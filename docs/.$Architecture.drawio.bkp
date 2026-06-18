@@ -1,0 +1,179 @@
+<mxfile host="app.diagrams.net" modified="2026-05-28T00:00:00.000Z" agent="Claude" version="21.0.0" compressed="false">
+  <diagram id="ChatBotPRN222-Architecture" name="Architecture">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- PRESENTATION LAYER -->
+        <mxCell id="pres" value="Presentation"
+          style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;fontColor=#1a3a1a;horizontal=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="190" y="40" width="430" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pres_ctrl" value="&lt;b&gt;Controller&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;Auth · Chat · Document&lt;br/&gt;Home · User · Profile&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="pres">
+          <mxGeometry x="25" y="60" width="118" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pres_model" value="&lt;b&gt;Model&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;AuthVM · ChatVM&lt;br/&gt;ProfileVM · ErrorVM&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="pres">
+          <mxGeometry x="158" y="60" width="118" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pres_view" value="&lt;b&gt;View&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;Razor .cshtml&lt;br/&gt;Auth · Chat · Document&lt;br/&gt;Home · User · Profile&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="pres">
+          <mxGeometry x="291" y="60" width="118" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- BUSINESS LOGIC LAYER -->
+        <mxCell id="bl" value="Business Logic"
+          style="swimlane;startSize=28;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;fontColor=#3a1a4a;horizontal=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="190" y="290" width="430" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bl_svc" value="&lt;b&gt;Service&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;Auth · Chat · Document&lt;br/&gt;Subject · User&lt;br/&gt;TextExtractor · Chunker&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="bl">
+          <mxGeometry x="55" y="55" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bl_dtos" value="&lt;b&gt;DTOs&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;AuthDtos · ChatDtos&lt;br/&gt;GeminiSettings&lt;br/&gt;GroqSettings&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="bl">
+          <mxGeometry x="235" y="55" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- BUSINESS OBJECTS -->
+        <mxCell id="bo" value="Business Objects"
+          style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;fontColor=#1a2a4a;horizontal=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="700" y="155" width="270" height="315" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bo_ent" value="&lt;b&gt;Entities&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;User · Subject&lt;br/&gt;Document · DocumentChunk&lt;br/&gt;ChatSession · ChatMessage&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="bo">
+          <mxGeometry x="20" y="65" width="105" height="115" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bo_const" value="&lt;b&gt;Enums&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;Constants · Roles&lt;br/&gt;Admin · Lecturer&lt;br/&gt;Student&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="bo">
+          <mxGeometry x="145" y="65" width="105" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- DATA ACCESS LAYER -->
+        <mxCell id="dal" value="Data Access"
+          style="swimlane;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;fontColor=#4a1a1a;horizontal=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="190" y="540" width="430" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dal_repo" value="&lt;b&gt;Repository&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;User · Subject&lt;br/&gt;Document · DocumentChunk&lt;br/&gt;Chat&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="dal">
+          <mxGeometry x="55" y="55" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dal_ctx" value="&lt;b&gt;DbContext&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;MongoDbContext&lt;br/&gt;MongoDbSettings&lt;br/&gt;MongoDB.Driver SDK&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;verticalAlign=middle;"
+          vertex="1" parent="dal">
+          <mxGeometry x="235" y="55" width="140" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- AI SERVICE -->
+        <mxCell id="gemini" value="&lt;b&gt;AI Service&lt;/b&gt;&lt;br/&gt;&lt;font style='font-size:9px'&gt;GeminiService&lt;br/&gt;gemini-2.5-flash&lt;/font&gt;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="25" y="340" width="125" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- MONGODB ATLAS -->
+        <mxCell id="mongodb" value="MongoDB Atlas"
+          style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="345" y="790" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- EDGES -->
+
+        <!-- Presentation to Business Logic (down) -->
+        <mxCell id="e1" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0.4;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="pres" target="bl" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Logic to Presentation (up) -->
+        <mxCell id="e2" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0.6;exitY=0;exitDx=0;exitDy=0;entryX=0.6;entryY=1;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bl" target="pres" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Logic to Data Access (down) -->
+        <mxCell id="e3" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0.4;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bl" target="dal" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Access to Business Logic (up) -->
+        <mxCell id="e4" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0.6;exitY=0;exitDx=0;exitDy=0;entryX=0.6;entryY=1;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="dal" target="bl" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Access to MongoDB Atlas -->
+        <mxCell id="e5" value=""
+          style="edgeStyle=orthogonalEdgeStyle;endArrow=block;endFill=1;"
+          edge="1" source="dal" target="mongodb" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- AI Service to Business Logic -->
+        <mxCell id="e6" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="gemini" target="bl" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Logic to AI Service -->
+        <mxCell id="e7" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.6;exitDx=0;exitDy=0;entryX=1;entryY=0.65;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bl" target="gemini" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Objects to Presentation -->
+        <mxCell id="e8" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.2;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bo" target="pres" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Objects to Business Logic -->
+        <mxCell id="e9" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bo" target="bl" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Business Objects to Data Access -->
+        <mxCell id="e10" value=""
+          style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.8;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;endArrow=block;endFill=1;"
+          edge="1" source="bo" target="dal" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

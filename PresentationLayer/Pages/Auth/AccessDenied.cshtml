@@ -1,0 +1,24 @@
+@page
+@{
+    ViewData["Title"] = "Bị từ chối";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bị từ chối – ChatBot PRN222</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card" style="text-align:center">
+        <div style="font-size:4rem;margin-bottom:16px">🚫</div>
+        <h2>Không có quyền truy cập</h2>
+        <p style="margin:16px 0">Bạn không có quyền vào trang này. Vui lòng liên hệ quản trị viên.</p>
+        <a href="/Dashboard" class="btn btn-primary">← Về trang chủ</a>
+    </div>
+</div>
+</body>
+</html>

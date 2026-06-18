@@ -1,0 +1,56 @@
+@page
+@model PresentationLayer.Pages.Documents.ViewModel
+@{
+    ViewData["Title"] = "Chi tiết tài liệu";
+    ViewData["TopbarTitle"] = "📄 Chi tiết tài liệu";
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <div class="flex items-center gap-3">
+            <a href="/Documents" class="btn btn-secondary btn-sm" style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; text-decoration: none;" title="Quay lại">
+                🔙
+            </a>
+            <h1>@Model.Document.Title</h1>
+        </div>
+        <p class="mt-2 text-muted">@Model.Document.FileName • @(Model.Document.FileSize / 1024) KB • Ngày tải: @Model.Document.UploadedAt.ToString("dd/MM/yyyy")</p>
+    </div>
+    <div>
+        <span class="badge @(Model.Document.Status == "Indexed" ? "badge-green" : Model.Document.Status == "Processing" ? "badge-orange" : Model.Document.Status == "Failed" ? "badge-red" : "badge-gray")" style="font-size: 1rem; padding: 0.5rem 1rem;">
+            @Model.Document.Status
+        </span>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
+    <div class="card" style="padding: 1.5rem;">
+        <div class="flex items-center justify-between mb-4">
+            <h3 style="margin: 0;">Các đoạn dữ liệu (Chunks)</h3>
+            <span class="badge badge-blue">@Model.Chunks.Count chunks</span>
+        </div>
+        
+        @if (Model.Chunks.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">🧩</div>
+                <div class="empty-state-title">Chưa có chunk nào</div>
+                <p class="empty-state-text">Tài liệu này chưa được chia chunk hoặc có lỗi trong quá trình xử lý.</p>
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-col gap-4">
+                @foreach (var chunk in Model.Chunks.OrderBy(c => c.ChunkIndex))
+                {
+                    <div class="card" style="background: var(--surface-hover); border: 1px solid var(--border-color); padding: 1.25rem;">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="badge" style="background: var(--accent-blue); color: white;">Chunk #@chunk.ChunkIndex</span>
+                            <span class="text-sm text-muted">Trang @chunk.Page</span>
+                        </div>
+                        <div class="text-sm" style="white-space: pre-wrap; line-height: 1.6; color: var(--text-primary); font-family: var(--font-mono, monospace);">@chunk.Content</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

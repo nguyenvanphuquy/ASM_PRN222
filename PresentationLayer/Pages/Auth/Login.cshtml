@@ -1,0 +1,87 @@
+@page
+@model PresentationLayer.Pages.Auth.LoginModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Đăng nhập";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng nhập – ChatBot PRN222</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">🤖</div>
+            <div>
+                <h1 style="font-size:1.4rem;margin:0">ChatBot PRN222</h1>
+                <p style="font-size:0.78rem;margin:0">Hệ thống hỗ trợ học tập AI</p>
+            </div>
+        </div>
+
+        <h2 style="font-size:1.1rem;margin-bottom:24px;color:var(--text-secondary);font-weight:500;">
+            Đăng nhập tài khoản
+        </h2>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">❌ @Model.ErrorMessage</div>
+        }
+
+        <form method="post" id="loginForm">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group">
+                <label class="form-label" for="username">Tên đăng nhập</label>
+                <input id="username" class="form-control" type="text"
+                       asp-for="Username" placeholder="Nhập username"
+                       autocomplete="username" required autofocus />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Mật khẩu</label>
+                <div style="position:relative">
+                    <input id="password" class="form-control" type="password"
+                           asp-for="Password" placeholder="Nhập mật khẩu"
+                           autocomplete="current-password" required
+                           style="padding-right:48px" />
+                    <button type="button" onclick="togglePwd()" title="Hiện/ẩn mật khẩu"
+                            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                                   background:none;border:none;cursor:pointer;font-size:1rem;color:var(--text-muted);"
+                            id="togglePwdBtn">👁️</button>
+                </div>
+            </div>
+
+            <button id="loginBtn" type="submit" class="btn btn-primary w-full btn-lg" style="margin-top:8px">
+                <span id="loginText">🔐 Đăng nhập</span>
+                <span id="loginSpinner" class="hidden animate-spin">⏳</span>
+            </button>
+        </form>
+
+        <div style="margin-top:24px;text-align:center;font-size:0.82rem;color:var(--text-muted)">
+            Chưa có tài khoản?
+            <a href="/Auth/Register" style="color:var(--accent-purple);font-weight:600">Đăng ký</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePwd() {
+    const p = document.getElementById('password');
+    const b = document.getElementById('togglePwdBtn');
+    p.type = p.type === 'password' ? 'text' : 'password';
+    b.textContent = p.type === 'password' ? '👁️' : '🙈';
+}
+
+document.getElementById('loginForm').addEventListener('submit', () => {
+    document.getElementById('loginText').classList.add('hidden');
+    document.getElementById('loginSpinner').classList.remove('hidden');
+    document.getElementById('loginBtn').disabled = true;
+});
+</script>
+</body>
+</html>

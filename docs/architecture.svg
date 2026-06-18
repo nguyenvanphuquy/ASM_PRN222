@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1000" font-family="Segoe UI, Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="gPres" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="gSvc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="gDal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="gExt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="1000" fill="#f8fafc"/>
+
+  <!-- Title -->
+  <text x="640" y="42" text-anchor="middle" font-size="26" font-weight="800" fill="#0f172a">
+    Kiến trúc MVC 3-Layer — ChatBotPRN222
+  </text>
+  <text x="640" y="68" text-anchor="middle" font-size="14" fill="#475569">
+    ASP.NET Core MVC 8.0 · MongoDB · Gemini AI · Cookie Authentication
+  </text>
+
+  <!-- =================== CLIENT =================== -->
+  <g filter="url(#shadow)">
+    <rect x="490" y="92" width="300" height="60" rx="14" fill="#1e293b"/>
+    <text x="640" y="120" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f5f9">
+      🌐 Trình duyệt người dùng (Client)
+    </text>
+    <text x="640" y="140" text-anchor="middle" font-size="12" fill="#cbd5e1">
+      HTTP Request / Response · Cookie session
+    </text>
+  </g>
+
+  <!-- Arrow Client -> Presentation -->
+  <line x1="640" y1="152" x2="640" y2="190" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- =================== PRESENTATION LAYER =================== -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="195" width="1160" height="200" rx="18" fill="url(#gPres)" opacity="0.12"/>
+    <rect x="60" y="195" width="1160" height="42" rx="18" fill="url(#gPres)"/>
+    <text x="80" y="222" font-size="17" font-weight="800" fill="#fff">
+      ① PRESENTATION LAYER — ChatBotPRN222 (ASP.NET Core MVC)
+    </text>
+    <text x="1200" y="222" text-anchor="end" font-size="12" font-style="italic" fill="#e0e7ff">
+      Giao diện · Xử lý request · Render HTML
+    </text>
+
+    <!-- Controllers -->
+    <g>
+      <rect x="85" y="255" width="260" height="125" rx="12" fill="#fff" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="215" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">📂 Controllers</text>
+      <text x="100" y="298" font-size="11" fill="#1e293b">• HomeController</text>
+      <text x="100" y="315" font-size="11" fill="#1e293b">• AuthController</text>
+      <text x="100" y="332" font-size="11" fill="#1e293b">• ChatController</text>
+      <text x="100" y="349" font-size="11" fill="#1e293b">• DocumentController</text>
+      <text x="100" y="366" font-size="11" fill="#1e293b">• UserController · ProfileController</text>
+    </g>
+
+    <!-- Views -->
+    <g>
+      <rect x="365" y="255" width="260" height="125" rx="12" fill="#fff" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="495" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">🎨 Views (Razor .cshtml)</text>
+      <text x="380" y="298" font-size="11" fill="#1e293b">• Auth/ · Chat/ · Document/</text>
+      <text x="380" y="315" font-size="11" fill="#1e293b">• Home/ · User/ · Profile/</text>
+      <text x="380" y="332" font-size="11" fill="#1e293b">• Shared/_Layout.cshtml</text>
+      <text x="380" y="349" font-size="11" fill="#1e293b">• wwwroot (css, js, lib, uploads)</text>
+      <text x="380" y="366" font-size="11" fill="#1e293b">• Bootstrap 5 · Bootstrap Icons</text>
+    </g>
+
+    <!-- ViewModels -->
+    <g>
+      <rect x="645" y="255" width="260" height="125" rx="12" fill="#fff" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="775" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">📦 Models (ViewModels)</text>
+      <text x="660" y="298" font-size="11" fill="#1e293b">• AuthViewModels</text>
+      <text x="660" y="315" font-size="11" fill="#1e293b">• ChatViewModels</text>
+      <text x="660" y="332" font-size="11" fill="#1e293b">• ProfileViewModels</text>
+      <text x="660" y="349" font-size="11" fill="#1e293b">• ErrorViewModel</text>
+    </g>
+
+    <!-- Auth/Config -->
+    <g>
+      <rect x="925" y="255" width="270" height="125" rx="12" fill="#fff" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="1060" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#4338ca">⚙️ Program.cs · Middleware</text>
+      <text x="940" y="298" font-size="11" fill="#1e293b">• Dependency Injection</text>
+      <text x="940" y="315" font-size="11" fill="#1e293b">• Cookie Authentication</text>
+      <text x="940" y="332" font-size="11" fill="#1e293b">• Authorization Policies</text>
+      <text x="940" y="349" font-size="11" fill="#1e293b">  (AdminOnly · LecturerOrAdmin)</text>
+      <text x="940" y="366" font-size="11" fill="#1e293b">• Session · Routing</text>
+    </g>
+  </g>
+
+  <!-- Arrow Presentation <-> Service -->
+  <line x1="640" y1="395" x2="640" y2="445" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <text x="660" y="425" font-size="11" fill="#475569" font-style="italic">gọi Interface (DI)</text>
+
+  <!-- =================== SERVICE LAYER =================== -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="450" width="1160" height="200" rx="18" fill="url(#gSvc)" opacity="0.12"/>
+    <rect x="60" y="450" width="1160" height="42" rx="18" fill="url(#gSvc)"/>
+    <text x="80" y="477" font-size="17" font-weight="800" fill="#fff">
+      ② SERVICE LAYER (Business Logic) — ServiceLayer.csproj
+    </text>
+    <text x="1200" y="477" text-anchor="end" font-size="12" font-style="italic" fill="#cffafe">
+      Nghiệp vụ · Validation · Orchestration
+    </text>
+
+    <!-- Auth/User Services -->
+    <g>
+      <rect x="85" y="510" width="260" height="125" rx="12" fill="#fff" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="215" y="532" text-anchor="middle" font-size="13" font-weight="700" fill="#0e7490">🔐 Auth &amp; User</text>
+      <text x="100" y="553" font-size="11" fill="#1e293b">• IAuthService / AuthService</text>
+      <text x="100" y="570" font-size="11" fill="#1e293b">  (Login · Register · Seed)</text>
+      <text x="100" y="587" font-size="11" fill="#1e293b">• IUserService / UserService</text>
+      <text x="100" y="604" font-size="11" fill="#1e293b">  (CRUD · UpdateRole · ResetPwd)</text>
+      <text x="100" y="621" font-size="11" fill="#1e293b">• BCrypt.Net password hashing</text>
+    </g>
+
+    <!-- Chat/AI Services -->
+    <g>
+      <rect x="365" y="510" width="260" height="125" rx="12" fill="#fff" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="495" y="532" text-anchor="middle" font-size="13" font-weight="700" fill="#0e7490">🤖 Chat &amp; AI</text>
+      <text x="380" y="553" font-size="11" fill="#1e293b">• IChatService / ChatService</text>
+      <text x="380" y="570" font-size="11" fill="#1e293b">  (Sessions · Messages · Q&amp;A)</text>
+      <text x="380" y="587" font-size="11" fill="#1e293b">• IGeminiService / GeminiService</text>
+      <text x="380" y="604" font-size="11" fill="#1e293b">  (HTTP call Gemini API)</text>
+      <text x="380" y="621" font-size="11" fill="#1e293b">• Retrieval Augmented Generation</text>
+    </g>
+
+    <!-- Document Services -->
+    <g>
+      <rect x="645" y="510" width="260" height="125" rx="12" fill="#fff" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="775" y="532" text-anchor="middle" font-size="13" font-weight="700" fill="#0e7490">📄 Document Pipeline</text>
+      <text x="660" y="553" font-size="11" fill="#1e293b">• IDocumentService / Service</text>
+      <text x="660" y="570" font-size="11" fill="#1e293b">• ITextExtractor (PDF/DOCX/PPTX)</text>
+      <text x="660" y="587" font-size="11" fill="#1e293b">• IChunker (SlidingWindow)</text>
+      <text x="660" y="604" font-size="11" fill="#1e293b">• ISubjectService / Service</text>
+      <text x="660" y="621" font-size="11" fill="#1e293b">• Indexing &amp; Vector search</text>
+    </g>
+
+    <!-- DTOs/Settings -->
+    <g>
+      <rect x="925" y="510" width="270" height="125" rx="12" fill="#fff" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="1060" y="532" text-anchor="middle" font-size="13" font-weight="700" fill="#0e7490">📋 DTOs &amp; Settings</text>
+      <text x="940" y="553" font-size="11" fill="#1e293b">• Dtos/AuthDtos</text>
+      <text x="940" y="570" font-size="11" fill="#1e293b">  (LoginResult · RegisterResult)</text>
+      <text x="940" y="587" font-size="11" fill="#1e293b">• Dtos/ChatDtos</text>
+      <text x="940" y="604" font-size="11" fill="#1e293b">• Settings/GeminiSettings</text>
+      <text x="940" y="621" font-size="11" fill="#1e293b">• Settings/GroqSettings</text>
+    </g>
+  </g>
+
+  <!-- Arrow Service <-> DAL -->
+  <line x1="640" y1="650" x2="640" y2="700" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <text x="660" y="680" font-size="11" fill="#475569" font-style="italic">gọi IRepository (DI)</text>
+
+  <!-- =================== DATA ACCESS LAYER =================== -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="705" width="1160" height="200" rx="18" fill="url(#gDal)" opacity="0.12"/>
+    <rect x="60" y="705" width="1160" height="42" rx="18" fill="url(#gDal)"/>
+    <text x="80" y="732" font-size="17" font-weight="800" fill="#fff">
+      ③ DATA ACCESS LAYER — DataAccessLayer.csproj
+    </text>
+    <text x="1200" y="732" text-anchor="end" font-size="12" font-style="italic" fill="#dcfce7">
+      Truy xuất MongoDB · Repository Pattern
+    </text>
+
+    <!-- Entities -->
+    <g>
+      <rect x="85" y="765" width="260" height="125" rx="12" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="215" y="787" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">🧬 Entities (POCO + BSON)</text>
+      <text x="100" y="808" font-size="11" fill="#1e293b">• User · Subject</text>
+      <text x="100" y="825" font-size="11" fill="#1e293b">• Document · DocumentChunk</text>
+      <text x="100" y="842" font-size="11" fill="#1e293b">• ChatSession · ChatMessage</text>
+      <text x="100" y="859" font-size="11" fill="#1e293b">─────────────</text>
+      <text x="100" y="876" font-size="11" fill="#1e293b">[BsonId] [BsonElement(...)]</text>
+    </g>
+
+    <!-- Repositories -->
+    <g>
+      <rect x="365" y="765" width="260" height="125" rx="12" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="495" y="787" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">🗄️ Repositories</text>
+      <text x="380" y="808" font-size="11" fill="#1e293b">• IUserRepository / UserRepo</text>
+      <text x="380" y="825" font-size="11" fill="#1e293b">• ISubjectRepository / SubjectRepo</text>
+      <text x="380" y="842" font-size="11" fill="#1e293b">• IDocumentRepository / DocRepo</text>
+      <text x="380" y="859" font-size="11" fill="#1e293b">• IDocumentChunkRepository</text>
+      <text x="380" y="876" font-size="11" fill="#1e293b">• IChatRepository / ChatRepo</text>
+    </g>
+
+    <!-- Context -->
+    <g>
+      <rect x="645" y="765" width="260" height="125" rx="12" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="775" y="787" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">🔌 Context &amp; Settings</text>
+      <text x="660" y="808" font-size="11" fill="#1e293b">• MongoDbContext</text>
+      <text x="660" y="825" font-size="11" fill="#1e293b">  (MongoClient · IMongoDatabase)</text>
+      <text x="660" y="842" font-size="11" fill="#1e293b">• Settings/MongoDbSettings</text>
+      <text x="660" y="859" font-size="11" fill="#1e293b">  (ConnectionString · DBName)</text>
+      <text x="660" y="876" font-size="11" fill="#1e293b">• MongoDB.Driver SDK</text>
+    </g>
+
+    <!-- Constants -->
+    <g>
+      <rect x="925" y="765" width="270" height="125" rx="12" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="1060" y="787" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">🏷️ Constants</text>
+      <text x="940" y="808" font-size="11" fill="#1e293b">• Roles.cs</text>
+      <text x="940" y="825" font-size="11" fill="#1e293b">  — Admin</text>
+      <text x="940" y="842" font-size="11" fill="#1e293b">  — Lecturer</text>
+      <text x="940" y="859" font-size="11" fill="#1e293b">  — Student</text>
+      <text x="940" y="876" font-size="11" fill="#1e293b">  — All[]</text>
+    </g>
+  </g>
+
+  <!-- Arrow DAL -> External -->
+  <line x1="640" y1="905" x2="640" y2="940" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- =================== EXTERNAL =================== -->
+  <g filter="url(#shadow)">
+    <rect x="170" y="942" width="280" height="50" rx="12" fill="url(#gExt)"/>
+    <text x="310" y="965" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">☁️ MongoDB Atlas</text>
+    <text x="310" y="982" text-anchor="middle" font-size="11" fill="#fff8e6">NoSQL Cloud Database</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="500" y="942" width="280" height="50" rx="12" fill="url(#gExt)"/>
+    <text x="640" y="965" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">✨ Gemini AI API</text>
+    <text x="640" y="982" text-anchor="middle" font-size="11" fill="#fff8e6">gemini-2.5-flash · Google</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="830" y="942" width="280" height="50" rx="12" fill="url(#gExt)"/>
+    <text x="970" y="965" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">💾 File Storage</text>
+    <text x="970" y="982" text-anchor="middle" font-size="11" fill="#fff8e6">wwwroot/uploads (PDF/DOCX/PPTX)</text>
+  </g>
+
+  <!-- Service -> Gemini direct arrow (side note) -->
+  <path d="M 1195 572 Q 1255 572 1255 967 L 1115 967" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text x="1260" y="770" text-anchor="end" font-size="10" font-style="italic" fill="#b45309" transform="rotate(90 1260 770)">GeminiService → HTTPS</text>
+</svg>

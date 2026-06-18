@@ -1,0 +1,40 @@
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio 2015/2017/2019/2022 cache/options directory
+.vs/
+
+# Node modules
+node_modules/
+
+# Mac
+.DS_Store
+
+# App settings (contain secrets)
+appsettings.json
+appsettings.Development.json
+
+# Local tooling / logs
+.claude/
+run.log

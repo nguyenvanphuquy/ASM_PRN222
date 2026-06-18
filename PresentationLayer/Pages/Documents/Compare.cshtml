@@ -1,0 +1,292 @@
+@page
+@model PresentationLayer.Pages.Documents.CompareModel
+@using ServiceLayer.Dtos
+@{
+    ViewData["Title"] = "So sánh tài liệu AI";
+    ViewData["TopbarTitle"] = "🔍 So sánh tài liệu AI";
+}
+
+<div class="page-header">
+    <h1>🔍 So sánh tài liệu bằng AI</h1>
+    <p>AI đọc 2 file, phát hiện lỗi sai, nội dung thiếu/thừa, mâu thuẫn giữa chúng</p>
+</div>
+
+<!-- Mode Toggle -->
+<div class="card mb-6">
+    <div style="display:flex;gap:8px;padding:4px;background:var(--bg-secondary);border-radius:var(--radius-md);width:fit-content">
+        <button type="button" onclick="setMode('db')" id="btnModeDb"
+                class="btn btn-sm" style="transition:all 0.2s">
+            📚 Từ tài liệu đã upload
+        </button>
+        <button type="button" onclick="setMode('upload')" id="btnModeUpload"
+                class="btn btn-sm" style="transition:all 0.2s">
+            ⬆️ Upload 2 file mới
+        </button>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="compareForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Mode" id="hiddenMode" />
+
+    @if (!string.IsNullOrEmpty(Model.CompareError))
+    {
+        <div class="alert alert-danger animate-fade-in">❌ @Model.CompareError</div>
+    }
+
+    <!-- DB Mode -->
+    <div id="panelDb">
+        <div class="comparison-grid" style="margin-bottom:20px">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:var(--accent-orange)">📄 File 1</span>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Chọn tài liệu thứ nhất</label>
+                    <select asp-for="DocId1" class="form-control" id="selDoc1">
+                        <option value="">– Chọn tài liệu –</option>
+                        @foreach (var d in Model.AllDocuments)
+                        {
+                            <option value="@d.Id" selected="@(Model.DocId1 == d.Id)">
+                                @d.Title (@d.FileName)
+                            </option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:var(--accent-green)">📄 File 2</span>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label">Chọn tài liệu thứ hai</label>
+                    <select asp-for="DocId2" class="form-control" id="selDoc2">
+                        <option value="">– Chọn tài liệu –</option>
+                        @foreach (var d in Model.AllDocuments)
+                        {
+                            <option value="@d.Id" selected="@(Model.DocId2 == d.Id)">
+                                @d.Title (@d.FileName)
+                            </option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Mode -->
+    <div id="panelUpload" style="display:none">
+        <div class="comparison-grid" style="margin-bottom:20px">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:var(--accent-orange)">📄 File 1</span>
+                </div>
+                <div class="drop-zone" onclick="document.getElementById('file1Input').click()" id="dz1">
+                    <div class="drop-zone-icon" id="dz1Icon">📁</div>
+                    <div class="drop-zone-title" id="dz1Title">Chọn File 1</div>
+                    <div class="drop-zone-subtitle">PDF, DOCX, PPTX, TXT</div>
+                </div>
+                <input type="file" asp-for="File1" id="file1Input"
+                       accept=".pdf,.docx,.pptx,.txt" style="display:none" />
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" style="color:var(--accent-green)">📄 File 2</span>
+                </div>
+                <div class="drop-zone" onclick="document.getElementById('file2Input').click()" id="dz2">
+                    <div class="drop-zone-icon" id="dz2Icon">📁</div>
+                    <div class="drop-zone-title" id="dz2Title">Chọn File 2</div>
+                    <div class="drop-zone-subtitle">PDF, DOCX, PPTX, TXT</div>
+                </div>
+                <input type="file" asp-for="File2" id="file2Input"
+                       accept=".pdf,.docx,.pptx,.txt" style="display:none" />
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin-bottom:32px">
+        <button id="compareBtn" type="submit" class="btn btn-primary btn-lg"
+                style="min-width:200px;justify-content:center">
+            <span id="compareText">🤖 Phân tích bằng AI</span>
+            <span id="compareSpinner" class="hidden animate-spin">⏳</span>
+        </button>
+    </div>
+</form>
+
+<!-- ── RESULT ── -->
+@if (Model.Result != null)
+{
+    var r = Model.Result;
+    <div class="animate-fade-in">
+
+        <!-- Summary card -->
+        <div class="card mb-6" style="border-color:var(--accent-purple);border-width:2px">
+            <div class="card-header">
+                <span class="card-title">📊 Kết quả phân tích AI</span>
+                <span class="badge @(r.TotalDifferences == 0 ? "badge-green" : r.TotalDifferences < 5 ? "badge-orange" : "badge-red")">
+                    @r.TotalDifferences điểm khác biệt
+                </span>
+            </div>
+
+            <div class="comparison-grid" style="margin-bottom:16px">
+                <div style="padding:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-md)">
+                    <div style="font-size:0.72rem;font-weight:700;color:var(--accent-orange);text-transform:uppercase;margin-bottom:4px">FILE 1</div>
+                    <div style="font-weight:600">@r.FileName1</div>
+                </div>
+                <div style="padding:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-md)">
+                    <div style="font-size:0.72rem;font-weight:700;color:var(--accent-green);text-transform:uppercase;margin-bottom:4px">FILE 2</div>
+                    <div style="font-weight:600">@r.FileName2</div>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-card);border-radius:var(--radius-md);padding:16px;font-size:0.92rem;line-height:1.7;color:var(--text-secondary)">
+                💡 @r.Summary
+            </div>
+
+            @if (r.TotalDifferences > 0)
+            {
+                <!-- Diff type summary -->
+                var byType = r.Differences.GroupBy(d => d.Type).OrderByDescending(g => g.Count());
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">
+                    @foreach (var g in byType)
+                    {
+                        var (cls, lbl) = g.Key switch {
+                            DiffType.ContentError     => ("badge-red",    "🔴 Lỗi nội dung"),
+                            DiffType.Typo             => ("badge-orange", "🟠 Lỗi chính tả"),
+                            DiffType.MissingContent   => ("badge-blue",   "🔵 Thiếu nội dung"),
+                            DiffType.ExtraContent     => ("badge-purple", "🟣 Thừa nội dung"),
+                            DiffType.FormatDifference => ("badge-gray",   "⚪ Định dạng"),
+                            _                         => ("badge-gray",   "⚫ Khác")
+                        };
+                        <span class="badge @cls">@lbl · @g.Count()</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Differences list -->
+        @if (r.Differences.Count > 0)
+        {
+            <h3 style="margin-bottom:16px">📋 Danh sách điểm khác biệt</h3>
+            <div style="display:flex;flex-direction:column;gap:12px">
+                @foreach (var d in r.Differences)
+                {
+                    var diffCls = d.Type switch {
+                        DiffType.ContentError     => "error",
+                        DiffType.Typo             => "typo",
+                        DiffType.MissingContent   => "missing",
+                        DiffType.ExtraContent     => "extra",
+                        DiffType.FormatDifference => "format",
+                        _                         => "other"
+                    };
+                    var typeLabel = d.Type switch {
+                        DiffType.ContentError     => "🔴 Lỗi nội dung",
+                        DiffType.Typo             => "🟠 Lỗi chính tả",
+                        DiffType.MissingContent   => "🔵 Thiếu nội dung",
+                        DiffType.ExtraContent     => "🟣 Thừa nội dung",
+                        DiffType.FormatDifference => "⚪ Định dạng",
+                        _                         => "⚫ Khác"
+                    };
+
+                    <div class="diff-item @diffCls">
+                        <div class="diff-number">#@d.Number · @typeLabel</div>
+                        @if (!string.IsNullOrEmpty(d.Location))
+                        {
+                            <div class="diff-location">📍 @d.Location</div>
+                        }
+                        <div class="diff-description">@d.Description</div>
+
+                        @if (!string.IsNullOrEmpty(d.File1Excerpt) || !string.IsNullOrEmpty(d.File2Excerpt))
+                        {
+                            <div class="diff-excerpts">
+                                @if (!string.IsNullOrEmpty(d.File1Excerpt))
+                                {
+                                    <div class="diff-excerpt file1">
+                                        <div class="diff-excerpt-label">File 1</div>
+                                        @d.File1Excerpt
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(d.File2Excerpt))
+                                {
+                                    <div class="diff-excerpt file2">
+                                        <div class="diff-excerpt-label">File 2</div>
+                                        @d.File2Excerpt
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (r.TotalDifferences == 0)
+        {
+            <div class="card" style="text-align:center;padding:48px">
+                <div style="font-size:3rem;margin-bottom:12px">✅</div>
+                <h3 style="color:var(--accent-green)">Hai file có nội dung giống nhau!</h3>
+                <p>AI không phát hiện điểm khác biệt đáng kể nào.</p>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+let currentMode = '@(Model.Mode ?? "db")';
+
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('hiddenMode').value = mode;
+
+    document.getElementById('panelDb').style.display = mode === 'db' ? 'block' : 'none';
+    document.getElementById('panelUpload').style.display = mode === 'upload' ? 'block' : 'none';
+
+    const btnDb = document.getElementById('btnModeDb');
+    const btnUp = document.getElementById('btnModeUpload');
+    if (mode === 'db') {
+        btnDb.classList.add('btn-primary');
+        btnDb.classList.remove('btn-secondary');
+        btnUp.classList.add('btn-secondary');
+        btnUp.classList.remove('btn-primary');
+    } else {
+        btnUp.classList.add('btn-primary');
+        btnUp.classList.remove('btn-secondary');
+        btnDb.classList.add('btn-secondary');
+        btnDb.classList.remove('btn-primary');
+    }
+}
+
+// Init
+setMode(currentMode);
+
+// File inputs
+function setupFileInput(inputId, iconId, titleId) {
+    const input = document.getElementById(inputId);
+    input.addEventListener('change', () => {
+        if (!input.files.length) return;
+        const f = input.files[0];
+        const icons = { pdf: '📕', docx: '📘', pptx: '📙', txt: '📝' };
+        const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+        document.getElementById(iconId).textContent = icons[ext] || '📄';
+        document.getElementById(titleId).textContent = f.name;
+    });
+}
+setupFileInput('file1Input', 'dz1Icon', 'dz1Title');
+setupFileInput('file2Input', 'dz2Icon', 'dz2Title');
+
+// Submit loading
+document.getElementById('compareForm').addEventListener('submit', () => {
+    document.getElementById('compareText').classList.add('hidden');
+    document.getElementById('compareSpinner').classList.remove('hidden');
+    document.getElementById('compareBtn').disabled = true;
+});
+
+// Scroll to result
+@if (Model.Result != null)
+{
+    <text>
+    document.querySelector('.animate-fade-in')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    </text>
+}
+</script>
+}

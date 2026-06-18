@@ -1,0 +1,101 @@
+@page
+@model PresentationLayer.Pages.Documents.UploadModel
+@{
+    ViewData["Title"] = "Upload tài liệu";
+    ViewData["TopbarTitle"] = "⬆️ Upload tài liệu";
+}
+
+<div class="page-header">
+    <h1>Upload tài liệu</h1>
+    <p>Tải lên tài liệu để AI có thể đọc, lập chỉ mục và trả lời câu hỏi</p>
+</div>
+
+<div style="max-width:640px">
+    <div class="card">
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            @Html.AntiForgeryToken()
+
+            <!-- Drop Zone -->
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="drop-zone-icon" id="dzIcon">📁</div>
+                <div class="drop-zone-title" id="dzTitle">Kéo thả file vào đây</div>
+                <div class="drop-zone-subtitle" id="dzSub">hoặc click để chọn file · PDF, DOCX, PPTX, TXT (tối đa 2GB)</div>
+            </div>
+
+            <input type="file" asp-for="UploadFile" id="fileInput"
+                   accept=".pdf,.docx,.pptx,.txt"
+                   style="display:none" />
+
+            @if (!ModelState.IsValid && ModelState.ContainsKey("File"))
+            {
+                <div class="form-error">@ModelState["File"]!.Errors.First().ErrorMessage</div>
+            }
+            @if (!ModelState.IsValid && ModelState.ContainsKey(""))
+            {
+                <div class="alert alert-danger mt-4">❌ @ModelState[""]!.Errors.First().ErrorMessage</div>
+            }
+
+            <div class="form-group mt-4">
+                <label class="form-label" for="Title">Tiêu đề (tuỳ chọn)</label>
+                <input id="Title" asp-for="Title" class="form-control"
+                       placeholder="Để trống sẽ dùng tên file" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="SubjectId">Môn học *</label>
+                <select id="SubjectId" asp-for="SubjectId" class="form-control" required>
+                    <option value="">– Chọn môn học –</option>
+                    @foreach (var s in Model.Subjects)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
+                <a href="/Documents" class="btn btn-secondary">Huỷ</a>
+                <button id="submitBtn" type="submit" class="btn btn-primary">
+                    <span id="uploadText">⬆️ Upload & Index</span>
+                    <span id="uploadSpinner" class="hidden animate-spin">⏳</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+// Drag & drop
+['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); }));
+['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); }));
+dropZone.addEventListener('drop', ev => {
+    const files = ev.dataTransfer.files;
+    if (files.length) setFile(files[0]);
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) setFile(fileInput.files[0]);
+});
+
+function setFile(file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+
+    const icons = { pdf: '📕', docx: '📘', pptx: '📙', txt: '📝' };
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    document.getElementById('dzIcon').textContent = icons[ext] || '📄';
+    document.getElementById('dzTitle').textContent = file.name;
+    document.getElementById('dzSub').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB · Click để đổi file';
+}
+
+document.getElementById('uploadForm').addEventListener('submit', () => {
+    document.getElementById('uploadText').classList.add('hidden');
+    document.getElementById('uploadSpinner').classList.remove('hidden');
+    document.getElementById('submitBtn').disabled = true;
+});
+</script>
+}

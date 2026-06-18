@@ -1,0 +1,122 @@
+@page
+@model PresentationLayer.Pages.Documents.IndexModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Tài liệu";
+    ViewData["TopbarTitle"] = "📄 Quản lý tài liệu";
+    var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var isCanUpload = role == "Admin" || role == "Lecturer" || User.HasClaim("CanUpload", "true");
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <h1>Tài liệu</h1>
+        <p>Quản lý và tìm kiếm tài liệu học tập</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="/Documents/Compare" class="btn btn-secondary" style="border-color:var(--accent-purple);color:var(--accent-purple)">
+            🔍 So sánh AI
+        </a>
+        @if (isCanUpload)
+        {
+            <a href="/Documents/Upload" class="btn btn-primary">⬆️ Upload mới</a>
+        }
+    </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card mb-6">
+    <form method="get" class="flex gap-3 flex-wrap items-center">
+        <input type="text" name="Query" value="@Model.Query"
+               class="form-control" placeholder="🔍 Tìm kiếm tài liệu..."
+               style="max-width:300px" />
+
+        <select name="SubjectId" class="form-control" style="max-width:200px">
+            <option value="">Tất cả môn học</option>
+            @foreach (var s in Model.Subjects)
+            {
+                <option value="@s.Id" selected="@(Model.SubjectId == s.Id)">@s.Name</option>
+            }
+        </select>
+
+        <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
+        @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.SubjectId))
+        {
+            <a href="/Documents" class="btn btn-secondary btn-sm">✕ Xoá lọc</a>
+        }
+    </form>
+</div>
+
+@if (Model.Documents.Count == 0)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-state-icon">📂</div>
+            <div class="empty-state-title">Chưa có tài liệu nào</div>
+            <p class="empty-state-text">Upload tài liệu đầu tiên để AI có thể học và trả lời câu hỏi.</p>
+            @if (isCanUpload)
+            {
+                <a href="/Documents/Upload" class="btn btn-primary mt-4">⬆️ Upload tài liệu</a>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="padding:0">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tài liệu</th>
+                        <th>Môn học</th>
+                        <th>Trạng thái</th>
+                        <th>Kích thước</th>
+                        <th>Ngày tải</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.Documents)
+                    {
+                        var icon = doc.FileName.EndsWith(".pdf") ? "📕" :
+                                   doc.FileName.EndsWith(".docx") ? "📘" :
+                                   doc.FileName.EndsWith(".pptx") ? "📙" : "📄";
+                        var statusClass = doc.Status == "Indexed" ? "badge-green" :
+                                          doc.Status == "Processing" ? "badge-orange" :
+                                          doc.Status == "Failed" ? "badge-red" : "badge-gray";
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <span style="font-size:1.3rem">@icon</span>
+                                    <div>
+                                        <div style="font-weight:600;color:var(--text-primary)">@doc.Title</div>
+                                        <div class="text-sm text-muted">@doc.FileName</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-blue">@(doc.SubjectId ?? "–")</span></td>
+                            <td><span class="badge @statusClass">@doc.Status</span></td>
+                            <td class="text-sm text-muted">@(doc.FileSize / 1024) KB</td>
+                            <td class="text-sm text-muted">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <a href="/Documents/View?id=@doc.Id" class="btn btn-secondary btn-sm">👁️</a>
+                                    @if (isCanUpload)
+                                    {
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@doc.Id"
+                                              onsubmit="return confirm('Xoá tài liệu này?')">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="text-sm text-muted mt-4">Tổng: @Model.Documents.Count tài liệu</p>
+}

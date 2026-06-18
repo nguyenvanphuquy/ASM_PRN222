@@ -1,0 +1,62 @@
+@page
+@model PresentationLayer.Pages.Chat.IndexModel
+@{
+    ViewData["Title"] = "Chat AI";
+    ViewData["TopbarTitle"] = "💬 Chat AI";
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <h1>Chat AI</h1>
+        <p>Đặt câu hỏi về tài liệu môn học</p>
+    </div>
+
+    <!-- New session form -->
+    <form method="post" asp-page-handler="Create" class="flex gap-2 items-center">
+        @Html.AntiForgeryToken()
+        <select name="subjectId" class="form-control" style="max-width:180px">
+            <option value="">Tất cả môn</option>
+            @foreach (var s in Model.Subjects)
+            {
+                <option value="@s.Id">@s.Name</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-primary">💬 Chat mới</button>
+    </form>
+</div>
+
+@if (Model.Sessions.Count == 0)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <div class="empty-state-title">Chưa có cuộc hội thoại</div>
+            <p class="empty-state-text">Tạo cuộc hội thoại mới để bắt đầu hỏi AI về tài liệu môn học.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+        @foreach (var s in Model.Sessions.OrderByDescending(x => x.UpdatedAt))
+        {
+            <div class="card" style="cursor:pointer;transition:all 0.2s" onclick="location.href='/Chat/Session?id=@s.Id'">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:1.5rem;margin-bottom:8px">💬</div>
+                        <div style="font-weight:600;margin-bottom:4px" class="truncate">@s.Title</div>
+                        <div class="text-sm text-muted">
+                            @s.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@s.Id"
+                          onsubmit="event.stopPropagation();return confirm('Xoá cuộc hội thoại này?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-icon btn-secondary btn-sm"
+                                onclick="event.stopPropagation()" title="Xoá">🗑️</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}

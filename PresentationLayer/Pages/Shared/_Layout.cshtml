@@ -1,0 +1,168 @@
+@using System.Security.Claims
+@{
+    var user = User;
+    var isAuth = user.Identity?.IsAuthenticated ?? false;
+    var userName = user.FindFirst(ClaimTypes.Name)?.Value ?? user.Identity?.Name ?? "Guest";
+    var fullName = user.FindFirst("FullName")?.Value ?? userName;
+    var role = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var avatarPath = user.FindFirst("AvatarPath")?.Value;
+    var isCanUpload = role == "Admin" || role == "Lecturer" || user.HasClaim("CanUpload", "true");
+    var initials = fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "?";
+    var pageTitle = (string?)ViewData["Title"] ?? "ChatBot PRN222";
+    var topbarTitle = (string?)ViewData["TopbarTitle"] ?? pageTitle;
+
+    // Active page detection
+    var path = Context.Request.Path.Value?.ToLower() ?? "";
+    bool IsActive(string segment) => path.StartsWith(segment);
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ChatBot PRN222 – Hệ thống hỗ trợ học tập AI" />
+    <title>@pageTitle – ChatBot PRN222</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+</head>
+<body>
+@if (!isAuth)
+{
+    <!-- Unauthenticated: just render page content without sidebar -->
+    @RenderBody()
+}
+else
+{
+<div class="app-shell">
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" id="sidebar">
+        <a class="sidebar-logo" href="/Dashboard">
+            <div class="sidebar-logo-icon">🤖</div>
+            <div class="sidebar-logo-text">
+                ChatBot
+                <span>PRN222 · Razor</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Tổng quan</div>
+            <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
+                <span class="nav-icon">💬</span> Chat AI
+            </a>
+
+            <div class="nav-section-label">Tài liệu</div>
+            <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
+                <span class="nav-icon">📄</span> Tài liệu
+            </a>
+            @if (isCanUpload)
+            {
+                <a class="nav-item @(IsActive("/documents/upload") ? "active" : "")" href="/Documents/Upload">
+                    <span class="nav-icon">⬆️</span> Upload
+                </a>
+            }
+            <a class="nav-item @(IsActive("/documents/compare") ? "active" : "")" href="/Documents/Compare">
+                <span class="nav-icon">🔍</span> So sánh AI
+                <span class="nav-badge">New</span>
+            </a>
+
+            <div class="nav-section-label">Quản lý</div>
+            <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
+                <span class="nav-icon">📚</span> Môn học
+            </a>
+            <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
+                <span class="nav-icon">💡</span> Phản hồi
+            </a>
+
+            @if (role == "Admin" || role == "Lecturer")
+            {
+                <div class="nav-section-label">Admin</div>
+                @if (role == "Admin")
+                {
+                    <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
+                        <span class="nav-icon">👥</span> Người dùng
+                    </a>
+                }
+            }
+
+            <div class="nav-section-label">Tài khoản</div>
+            <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
+                <span class="nav-icon">👤</span> Hồ sơ
+            </a>
+            <a class="nav-item nav-logout" href="/Auth/Logout">
+                <span class="nav-icon">🚪</span> Đăng xuất
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">
+                    @if (!string.IsNullOrEmpty(avatarPath))
+                    {
+                        <img src="@avatarPath" alt="Avatar" />
+                    }
+                    else
+                    {
+                        @initials
+                    }
+                </div>
+                <div class="user-info">
+                    <div class="user-name">@fullName</div>
+                    <div class="user-role">@role</div>
+                </div>
+                <a href="/Auth/Logout" class="user-logout" title="Đăng xuất">🚪</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <div class="main-content">
+        <header class="topbar">
+            <button class="btn btn-secondary btn-icon" id="sidebarToggle" style="display:none" title="Menu">☰</button>
+            <h2 class="topbar-title" style="font-size:1rem;font-weight:600;">@topbarTitle</h2>
+            <div class="topbar-actions">
+                <a href="/Chat" class="btn btn-primary btn-sm">
+                    💬 Chat mới
+                </a>
+            </div>
+        </header>
+
+        <main class="page-content">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success animate-fade-in">✅ @TempData["Success"]</div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger animate-fade-in">❌ @TempData["Error"]</div>
+            }
+            @if (TempData["Info"] != null)
+            {
+                <div class="alert alert-info animate-fade-in">ℹ️ @TempData["Info"]</div>
+            }
+
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+<script>
+    // Mobile sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggle = document.getElementById('sidebarToggle');
+    if (toggle) {
+        toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+        if (window.innerWidth <= 768) toggle.style.display = 'flex';
+    }
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) toggle.style.display = 'flex';
+        else { toggle.style.display = 'none'; sidebar.classList.remove('open'); }
+    });
+</script>
+}
+
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

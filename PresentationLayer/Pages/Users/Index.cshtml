@@ -1,0 +1,91 @@
+@page
+@model PresentationLayer.Pages.Users.IndexModel
+@{
+    ViewData["Title"] = "Người dùng";
+}
+
+<div class="page-header">
+    <h1>👥 Quản lý người dùng</h1>
+    <p>Danh sách tất cả người dùng trong hệ thống</p>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Người dùng</th>
+                    <th>Email</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model.Users)
+                {
+                    var roleClass = u.Role == "Admin" ? "badge-red" :
+                                    u.Role == "Lecturer" ? "badge-blue" : "badge-green";
+                    <tr>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <div class="user-avatar" style="background:var(--grad-primary)">
+                                    @(u.FullName.Length > 0 ? u.FullName[0].ToString().ToUpper() : "?")
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;color:var(--text-primary)">@u.FullName</div>
+                                    <div class="text-sm text-muted">@u.Username</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-sm">@u.Email</td>
+                        <td><span class="badge @roleClass">@u.Role</span></td>
+                        <td>
+                            @if (u.IsEmailVerified)
+                            {
+                                <span class="badge badge-green">✅ Đã xác thực</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-orange">⏳ Chờ xác thực</span>
+                            }
+                        </td>
+                        <td class="text-sm text-muted">@u.CreatedAt.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <div class="flex gap-2 items-center flex-wrap">
+                                @if (u.Role == "Lecturer")
+                                {
+                                    <form method="post" asp-page-handler="AssignSubject" asp-route-id="@u.Id" class="flex gap-2">
+                                        @Html.AntiForgeryToken()
+                                        <select name="subjectId" class="form-control" style="padding: 0.25rem; font-size: 0.875rem; height: auto;" required>
+                                            <option value="">– Chọn môn –</option>
+                                            @foreach (var s in Model.Subjects)
+                                            {
+                                                if (s.Id == u.AssignedSubjectId)
+                                                {
+                                                    <option value="@s.Id" selected>@s.Name</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@s.Id">@s.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm">Gán môn</button>
+                                    </form>
+                                }
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id"
+                                      onsubmit="return confirm('Xoá người dùng @u.Username?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Xoá</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<p class="text-sm text-muted mt-4">Tổng: @Model.Users.Count người dùng</p>

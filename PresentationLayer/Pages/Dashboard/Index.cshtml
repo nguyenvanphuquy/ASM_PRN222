@@ -1,0 +1,118 @@
+@page
+@model PresentationLayer.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["TopbarTitle"] = "📊 Dashboard";
+    var s = Model.Stats;
+}
+
+<div class="page-header">
+    <h1>Tổng quan hệ thống</h1>
+    <p>Thống kê hoạt động ChatBot PRN222 – Razor Pages</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card purple">
+        <div class="stat-icon purple">👥</div>
+        <div class="stat-value">@s.UsersTotal</div>
+        <div class="stat-label">Người dùng</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-icon blue">📄</div>
+        <div class="stat-value">@s.Documents</div>
+        <div class="stat-label">Tài liệu</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">💬</div>
+        <div class="stat-value">@s.ChatMessages</div>
+        <div class="stat-label">Tin nhắn chat</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon orange">📚</div>
+        <div class="stat-value">@s.Subjects</div>
+        <div class="stat-label">Môn học</div>
+    </div>
+</div>
+
+<!-- Two-column grid -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+
+    <!-- Recent Documents -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📄 Tài liệu gần đây</span>
+            <a href="/Documents" class="btn btn-secondary btn-sm">Xem tất cả</a>
+        </div>
+        @if (s.RecentDocuments.Count == 0)
+        {
+            <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">📂</div>
+                <div class="empty-state-title">Chưa có tài liệu</div>
+            </div>
+        }
+        else
+        {
+            foreach (var doc in s.RecentDocuments)
+            {
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle)">
+                    <div style="font-size:1.4rem">
+                        @(doc.FileName.EndsWith(".pdf") ? "📕" :
+                          doc.FileName.EndsWith(".docx") ? "📘" :
+                          doc.FileName.EndsWith(".pptx") ? "📙" : "📄")
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div class="truncate" style="font-size:0.85rem;font-weight:600">@doc.Title</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted)">
+                            @(doc.FileSize / 1024) KB · @doc.Status
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Feedback & Stats -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">💡 Phản hồi & AI</span>
+            <a href="/Feedback" class="btn btn-secondary btn-sm">Xem tất cả</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
+                <span style="font-size:0.85rem;color:var(--text-secondary)">⭐ Điểm phản hồi TB</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-orange)">
+                    @(s.FeedbackAverage > 0 ? s.FeedbackAverage.ToString("F1") : "–")
+                </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
+                <span style="font-size:0.85rem;color:var(--text-secondary)">💬 Phiên chat</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-blue)">@s.ChatSessions</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
+                <span style="font-size:0.85rem;color:var(--text-secondary)">🧩 Chunks đã index</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-green)">@s.Chunks</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
+                <span style="font-size:0.85rem;color:var(--text-secondary)">⏳ Phản hồi chờ duyệt</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-red)">@s.FeedbackAwaiting</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚡ Thao tác nhanh</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="/Chat" class="btn btn-primary">💬 Chat mới</a>
+        <a href="/Documents/Upload" class="btn btn-secondary">⬆️ Upload tài liệu</a>
+        <a href="/Documents/Compare" class="btn btn-secondary" style="border-color:var(--accent-purple);color:var(--accent-purple)">
+            🔍 So sánh file AI
+            <span class="nav-badge" style="margin-left:4px">New</span>
+        </a>
+        <a href="/Subjects" class="btn btn-secondary">📚 Quản lý môn học</a>
+    </div>
+</div>

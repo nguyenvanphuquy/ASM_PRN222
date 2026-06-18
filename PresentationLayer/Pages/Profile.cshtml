@@ -1,0 +1,63 @@
+@page
+@model PresentationLayer.Pages.ProfileModel
+@{
+    ViewData["Title"] = "Hồ sơ";
+    ViewData["TopbarTitle"] = "👤 Hồ sơ cá nhân";
+}
+
+<div class="page-header">
+    <h1>👤 Hồ sơ cá nhân</h1>
+    <p>Quản lý thông tin tài khoản</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+
+    <!-- Profile info -->
+    <div class="card">
+        <div class="card-header"><span class="card-title">📝 Thông tin cá nhân</span></div>
+        <form method="post" asp-page-handler="Update">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label class="form-label">Họ tên</label>
+                <input asp-for="FullName" class="form-control" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" type="email" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Giới thiệu</label>
+                <textarea asp-for="Bio" class="form-control" rows="3" placeholder="Viết vài dòng về bạn..."></textarea>
+            </div>
+            @if (Model.UserInfo != null)
+            {
+                <div style="margin-bottom:16px">
+                    <span class="badge badge-purple">@Model.UserInfo.Role</span>
+                    @if (Model.UserInfo.CanUploadDocuments)
+                    {
+                        <span class="badge badge-green" style="margin-left:6px">✅ Quyền upload</span>
+                    }
+                </div>
+            }
+            <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+        </form>
+    </div>
+
+    <!-- Change password -->
+    <div class="card">
+        <div class="card-header"><span class="card-title">🔐 Đổi mật khẩu</span></div>
+        <form method="post" asp-page-handler="Password">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label class="form-label">Mật khẩu hiện tại</label>
+                <input asp-for="CurrentPassword" class="form-control" type="password" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mật khẩu mới</label>
+                <input asp-for="NewPassword" class="form-control" type="password" minlength="6" required />
+                <div class="form-text">Ít nhất 6 ký tự</div>
+            </div>
+            <button type="submit" class="btn btn-primary">🔒 Đổi mật khẩu</button>
+        </form>
+    </div>
+</div>
