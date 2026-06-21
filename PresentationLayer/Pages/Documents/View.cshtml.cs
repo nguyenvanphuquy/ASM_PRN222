@@ -31,4 +31,18 @@ public class ViewModel : PageModel
 
         return Page();
     }
+
+    public async Task<IActionResult> OnPostApproveAsync(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return NotFound();
+        await _documentService.ApproveAsync(id);
+        return RedirectToPage(new { id });
+    }
+
+    public async Task<IActionResult> OnPostRejectAsync(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return NotFound();
+        await _documentService.RejectAsync(id);
+        return RedirectToPage(new { id });
+    }
 }

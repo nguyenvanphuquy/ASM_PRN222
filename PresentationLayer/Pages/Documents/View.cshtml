@@ -16,13 +16,49 @@
         <p class="mt-2 text-muted">@Model.Document.FileName • @(Model.Document.FileSize / 1024) KB • Ngày tải: @Model.Document.UploadedAt.ToString("dd/MM/yyyy")</p>
     </div>
     <div>
-        <span class="badge @(Model.Document.Status == "Indexed" ? "badge-green" : Model.Document.Status == "Processing" ? "badge-orange" : Model.Document.Status == "Failed" ? "badge-red" : "badge-gray")" style="font-size: 1rem; padding: 0.5rem 1rem;">
+        <span class="badge @(Model.Document.Status == "Indexed" ? "badge-green" : Model.Document.Status == "Processing" ? "badge-orange" : Model.Document.Status == "Failed" ? "badge-red" : Model.Document.Status == "Reviewing" ? "badge-blue" : "badge-gray")" style="font-size: 1rem; padding: 0.5rem 1rem;">
             @Model.Document.Status
         </span>
+        @if (Model.Document.Status == "Reviewing")
+        {
+            <form method="post" class="flex gap-2" style="display: inline-flex; margin-left: 10px;">
+                <button type="submit" asp-page-handler="Approve" asp-route-id="@Model.Document.Id" class="btn btn-primary">Duyệt & Chunk</button>
+                <button type="submit" asp-page-handler="Reject" asp-route-id="@Model.Document.Id" class="btn btn-danger">Từ chối</button>
+            </form>
+        }
     </div>
 </div>
 
 <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
+    @if (Model.Document.Status == "Reviewing" || Model.Document.Status == "Indexed")
+    {
+        <div class="card" style="padding: 1.5rem; margin-bottom: 1rem; background: var(--surface-hover);">
+            <div class="flex justify-between items-center mb-2">
+                <h3 style="margin: 0; color: var(--text-primary);">Đánh giá AI (Quality Check)</h3>
+                <span class="badge @(Model.Document.QualityScore >= 80 ? "badge-green" : Model.Document.QualityScore >= 50 ? "badge-orange" : "badge-red")" style="font-size: 1.2rem;">
+                    @Model.Document.QualityScore / 100
+                </span>
+            </div>
+            <p><strong>Tóm tắt:</strong> @Model.Document.QualitySummary</p>
+            @if (!string.IsNullOrEmpty(Model.Document.QualityWarnings))
+            {
+                <div style="background-color: #ffcc0033; border-left: 4px solid #ffcc00; padding: 10px; margin-top: 10px; border-radius: 4px;">
+                    <strong style="color: #d4a000;">Cảnh báo:</strong> @Model.Document.QualityWarnings
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Document.ExtractedText))
+    {
+        <div class="card" style="padding: 1.5rem; margin-bottom: 1rem;">
+            <h3 style="margin: 0 0 1rem 0; color: var(--text-primary);">Nội dung trích xuất (Preview)</h3>
+            <div style="max-height: 400px; overflow-y: auto; background: var(--surface-bg); padding: 1rem; border-radius: 4px; font-family: var(--font-mono, monospace); white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; border: 1px solid var(--border-color);">
+                @Model.Document.ExtractedText
+            </div>
+        </div>
+    }
+
     <div class="card" style="padding: 1.5rem;">
         <div class="flex items-center justify-between mb-4">
             <h3 style="margin: 0;">Các đoạn dữ liệu (Chunks)</h3>

@@ -17,4 +17,5 @@ public class ChatSource
     public int ChunkIndex { get; set; }
     public int Page { get; set; }
     public string Snippet { get; set; } = string.Empty;
+    public float ConfidenceScore { get; set; }
 }

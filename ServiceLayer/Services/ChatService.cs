@@ -2,18 +2,20 @@ using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
 using ServiceLayer.Dtos;
 
+using ServiceLayer.Services.Embeddings;
+
 namespace ServiceLayer.Services;
 
 public class ChatService : IChatService
 {
     private readonly IChatRepository _chatRepo;
-    private readonly IDocumentChunkRepository _chunkRepo;
+    private readonly IRetrievalService _retrievalService;
     private readonly IGroqService _llm;
 
-    public ChatService(IChatRepository chatRepo, IDocumentChunkRepository chunkRepo, IGroqService llm)
+    public ChatService(IChatRepository chatRepo, IRetrievalService retrievalService, IGroqService llm)
     {
         _chatRepo = chatRepo;
-        _chunkRepo = chunkRepo;
+        _retrievalService = retrievalService;
         _llm = llm;
     }
 
@@ -40,7 +42,6 @@ public class ChatService : IChatService
         var session = await _chatRepo.GetSessionAsync(sessionId)
             ?? throw new InvalidOperationException("Session không tồn tại");
 
-        // Load history BEFORE saving the new question so we feed only prior turns
         var history = await _chatRepo.GetMessagesAsync(sessionId);
 
         await _chatRepo.AddMessageAsync(new ChatMessage
@@ -50,18 +51,39 @@ public class ChatService : IChatService
             Content = question
         });
 
-        var chunks = await _chunkRepo.SearchAsync(question, session.SubjectId, limit: 5);
+        var searchResults = await _retrievalService.SearchAsync(question, session.SubjectId, 5);
 
-        var answer = await _llm.GenerateAnswerAsync(question, chunks, history);
+        string answer;
+        var sources = new List<ChatSource>();
 
-        var sources = chunks.Select(c => new ChatSource
+        if (searchResults.Count == 0 || searchResults.All(x => x.Score < 0.2f))
         {
-            DocumentId = c.DocumentId,
-            DocumentName = c.DocumentName,
-            ChunkIndex = c.ChunkIndex,
-            Page = c.Page,
-            Snippet = c.Content.Length > 300 ? c.Content.Substring(0, 300) + "..." : c.Content
-        }).ToList();
+            answer = "Không tìm thấy thông tin này trong tài liệu đã được giảng viên cung cấp.";
+        }
+        else
+        {
+            var chunks = searchResults.Select(x => x.Chunk).ToList();
+            // Deduplicate sources by DocumentId, lấy điểm cao nhất cho mỗi tài liệu
+            sources = searchResults
+                .GroupBy(c => c.Chunk.DocumentId)
+                .Select(g =>
+                {
+                    var best = g.OrderByDescending(x => x.Score).First();
+                    return new ChatSource
+                    {
+                        DocumentId = best.Chunk.DocumentId,
+                        DocumentName = best.Chunk.DocumentName,
+                        ChunkIndex = best.Chunk.ChunkIndex,
+                        Page = best.Chunk.Page,
+                        Snippet = best.Chunk.Content.Length > 300 ? best.Chunk.Content.Substring(0, 300) + "..." : best.Chunk.Content,
+                        ConfidenceScore = Math.Min(best.Score, 1.0f) // Cap tối đa 100%
+                    };
+                })
+                .OrderByDescending(s => s.ConfidenceScore)
+                .ToList();
+
+            answer = await _llm.GenerateAnswerAsync(question, chunks, history);
+        }
 
         await _chatRepo.AddMessageAsync(new ChatMessage
         {

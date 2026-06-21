@@ -3,6 +3,9 @@ using DataAccessLayer.Constants;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
 
+using ServiceLayer.Services.Embeddings;
+using System.Text.Json;
+
 namespace ServiceLayer.Services;
 
 public class DocumentService : IDocumentService
@@ -10,17 +13,20 @@ public class DocumentService : IDocumentService
     private readonly IDocumentRepository _docRepo;
     private readonly IDocumentChunkRepository _chunkRepo;
     private readonly ITextExtractor _extractor;
-    private readonly IChunker _chunker;
     private readonly IDocumentFileStore _fileStore;
+    private readonly IQualityCheckService _qualityCheckService;
+    private readonly IChunkingService _chunkingService;
 
     public DocumentService(IDocumentRepository docRepo, IDocumentChunkRepository chunkRepo,
-        ITextExtractor extractor, IChunker chunker, IDocumentFileStore fileStore)
+        ITextExtractor extractor, IDocumentFileStore fileStore,
+        IQualityCheckService qualityCheckService, IChunkingService chunkingService)
     {
         _docRepo = docRepo;
         _chunkRepo = chunkRepo;
         _extractor = extractor;
-        _chunker = chunker;
         _fileStore = fileStore;
+        _qualityCheckService = qualityCheckService;
+        _chunkingService = chunkingService;
     }
 
     public async Task<UploadResult> UploadAsync(Stream content, string fileName, string contentType,
@@ -58,11 +64,10 @@ public class DocumentService : IDocumentService
             ChapterId = string.IsNullOrWhiteSpace(chapterId) ? null : chapterId,
             UploadedBy = uploadedByUserId,
             ChunkCount = 0,
-            Status = DocumentStatuses.Processing
+            Status = "Processing"
         };
         await _docRepo.CreateAsync(doc);
 
-        // Persist the original file so it can be opened/downloaded from the web later.
         ms.Position = 0;
         await _fileStore.SaveAsync(doc.Id, fileName, ms);
 
@@ -70,29 +75,20 @@ public class DocumentService : IDocumentService
         {
             ms.Position = 0;
             var pages = _extractor.Extract(ms, fileName, contentType);
-            var chunked = _chunker.Chunk(pages);
+            var extractedText = string.Join("\n\n", pages.Select(p => p.Text));
 
-            if (chunked.Count > 0)
-            {
-                var chunks = chunked.Select((c, i) => new DocumentChunk
-                {
-                    DocumentId = doc.Id,
-                    SubjectId = subjectId,
-                    DocumentName = fileName,
-                    ChunkIndex = i,
-                    Content = c.Text,
-                    Page = c.Page
-                }).ToList();
-                await _chunkRepo.InsertManyAsync(chunks);
-            }
+            doc.ExtractedText = extractedText;
 
-            doc.ChunkCount = chunked.Count;
-            doc.Status = chunked.Count > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
+            var qualityResult = await _qualityCheckService.CheckQualityAsync(extractedText);
+            doc.QualityScore = qualityResult.Score;
+            doc.QualitySummary = qualityResult.Summary;
+            doc.QualityWarnings = qualityResult.Warnings;
+
+            doc.Status = "Reviewing";
             await _docRepo.UpdateAsync(doc);
         }
         catch
         {
-            // Mark the document Failed (visible in the list) and re-throw so the caller can surface the error.
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
             throw;
@@ -114,39 +110,29 @@ public class DocumentService : IDocumentService
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc == null) return null;
 
-        // Re-chunking re-reads the original stored file and runs the chunker over it again.
-        var stream = _fileStore.Open(doc.Id, doc.FileName);
-        if (stream == null) return null; // uploaded before original-file storage existed — can't re-chunk
+        if (string.IsNullOrWhiteSpace(doc.ExtractedText))
+        {
+            // Cố gắng trích xuất lại
+            var stream = _fileStore.Open(doc.Id, doc.FileName);
+            if (stream != null)
+            {
+                using (stream)
+                {
+                    var pages = _extractor.Extract(stream, doc.FileName, doc.ContentType);
+                    doc.ExtractedText = string.Join("\n\n", pages.Select(p => p.Text));
+                }
+            }
+        }
 
         try
         {
-            List<(int Page, string Text)> pages;
-            using (stream)
-                pages = _extractor.Extract(stream, doc.FileName, doc.ContentType);
-
-            var chunked = _chunker.Chunk(pages);
-
-            // Replace the old chunks with the freshly produced ones.
-            await _chunkRepo.DeleteByDocumentAsync(documentId);
-            if (chunked.Count > 0)
-            {
-                var chunks = chunked.Select((c, i) => new DocumentChunk
-                {
-                    DocumentId = doc.Id,
-                    SubjectId = doc.SubjectId,
-                    DocumentName = doc.FileName,
-                    ChunkIndex = i,
-                    Content = c.Text,
-                    Page = c.Page
-                }).ToList();
-                await _chunkRepo.InsertManyAsync(chunks);
-            }
-
-            doc.ChunkCount = chunked.Count;
-            doc.Status = chunked.Count > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
+            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, doc.ExtractedText ?? "");
+            
+            doc.ChunkCount = chunkCount;
+            doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
 
-            return chunked.Count;
+            return chunkCount;
         }
         catch
         {
@@ -225,5 +211,39 @@ public class DocumentService : IDocumentService
         await _chunkRepo.DeleteByDocumentAsync(documentId);
         await _docRepo.DeleteAsync(documentId);
         if (doc != null) _fileStore.Delete(doc.Id, doc.FileName);
+    }
+
+    public async Task<bool> ApproveAsync(string documentId)
+    {
+        var doc = await _docRepo.GetByIdAsync(documentId);
+        if (doc == null || doc.Status != "Reviewing") return false;
+
+        doc.Status = "Indexing";
+        await _docRepo.UpdateAsync(doc);
+
+        try
+        {
+            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, doc.ExtractedText ?? "");
+            doc.ChunkCount = chunkCount;
+            doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
+            await _docRepo.UpdateAsync(doc);
+            return true;
+        }
+        catch
+        {
+            doc.Status = DocumentStatuses.Failed;
+            await _docRepo.UpdateAsync(doc);
+            return false;
+        }
+    }
+
+    public async Task<bool> RejectAsync(string documentId)
+    {
+        var doc = await _docRepo.GetByIdAsync(documentId);
+        if (doc == null || doc.Status != "Reviewing") return false;
+
+        doc.Status = "Rejected";
+        await _docRepo.UpdateAsync(doc);
+        return true;
     }
 }

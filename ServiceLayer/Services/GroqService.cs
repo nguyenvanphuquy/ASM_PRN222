@@ -151,4 +151,55 @@ public class GroqService : IGroqService
         }
         return sb.ToString().Trim();
     }
+
+    public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+            return "Chưa cấu hình API Key cho Groq.";
+
+        var messages = new List<object>
+        {
+            new { role = "user", content = prompt }
+        };
+
+        var payload = new
+        {
+            model = _groq.Model,
+            messages,
+            temperature = 0.3,
+            max_tokens = 2048
+        };
+
+        var url = $"{_groq.BaseUrl}/chat/completions";
+        var body = JsonSerializer.Serialize(payload);
+
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _groq.ApiKey);
+
+            var res = await _http.SendAsync(req, ct);
+            var text = await res.Content.ReadAsStringAsync(ct);
+
+            if (!res.IsSuccessStatusCode)
+                return $"Lỗi gọi API: {res.StatusCode}";
+
+            using var doc = JsonDocument.Parse(text);
+            var content = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+            return content?.Trim() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Groq call failed in GenerateTextAsync");
+            return "Lỗi khi gọi API phân tích.";
+        }
+    }
 }

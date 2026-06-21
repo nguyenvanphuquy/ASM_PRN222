@@ -3,6 +3,8 @@ using DataAccessLayer.Context;
 using DataAccessLayer.Entities;
 using Microsoft.EntityFrameworkCore;
 
+using System.Text.Json;
+
 namespace DataAccessLayer.Repositories;
 
 public class DocumentChunkRepository : IDocumentChunkRepository
@@ -26,35 +28,66 @@ public class DocumentChunkRepository : IDocumentChunkRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<DocumentChunk>> SearchAsync(string query, string? subjectId, int limit)
+    public async Task<List<(DocumentChunk Chunk, float Score)>> SearchAsync(string query, string? subjectId, int limit, float[]? queryVector = null)
     {
-        if (string.IsNullOrWhiteSpace(query)) return new List<DocumentChunk>();
+        if (string.IsNullOrWhiteSpace(query)) return new List<(DocumentChunk, float)>();
 
         var baseQuery = _context.DocumentChunks.AsQueryable();
         if (!string.IsNullOrEmpty(subjectId))
             baseQuery = baseQuery.Where(c => c.SubjectId == subjectId);
 
-        // 1) Nếu người dùng nhắc tới "chương N / chapter N / bài N / buổi N" → ưu tiên
-        //    lấy đúng tài liệu có số đó trong tên (vd: "chuong 1" → "Chapter 01 ...").
+        // 1) Nếu người dùng nhắc tới "chương N"
         var chapterNo = ExtractChapterNumber(query);
         if (chapterNo.HasValue)
         {
             var n = chapterNo.Value;
-            var padded = n.ToString("D2");           // 1 → "01"
-            var plain = n.ToString();                // 1 → "1"
+            var padded = n.ToString("D2");
+            var plain = n.ToString();
             var chapterChunks = await baseQuery
                 .Where(c => EF.Functions.Like(c.DocumentName, $"%Chapter {padded}%")
                          || EF.Functions.Like(c.DocumentName, $"%Chapter {plain}%")
                          || EF.Functions.Like(c.DocumentName, $"%Chuong {padded}%")
                          || EF.Functions.Like(c.DocumentName, $"%Chuong {plain}%"))
-                .OrderBy(c => c.ChunkIndex)          // lấy từ đầu tài liệu để tóm tắt
+                .OrderBy(c => c.ChunkIndex)
                 .Take(limit)
                 .ToListAsync();
 
-            if (chapterChunks.Count > 0) return chapterChunks;
+            if (chapterChunks.Count > 0) return chapterChunks.Select(c => (c, 1.0f)).ToList();
         }
 
-        // 2) Tìm theo từng từ khóa (≥3 ký tự, bỏ từ thừa) trong cả Nội dung lẫn Tên tài liệu.
+        // 2) Cosine Similarity
+        if (queryVector != null && queryVector.Length > 0)
+        {
+            var allChunks = await baseQuery.ToListAsync();
+            
+            var scoredChunks = allChunks.Select(c =>
+            {
+                if (string.IsNullOrEmpty(c.VectorJson)) return (Chunk: c, Score: -1f);
+                try
+                {
+                    var chunkVector = JsonSerializer.Deserialize<float[]>(c.VectorJson);
+                    if (chunkVector == null || chunkVector.Length != queryVector.Length) return (Chunk: c, Score: -1f);
+                    
+                    float dotProduct = 0, normA = 0, normB = 0;
+                    for (int i = 0; i < queryVector.Length; i++)
+                    {
+                        dotProduct += queryVector[i] * chunkVector[i];
+                        normA += queryVector[i] * queryVector[i];
+                        normB += chunkVector[i] * chunkVector[i];
+                    }
+                    float similarity = (normA == 0 || normB == 0) ? 0 : dotProduct / (float)(Math.Sqrt(normA) * Math.Sqrt(normB));
+                    return (Chunk: c, Score: similarity);
+                }
+                catch { return (Chunk: c, Score: -1f); }
+            }).Where(x => x.Score > 0.3f)
+              .OrderByDescending(x => x.Score)
+              .Take(limit)
+              .ToList();
+
+            if (scoredChunks.Count > 0) return scoredChunks;
+        }
+
+        // 3) Keyword search
         var keywords = query
             .Split(new[] { ' ', ',', '.', '?', '!', ':', ';' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(w => w.Trim())
@@ -76,28 +109,25 @@ public class DocumentChunkRepository : IDocumentChunkRepository
 
         if (candidates.Count > 0)
         {
-            // Xếp hạng theo số từ khóa khớp (chunk khớp nhiều từ → ưu tiên hơn)
             return candidates
                 .GroupBy(c => c.Id)
                 .OrderByDescending(g => g.Count())
                 .Take(limit)
-                .Select(g => g.First())
+                .Select(g => (g.First(), 0.5f + (g.Count() * 0.1f))) // Phỏng đoán điểm keyword
                 .ToList();
         }
 
-        // 3) Fallback: không khớp từ khóa nào nhưng chat đang gắn với một môn →
-        //    trả về các đoạn đầu của tài liệu trong môn để câu hỏi dạng "tóm tắt"
-        //    vẫn có ngữ cảnh cho LLM xử lý (thay vì báo "không tìm thấy").
         if (!string.IsNullOrEmpty(subjectId))
         {
-            return await baseQuery
+            var fallback = await baseQuery
                 .OrderBy(c => c.DocumentName)
                 .ThenBy(c => c.ChunkIndex)
                 .Take(limit)
                 .ToListAsync();
+            return fallback.Select(c => (c, 0.1f)).ToList();
         }
 
-        return new List<DocumentChunk>();
+        return new List<(DocumentChunk, float)>();
     }
 
     // Tìm số chương từ câu hỏi: "chuong 1", "chương 01", "chapter 2", "bai 3", "buoi 4"...

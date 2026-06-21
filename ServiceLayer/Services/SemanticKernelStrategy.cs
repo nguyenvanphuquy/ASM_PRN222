@@ -8,8 +8,9 @@ namespace ServiceLayer.Services;
 /// Đo độ dài theo KÝ TỰ: tách văn bản thành dòng ≤200 ký tự, rồi gom thành đoạn (chunk)
 /// ≤800 ký tự với overlap 100 ký tự; bỏ các chunk ngắn hơn 50 ký tự.
 /// </summary>
-public class TextChunkerChunker : IChunker
+public class SemanticKernelStrategy : IChunkingStrategy
 {
+    public string Name => "SemanticKernel";
     // Theo spec: 500–1000 ký tự mỗi chunk.
     private const int LineMaxChars = 200;
     private const int ChunkSize = 800;

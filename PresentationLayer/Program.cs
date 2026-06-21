@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using ServiceLayer.Services;
+using ServiceLayer.Services.Embeddings;
 using ServiceLayer.Settings;
 
 namespace PresentationLayer;
@@ -53,8 +54,25 @@ public class Program
         builder.Services.AddScoped<ISubjectService, SubjectService>();
         builder.Services.AddScoped<IChapterService, ChapterService>();
         builder.Services.AddScoped<IAllowedEmailService, AllowedEmailService>();
+        builder.Services.AddScoped<ISystemSettingService, SystemSettingService>();
+        
         builder.Services.AddSingleton<ITextExtractor, TextExtractor>();
-        builder.Services.AddSingleton<IChunker, TextChunkerChunker>();
+        
+        // Chunking
+        builder.Services.AddSingleton<IChunkingStrategy, SemanticKernelStrategy>();
+        builder.Services.AddSingleton<IChunkingStrategy, FixedSizeChunkingStrategy>();
+        builder.Services.AddSingleton<IChunkingStrategy, SentenceChunkingStrategy>();
+        builder.Services.AddSingleton<IChunkingFactory, ChunkingFactory>();
+        
+        // Embeddings
+        builder.Services.AddHttpClient<IEmbeddingProvider, OpenAIEmbeddingProvider>();
+        builder.Services.AddHttpClient<IEmbeddingProvider, HuggingFaceEmbeddingProvider>();
+        builder.Services.AddScoped<IEmbeddingFactory>(sp => 
+        {
+            var providers = sp.GetServices<IEmbeddingProvider>();
+            return new EmbeddingFactory(providers);
+        });
+
         builder.Services.AddSingleton<IDocumentFileStore>(_ =>
             new LocalDocumentFileStore(
                 Path.Combine(builder.Environment.ContentRootPath, "App_Data", "uploads")));
@@ -62,6 +80,9 @@ public class Program
         builder.Services.AddScoped<IFeedbackService, FeedbackService>();
         builder.Services.AddScoped<IDashboardService, DashboardService>();
         builder.Services.AddScoped<IChatService, ChatService>();
+        builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
+        builder.Services.AddScoped<IChunkingService, ChunkingService>();
+        builder.Services.AddScoped<IRetrievalService, RetrievalService>();
 
         // Groq (HTTP client)
         builder.Services.AddHttpClient<IGroqService, GroqService>(c =>
@@ -154,6 +175,14 @@ public class Program
                     END;
                     IF COL_LENGTH('Documents', 'ChapterId') IS NULL
                         ALTER TABLE Documents ADD ChapterId nvarchar(36) NULL;
+                    IF COL_LENGTH('Documents', 'ExtractedText') IS NULL
+                        ALTER TABLE Documents ADD ExtractedText nvarchar(max) NULL;
+                    IF COL_LENGTH('Documents', 'QualityScore') IS NULL
+                        ALTER TABLE Documents ADD QualityScore int NOT NULL DEFAULT 0;
+                    IF COL_LENGTH('Documents', 'QualitySummary') IS NULL
+                        ALTER TABLE Documents ADD QualitySummary nvarchar(max) NULL;
+                    IF COL_LENGTH('Documents', 'QualityWarnings') IS NULL
+                        ALTER TABLE Documents ADD QualityWarnings nvarchar(max) NULL;
                     IF OBJECT_ID('AllowedEmails') IS NULL
                     BEGIN
                         CREATE TABLE AllowedEmails (
@@ -164,6 +193,21 @@ public class Program
                             CreatedAt datetime2     NOT NULL DEFAULT GETUTCDATE()
                         );
                         CREATE UNIQUE INDEX UX_AllowedEmails_Email ON AllowedEmails (Email);
+                    END;
+                    IF COL_LENGTH('DocumentChunks', 'VectorJson') IS NULL
+                        ALTER TABLE DocumentChunks ADD VectorJson nvarchar(max) NULL;
+                    IF COL_LENGTH('DocumentChunks', 'EmbeddingModel') IS NULL
+                        ALTER TABLE DocumentChunks ADD EmbeddingModel nvarchar(100) NULL;
+                    IF OBJECT_ID('SystemSettings') IS NULL
+                    BEGIN
+                        CREATE TABLE SystemSettings (
+                            Id          nvarchar(36)  NOT NULL PRIMARY KEY,
+                            [Key]       nvarchar(100) NOT NULL,
+                            Value       nvarchar(max) NULL,
+                            Description nvarchar(500) NULL,
+                            UpdatedAt   datetime2     NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE UNIQUE INDEX UX_SystemSettings_Key ON SystemSettings ([Key]);
                     END;");
 
                 var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();

@@ -15,4 +15,9 @@ public class Document
     public int ChunkCount { get; set; }
     public string Status { get; set; } = "Indexed";
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+
+    public string? ExtractedText { get; set; }
+    public int QualityScore { get; set; }
+    public string? QualitySummary { get; set; }
+    public string? QualityWarnings { get; set; }
 }

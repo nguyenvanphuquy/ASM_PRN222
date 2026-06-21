@@ -9,4 +9,6 @@ public interface IGroqService
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
         CancellationToken ct = default);
+
+    Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default);
 }

@@ -40,7 +40,11 @@ else
                             @foreach (var src in msg.Sources.Take(3))
                             {
                                 <div style="font-size:0.75rem;color:var(--accent-blue);margin-bottom:2px">
-                                    📄 @src.DocumentName – Trang @src.Page
+                                    📄 @src.DocumentName – Trang @src.Page 
+                                    @if(src.ConfidenceScore > 0)
+                                    {
+                                        <span style="color:var(--text-muted); font-size:0.7rem;">(Độ tin cậy: @(Math.Round(src.ConfidenceScore * 100))%)</span>
+                                    }
                                 </div>
                             }
                         </div>

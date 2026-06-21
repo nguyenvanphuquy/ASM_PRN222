@@ -9,5 +9,7 @@ public class DocumentChunk
     public int ChunkIndex { get; set; }
     public string Content { get; set; } = string.Empty;
     public int Page { get; set; }
+    public string? VectorJson { get; set; }
+    public string? EmbeddingModel { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

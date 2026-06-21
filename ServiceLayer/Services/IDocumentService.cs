@@ -36,4 +36,7 @@ public interface IDocumentService
     // Converts a .docx to formatted HTML (headings, lists, tables, embedded images) for in-web viewing.
     Task<string?> ExtractDocxHtmlAsync(string documentId);
     Task DeleteAsync(string documentId);
+    
+    Task<bool> ApproveAsync(string documentId);
+    Task<bool> RejectAsync(string documentId);
 }

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<AllowedEmail> AllowedEmails => Set<AllowedEmail>();
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
@@ -65,6 +66,9 @@ public class AppDbContext : DbContext
             e.Property(d => d.ContentType).HasMaxLength(100);
             e.Property(d => d.ContentHash).HasMaxLength(64).HasDefaultValue("");
             e.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Indexed");
+            e.Property(d => d.ExtractedText).HasColumnType("nvarchar(max)");
+            e.Property(d => d.QualitySummary).HasColumnType("nvarchar(max)");
+            e.Property(d => d.QualityWarnings).HasColumnType("nvarchar(max)");
             e.HasIndex(d => d.SubjectId);
             e.HasIndex(d => d.ChapterId);
         });
@@ -77,8 +81,20 @@ public class AppDbContext : DbContext
             e.Property(c => c.SubjectId).HasMaxLength(36);
             e.Property(c => c.DocumentName).HasMaxLength(500);
             e.Property(c => c.Content).HasColumnType("nvarchar(max)");
+            e.Property(c => c.VectorJson).HasColumnType("nvarchar(max)");
+            e.Property(c => c.EmbeddingModel).HasMaxLength(100);
             e.HasIndex(c => c.SubjectId);
             e.HasIndex(c => c.DocumentId);
+        });
+
+        modelBuilder.Entity<SystemSetting>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Id).HasMaxLength(36);
+            e.Property(s => s.Key).HasMaxLength(100);
+            e.HasIndex(s => s.Key).IsUnique();
+            e.Property(s => s.Value).HasColumnType("nvarchar(max)");
+            e.Property(s => s.Description).HasMaxLength(500);
         });
 
         modelBuilder.Entity<ChatSession>(e =>

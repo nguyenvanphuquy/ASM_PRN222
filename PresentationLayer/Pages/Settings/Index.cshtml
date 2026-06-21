@@ -1,0 +1,50 @@
+@page
+@model PresentationLayer.Pages.Settings.IndexModel
+@{
+}
+
+<div class="page-header">
+    <h1>Cài đặt RBL (Research Based Learning)</h1>
+    <p>Cấu hình các chiến lược cắt chunk và nhúng vector cho thực nghiệm</p>
+</div>
+
+<div class="card" style="max-width: 600px;">
+    <form method="post">
+        <div class="form-group">
+            <label class="form-label" asp-for="ChunkingStrategy">Chiến lược cắt Chunk</label>
+            <select asp-for="ChunkingStrategy" class="form-control">
+                <option value="SemanticKernel">Semantic Kernel (Mặc định)</option>
+                <option value="FixedSize">Cắt đoạn cố định (500 ký tự)</option>
+                <option value="Sentence">Cắt theo câu</option>
+            </select>
+            <small class="text-muted">Áp dụng cho các tài liệu upload mới hoặc khi bấm Re-Chunk.</small>
+        </div>
+
+        <div class="form-group mt-4">
+            <label class="form-label" asp-for="EmbeddingModel">Mô hình Embedding (Nhúng Vector)</label>
+            <select asp-for="EmbeddingModel" class="form-control">
+                <option value="Keyword">Không dùng (Tìm kiếm từ khóa LIKE cũ)</option>
+                <option value="text-embedding-3-small">OpenAI (text-embedding-3-small)</option>
+                <option value="PhoBERT-base">HuggingFace (PhoBERT-base)</option>
+                <option value="bge-m3">HuggingFace (bge-m3)</option>
+                <option value="multilingual-e5-base">HuggingFace (multilingual-e5-base)</option>
+            </select>
+            <small class="text-muted">Tính khoảng cách Cosine trong bộ nhớ. Lựa chọn này cũng áp dụng cho lúc ChatBot truy vấn ngữ cảnh.</small>
+        </div>
+
+        <div class="form-group mt-4">
+            <label class="form-label">OpenAI API Key (Tùy chọn)</label>
+            <input type="password" asp-for="OpenAIApiKey" class="form-control" placeholder="Chỉ nhập nếu chọn mô hình OpenAI" />
+        </div>
+
+        <div class="form-group mt-4">
+            <label class="form-label">HuggingFace API Token (Tùy chọn)</label>
+            <input type="password" asp-for="HuggingFaceApiToken" class="form-control" placeholder="hf_..." />
+            <small class="text-muted">Chỉ nhập nếu chọn mô hình HuggingFace. Lấy tại huggingface.co/settings/tokens</small>
+        </div>
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">Lưu Cấu Hình</button>
+        </div>
+    </form>
+</div>

@@ -45,55 +45,75 @@ else
         </a>
 
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Tổng quan</div>
-            <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
-                <span class="nav-icon">📊</span> Dashboard
-            </a>
-            <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
-                <span class="nav-icon">💬</span> Chat AI
-            </a>
-
-            <div class="nav-section-label">Tài liệu</div>
-            <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
-                <span class="nav-icon">📄</span> Tài liệu
-            </a>
-            @if (isCanUpload)
+            @if (role == "Lecturer")
             {
-                <a class="nav-item @(IsActive("/documents/upload") ? "active" : "")" href="/Documents/Upload">
-                    <span class="nav-icon">⬆️</span> Upload
+                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
+                    <span class="nav-icon">📂</span> Document Management
+                </a>
+                <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
+                    <span class="nav-icon">🤖</span> Chatbot Testing
+                </a>
+                <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
+                    <span class="nav-icon">📊</span> RBL Experiment
+                </a>
+                <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
+                    <span class="nav-icon">👤</span> Profile
+                </a>
+                <a class="nav-item nav-logout" href="/Auth/Logout">
+                    <span class="nav-icon">🚪</span> Đăng xuất
                 </a>
             }
-            <a class="nav-item @(IsActive("/documents/compare") ? "active" : "")" href="/Documents/Compare">
-                <span class="nav-icon">🔍</span> So sánh AI
-                <span class="nav-badge">New</span>
-            </a>
-
-            <div class="nav-section-label">Quản lý</div>
-            <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
-                <span class="nav-icon">📚</span> Môn học
-            </a>
-            <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
-                <span class="nav-icon">💡</span> Phản hồi
-            </a>
-
-            @if (role == "Admin" || role == "Lecturer")
+            else if (role == "Admin")
             {
-                <div class="nav-section-label">Admin</div>
-                @if (role == "Admin")
-                {
-                    <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
-                        <span class="nav-icon">👥</span> Người dùng
-                    </a>
-                }
+                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
+                    <span class="nav-icon">👥</span> User Management
+                </a>
+                <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
+                    <span class="nav-icon">📖</span> Course Management
+                </a>
+                <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
+                    <span class="nav-icon">📂</span> Document Monitoring
+                </a>
+                <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
+                    <span class="nav-icon">⚙️</span> System Monitoring
+                </a>
+                <a class="nav-item @(IsActive("/auditlogs") ? "active" : "")" href="/AuditLogs">
+                    <span class="nav-icon">📜</span> Audit Logs
+                </a>
+                <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
+                    <span class="nav-icon">👤</span> Profile
+                </a>
+                <a class="nav-item nav-logout" href="/Auth/Logout">
+                    <span class="nav-icon">🚪</span> Đăng xuất
+                </a>
             }
-
-            <div class="nav-section-label">Tài khoản</div>
-            <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
-                <span class="nav-icon">👤</span> Hồ sơ
-            </a>
-            <a class="nav-item nav-logout" href="/Auth/Logout">
-                <span class="nav-icon">🚪</span> Đăng xuất
-            </a>
+            else
+            {
+                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
+                    <span class="nav-icon">📚</span> Subjects
+                </a>
+                <a class="nav-item @(IsActive("/chat/session") ? "active" : "")" href="/Chat">
+                    <span class="nav-icon">🤖</span> AI Chatbot
+                </a>
+                <a class="nav-item @(path == "/chat" || path == "/chat/" ? "active" : "")" href="/Chat">
+                    <span class="nav-icon">🕒</span> Chat History
+                </a>
+                <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
+                    <span class="nav-icon">👤</span> Profile
+                </a>
+                <a class="nav-item nav-logout" href="/Auth/Logout">
+                    <span class="nav-icon">🚪</span> Đăng xuất
+                </a>
+            }
         </nav>
 
         <div class="sidebar-footer">
