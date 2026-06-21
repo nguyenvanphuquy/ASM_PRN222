@@ -7,7 +7,11 @@ public class SubjectService : ISubjectService
 {
     private readonly ISubjectRepository _repo;
     private readonly AutoMapper.IMapper _mapper;
-    public SubjectService(ISubjectRepository repo, AutoMapper.IMapper mapper) => _repo = repo;
+    public SubjectService(ISubjectRepository repo, AutoMapper.IMapper mapper)
+    {
+        _repo = repo;
+        _mapper = mapper;
+    }
 
     public async Task<List<ServiceLayer.DTOs.SubjectDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.SubjectDto>>(entities); }
     public async Task<ServiceLayer.DTOs.SubjectDto?> GetByIdAsync(string id) { var entity = await _repo.GetByIdAsync(id); return _mapper.Map<ServiceLayer.DTOs.SubjectDto>(entity); }

@@ -18,6 +18,7 @@ public class ChatService : IChatService
         _chatRepo = chatRepo;
         _retrievalService = retrievalService;
         _llm = llm;
+        _mapper = mapper;
     }
 
     public async Task<List<ServiceLayer.DTOs.ChatSessionDto>> GetSessionsAsync(string userId) { var entities = await _chatRepo.GetSessionsForUserAsync(userId); return _mapper.Map<List<ServiceLayer.DTOs.ChatSessionDto>>(entities); }
@@ -102,6 +103,8 @@ public class ChatService : IChatService
         return new ChatAnswer(answer, sources);
     }
 }
+
+
 
 
 

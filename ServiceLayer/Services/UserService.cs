@@ -13,10 +13,11 @@ public class UserService : IUserService
     private readonly IUserRepository _repo;
     private readonly AutoMapper.IMapper _mapper;
     private readonly IAllowedEmailService _allowedEmails;
-    public UserService(IUserRepository repo, IAllowedEmailService allowedEmails)
+    public UserService(IUserRepository repo, IAllowedEmailService allowedEmails, AutoMapper.IMapper mapper)
     {
         _repo = repo;
         _allowedEmails = allowedEmails;
+        _mapper = mapper;
     }
 
     public async Task<List<ServiceLayer.DTOs.UserDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.UserDto>>(entities); }
@@ -172,6 +173,7 @@ public class UserService : IUserService
         return (total, admins, lecturers, students);
     }
 }
+
 
 
 

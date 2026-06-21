@@ -9,10 +9,11 @@ public class ChapterService : IChapterService
     private readonly AutoMapper.IMapper _mapper;
     private readonly IDocumentRepository _docRepo;
 
-    public ChapterService(IChapterRepository repo, IDocumentRepository docRepo)
+    public ChapterService(IChapterRepository repo, IDocumentRepository docRepo, AutoMapper.IMapper mapper)
     {
         _repo = repo;
         _docRepo = docRepo;
+        _mapper = mapper;
     }
 
     public async Task<List<ServiceLayer.DTOs.ChapterDto>> GetBySubjectAsync(string subjectId) { var entities = await _repo.GetBySubjectAsync(subjectId); return _mapper.Map<List<ServiceLayer.DTOs.ChapterDto>>(entities); }
@@ -59,6 +60,7 @@ public class ChapterService : IChapterService
         await _repo.DeleteAsync(id);
     }
 }
+
 
 
 

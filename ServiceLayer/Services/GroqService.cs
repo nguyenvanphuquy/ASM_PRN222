@@ -109,7 +109,7 @@ public class GroqService : IGroqService
         sb.AppendLine("Quy tắc bắt buộc:");
         sb.AppendLine("1. CHỈ trả lời dựa trên nội dung tài liệu được cung cấp bên dưới.");
         sb.AppendLine("2. Nếu tài liệu không đủ thông tin, nói rõ \"Mình chưa tìm thấy trong tài liệu\" — KHÔNG được bịa.");
-        sb.AppendLine("3. Khi trích dẫn, ghi rõ nguồn dạng [Tên tài liệu - Trang X] sau câu liên quan.");
+        sb.AppendLine("3. KHÔNG tự ý chèn Nguồn (Source) hay Độ tin cậy vào câu trả lời vì giao diện đã tự động hiển thị chúng bên dưới.");
         sb.AppendLine("4. Giọng thân thiện, ngắn gọn, có thể dùng markdown.");
         sb.AppendLine();
         sb.AppendLine("=== NGỮ CẢNH TÀI LIỆU ===");
