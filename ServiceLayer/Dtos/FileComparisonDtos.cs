@@ -28,3 +28,12 @@ public record FileComparisonResult(
     int TotalDifferences,
     List<ComparisonDifference> Differences
 );
+
+public class CompareByIdRequest
+{
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Id tài liệu 1 không được để trống")]
+    public string DocumentId1 { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Id tài liệu 2 không được để trống")]
+    public string DocumentId2 { get; set; } = string.Empty;
+}

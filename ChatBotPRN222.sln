@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36908.2
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatBotPRN222", "ChatBotPRN222\ChatBotPRN222.csproj", "{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccessLayer", "DataAccessLayer\DataAccessLayer.csproj", "{2E501EB2-52E8-4558-AD53-D29BB663360D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceLayer", "ServiceLayer\ServiceLayer.csproj", "{9CF3BEC0-B342-4ACB-9C63-2777EFA5CDB8}"
@@ -21,18 +19,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|x64.Build.0 = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Debug|x86.Build.0 = Debug|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|x64.ActiveCfg = Release|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|x64.Build.0 = Release|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|x86.ActiveCfg = Release|Any CPU
-		{6F6699C4-AE51-4B4E-83E2-F2344535DFD8}.Release|x86.Build.0 = Release|Any CPU
 		{2E501EB2-52E8-4558-AD53-D29BB663360D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2E501EB2-52E8-4558-AD53-D29BB663360D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E501EB2-52E8-4558-AD53-D29BB663360D}.Debug|x64.ActiveCfg = Debug|Any CPU
