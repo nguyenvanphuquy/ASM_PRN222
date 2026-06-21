@@ -26,8 +26,9 @@ else
                 <h3 style="font-size:1rem;margin-bottom:6px">@s.Name</h3>
                 <p class="text-sm text-muted">@s.Code</p>
                 <div class="flex gap-2 mt-4">
-                    <a href="/Documents?SubjectId=@s.Id" class="btn btn-secondary btn-sm">📄 Tài liệu</a>
-                    <a href="/Chat" class="btn btn-primary btn-sm">💬 Chat</a>
+                    <a href="/Documents?SubjectId=@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📄 Tài liệu</a>
+                    <a href="/Subjects/Chapters/@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📖 Chương</a>
+                    <a href="/Chat" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">💬 Chat</a>
                 </div>
             </div>
         }

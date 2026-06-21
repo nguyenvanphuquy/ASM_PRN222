@@ -1,0 +1,145 @@
+@page "{subjectId}"
+@model PresentationLayer.Pages.Subjects.ChaptersModel
+@{
+    ViewData["Title"] = "Chương – " + Model.SubjectName;
+    ViewData["TopbarTitle"] = "📖 " + Model.SubjectName + " — Danh sách chương";
+}
+
+<div class="page-header flex items-center justify-between">
+    <div>
+        <a href="/Subjects" class="btn btn-secondary btn-sm" style="margin-bottom:8px">← Môn học</a>
+        <h1>📖 @Model.SubjectName</h1>
+        <p>Quản lý danh sách chương (Chapter) của môn học</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">+ Thêm chương</button>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mb-4">✅ @TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger mb-4">❌ @TempData["Error"]</div>
+}
+
+@if (Model.Chapters.Count == 0)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-state-icon">📖</div>
+            <div class="empty-state-title">Chưa có chương nào</div>
+            <p class="empty-state-text">Nhấn "+ Thêm chương" để tạo chương đầu tiên.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border-color)">
+                    <th style="padding:12px 16px;text-align:left;width:50px">STT</th>
+                    <th style="padding:12px 16px;text-align:left">Tên chương</th>
+                    <th style="padding:12px 16px;text-align:left">Mô tả</th>
+                    <th style="padding:12px 16px;text-align:center;width:140px">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Chapters.OrderBy(c => c.OrderIndex))
+                {
+                    <tr style="border-bottom:1px solid var(--border-color);transition:background 0.15s"
+                        onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background=''">
+                        <td style="padding:12px 16px;color:var(--text-muted);font-weight:600">@c.OrderIndex</td>
+                        <td style="padding:12px 16px;font-weight:500">@c.Title</td>
+                        <td style="padding:12px 16px;color:var(--text-muted);font-size:0.9rem">@c.Description</td>
+                        <td style="padding:12px 16px;text-align:center">
+                            <button class="btn btn-secondary btn-sm"
+                                    onclick="openEdit('@c.Id','@c.Title.Replace("'","\\'")', '@c.Description.Replace("'","\\'")', @c.OrderIndex)">
+                                ✏️ Sửa
+                            </button>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id"
+                                  style="display:inline"
+                                  onsubmit="return confirmDelete(this)">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="chapterTitle" value="@c.Title" />
+                                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Modal Thêm/Sửa Chapter -->
+<div id="chapterModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
+    <div class="card" style="width:480px;max-width:95vw;padding:2rem">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="modalTitle" style="margin:0">Thêm chương</h3>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted)">✕</button>
+        </div>
+
+        <form method="post" id="modalForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="editId" name="id" value="" />
+
+            <div class="form-group">
+                <label class="form-label">Tên chương *</label>
+                <input type="text" id="inputTitle" name="title" class="form-control" required placeholder="VD: Chương 1: Giới thiệu" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mô tả</label>
+                <textarea id="inputDesc" name="description" class="form-control" rows="3" placeholder="Nội dung chương này bao gồm..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Thứ tự (để trống = tự động)</label>
+                <input type="number" id="inputOrder" name="orderIndex" class="form-control" min="1" placeholder="1, 2, 3..." />
+            </div>
+
+            <div class="flex gap-2 justify-end mt-4">
+                <button type="button" onclick="closeModal()" class="btn btn-secondary">Hủy</button>
+                <button type="submit" class="btn btn-primary" id="modalSubmitBtn">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const modal = document.getElementById('chapterModal');
+
+function openModal() {
+    document.getElementById('modalTitle').textContent = 'Thêm chương';
+    document.getElementById('modalSubmitBtn').textContent = '+ Thêm';
+    document.getElementById('modalForm').action = '?handler=Create';
+    document.getElementById('editId').value = '';
+    document.getElementById('inputTitle').value = '';
+    document.getElementById('inputDesc').value = '';
+    document.getElementById('inputOrder').value = '';
+    modal.style.display = 'flex';
+}
+
+function openEdit(id, title, desc, order) {
+    document.getElementById('modalTitle').textContent = 'Sửa chương';
+    document.getElementById('modalSubmitBtn').textContent = '💾 Lưu';
+    document.getElementById('modalForm').action = '?handler=Update';
+    document.getElementById('editId').value = id;
+    document.getElementById('inputTitle').value = title;
+    document.getElementById('inputDesc').value = desc;
+    document.getElementById('inputOrder').value = order;
+    modal.style.display = 'flex';
+}
+
+function closeModal() { modal.style.display = 'none'; }
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+function confirmDelete(form) {
+    const title = form.querySelector('input[name="chapterTitle"]')?.value || 'chương này';
+    return confirm(`Xóa "${title}"? Tài liệu trong chương sẽ không bị xóa.`);
+}
+</script>
+}

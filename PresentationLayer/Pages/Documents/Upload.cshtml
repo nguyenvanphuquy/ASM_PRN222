@@ -43,13 +43,22 @@
 
             <div class="form-group">
                 <label class="form-label" for="SubjectId">Môn học *</label>
-                <select id="SubjectId" asp-for="SubjectId" class="form-control" required>
+                <select id="SubjectId" asp-for="SubjectId" class="form-control" required
+                        onchange="loadChapters(this.value)">
                     <option value="">– Chọn môn học –</option>
                     @foreach (var s in Model.Subjects)
                     {
                         <option value="@s.Id">@s.Name</option>
                     }
                 </select>
+            </div>
+
+            <div class="form-group" id="chapterGroup" style="display:none">
+                <label class="form-label" for="ChapterId">Chương (tuỳ chọn)</label>
+                <select id="ChapterId" asp-for="ChapterId" class="form-control">
+                    <option value="">– Không gán chương –</option>
+                </select>
+                <div id="chapterLoading" style="display:none;font-size:0.85rem;color:var(--text-muted);margin-top:4px">⏳ Đang tải danh sách chương...</div>
             </div>
 
             <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
@@ -65,8 +74,39 @@
 
 @section Scripts {
 <script>
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
+const subjectSelect = document.getElementById('SubjectId');
+const chapterGroup  = document.getElementById('chapterGroup');
+const chapterSelect = document.getElementById('ChapterId');
+
+async function loadChapters(subjectId) {
+    if (!subjectId) { chapterGroup.style.display = 'none'; return; }
+
+    chapterGroup.style.display = '';
+    document.getElementById('chapterLoading').style.display = '';
+    chapterSelect.style.display = 'none';
+
+    try {
+        const res = await fetch(`/api/chapters/${subjectId}`);
+        const chapters = await res.json();
+
+        chapterSelect.innerHTML = '<option value="">– Không gán chương –</option>';
+        chapters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.orderIndex}. ${c.title}`;
+            chapterSelect.appendChild(opt);
+        });
+    } catch (e) {
+        chapterSelect.innerHTML = '<option value="">– Không thể tải chương –</option>';
+    }
+
+    document.getElementById('chapterLoading').style.display = 'none';
+    chapterSelect.style.display = '';
+}
+
+// Nếu môn đã được chọn sẵn (Lecturer), tự load ngay
+if (subjectSelect.value) loadChapters(subjectSelect.value);
+
 
 // Drag & drop
 ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); }));

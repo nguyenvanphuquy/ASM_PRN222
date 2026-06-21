@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using DataAccessLayer.Constants;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
-
 using ServiceLayer.Services.Embeddings;
 using System.Text.Json;
 
@@ -16,10 +15,12 @@ public class DocumentService : IDocumentService
     private readonly IDocumentFileStore _fileStore;
     private readonly IQualityCheckService _qualityCheckService;
     private readonly IChunkingService _chunkingService;
+    private readonly INotificationService _notifier;
 
     public DocumentService(IDocumentRepository docRepo, IDocumentChunkRepository chunkRepo,
         ITextExtractor extractor, IDocumentFileStore fileStore,
-        IQualityCheckService qualityCheckService, IChunkingService chunkingService)
+        IQualityCheckService qualityCheckService, IChunkingService chunkingService,
+        INotificationService notifier)
     {
         _docRepo = docRepo;
         _chunkRepo = chunkRepo;
@@ -27,6 +28,7 @@ public class DocumentService : IDocumentService
         _fileStore = fileStore;
         _qualityCheckService = qualityCheckService;
         _chunkingService = chunkingService;
+        _notifier = notifier;
     }
 
     public async Task<UploadResult> UploadAsync(Stream content, string fileName, string contentType,
@@ -86,11 +88,20 @@ public class DocumentService : IDocumentService
 
             doc.Status = "Reviewing";
             await _docRepo.UpdateAsync(doc);
+
+            // 🔔 Thông báo cho giảng viên: tài liệu đã qua kiểm tra AI, chờ duyệt
+            await _notifier.SendAsync(uploadedByUserId, "info",
+                "📎 Tài liệu đã sẵn sàng",
+                $"\"{doc.Title}\" đã được AI đánh giá ({doc.QualityScore}/100). Vui lòng vào trang chi tiết để xem xet và duyệt.");
         }
         catch
         {
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
+
+            await _notifier.SendAsync(uploadedByUserId, "error",
+                "❌ Upload thất bại",
+                $"\"{doc.Title}\" gặp lỗi khi xử lý. Vui lòng thử lại.");
             throw;
         }
 
@@ -227,12 +238,22 @@ public class DocumentService : IDocumentService
             doc.ChunkCount = chunkCount;
             doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
+
+            // 🔔 Thông báo Indexed thành công
+            await _notifier.SendAsync(doc.UploadedBy, "success",
+                "✅ Tài liệu đã được duyệt",
+                $"\"{doc.Title}\" đã được index {chunkCount} chunks và sẵn sàng cho chatbot.");
+
             return true;
         }
         catch
         {
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
+
+            await _notifier.SendAsync(doc.UploadedBy, "error",
+                "❌ Index thất bại",
+                $"\"{doc.Title}\" gặp lỗi khi tạo chunks. Vui lòng thử lại.");
             return false;
         }
     }
@@ -244,6 +265,12 @@ public class DocumentService : IDocumentService
 
         doc.Status = "Rejected";
         await _docRepo.UpdateAsync(doc);
+
+        // 🔔 Thông báo từ chối
+        await _notifier.SendAsync(doc.UploadedBy, "warning",
+            "🚫 Tài liệu bị từ chối",
+            $"\"{doc.Title}\" đã bị từ chối bởi quản trị viên.");
+
         return true;
     }
 }

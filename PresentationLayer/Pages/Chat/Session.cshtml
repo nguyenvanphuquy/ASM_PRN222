@@ -16,7 +16,7 @@ else
     <div class="chat-messages" id="chatMessages">
         @if (Model.Messages.Count == 0)
         {
-            <div class="empty-state">
+            <div class="empty-state" id="emptyState">
                 <div class="empty-state-icon">🤖</div>
                 <div class="empty-state-title">AI sẵn sàng trợ giúp!</div>
                 <p class="empty-state-text">Đặt câu hỏi về tài liệu môn học bên dưới.</p>
@@ -40,7 +40,7 @@ else
                             @foreach (var src in msg.Sources.Take(3))
                             {
                                 <div style="font-size:0.75rem;color:var(--accent-blue);margin-bottom:2px">
-                                    📄 @src.DocumentName – Trang @src.Page 
+                                    📄 @src.DocumentName – Trang @src.Page
                                     @if(src.ConfidenceScore > 0)
                                     {
                                         <span style="color:var(--text-muted); font-size:0.7rem;">(Độ tin cậy: @(Math.Round(src.ConfidenceScore * 100))%)</span>
@@ -61,53 +61,142 @@ else
     <!-- Input area -->
     <div class="chat-input-area">
         <a href="/Chat" class="btn btn-secondary btn-sm" title="Về danh sách chat">←</a>
-
-        <form method="post" asp-route-id="@Model.Session.Id" class="flex gap-2" style="flex:1" id="chatForm">
-            @Html.AntiForgeryToken()
+        <div class="flex gap-2" style="flex:1">
             <textarea id="questionInput" class="form-control chat-input"
-                      name="Question" placeholder="Đặt câu hỏi về tài liệu..."
-                      rows="1" autofocus>@Model.Question</textarea>
-            <button type="submit" class="btn btn-primary" id="sendBtn" title="Gửi">
+                      placeholder="Đặt câu hỏi về tài liệu... (Ctrl+Enter để gửi)"
+                      rows="1" autofocus></textarea>
+            <button type="button" class="btn btn-primary" id="sendBtn" title="Gửi (Ctrl+Enter)">
                 <span id="sendText">➤</span>
-                <span id="sendSpinner" class="hidden animate-spin">⏳</span>
+                <span id="sendSpinner" style="display:none">⏳</span>
             </button>
-        </form>
+        </div>
     </div>
 </div>
 }
 
 @section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
-// Auto-scroll to bottom
+const SESSION_ID = '@Model.Session?.Id';
 const msgs = document.getElementById('chatMessages');
-if (msgs) msgs.scrollTop = msgs.scrollHeight;
+const ta   = document.getElementById('questionInput');
+const btn  = document.getElementById('sendBtn');
+
+// Auto-scroll
+function scrollBottom() { if (msgs) msgs.scrollTop = msgs.scrollHeight; }
+scrollBottom();
 
 // Auto-resize textarea
-const ta = document.getElementById('questionInput');
 if (ta) {
     ta.addEventListener('input', () => {
         ta.style.height = 'auto';
         ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
     });
-    // Submit on Ctrl+Enter or Cmd+Enter
-    ta.addEventListener('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('chatForm').submit();
-        }
-    });
 }
 
-// Loading state
-const chatForm = document.getElementById('chatForm');
-if (chatForm) {
-    chatForm.addEventListener('submit', () => {
-        const q = ta.value.trim();
-        if (!q) { event.preventDefault(); return; }
-        document.getElementById('sendText').classList.add('hidden');
-        document.getElementById('sendSpinner').classList.remove('hidden');
-        document.getElementById('sendBtn').disabled = true;
-    });
+// ---- Helpers ----
+function nowStr() {
+    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function appendBubble(role, html, sources) {
+    document.getElementById('emptyState')?.remove();
+
+    const div = document.createElement('div');
+    div.className = `bubble ${role} animate-fade-in`;
+
+    let inner = '';
+    if (role === 'assistant') inner += `<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">🤖 AI</div>`;
+    inner += `<div style="white-space:pre-wrap">${html}</div>`;
+
+    if (sources && sources.length > 0) {
+        inner += `<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Nguồn tham khảo:</div>`;
+        sources.slice(0, 3).forEach(s => {
+            const pct = s.confidenceScore > 0
+                ? ` <span style="color:var(--text-muted);font-size:0.7rem">(Độ tin cậy: ${Math.round(s.confidenceScore * 100)}%)</span>`
+                : '';
+            inner += `<div style="font-size:0.75rem;color:var(--accent-blue);margin-bottom:2px">📄 ${escHtml(s.documentName)} – Trang ${s.page}${pct}</div>`;
+        });
+        inner += `</div>`;
+    }
+
+    inner += `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:6px;text-align:right">${nowStr()}</div>`;
+    div.innerHTML = inner;
+    msgs.appendChild(div);
+    scrollBottom();
+    return div;
+}
+
+function setLoading(on) {
+    if (btn)  btn.disabled = on;
+    if (ta)   ta.disabled  = on;
+    document.getElementById('sendText').style.display    = on ? 'none' : '';
+    document.getElementById('sendSpinner').style.display = on ? ''     : 'none';
+}
+
+// ---- SignalR ----
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/chat')
+    .withAutomaticReconnect()
+    .build();
+
+let thinkingBubble = null;
+
+connection.on('Thinking', () => {
+    thinkingBubble = appendBubble('assistant',
+        '<em style="color:var(--text-muted)">⏳ AI đang suy nghĩ...</em>', null);
+});
+
+connection.on('ReceiveMessage', data => {
+    thinkingBubble?.remove(); thinkingBubble = null;
+    appendBubble('assistant', escHtml(data.answer).replace(/\n/g, '<br>'), data.sources);
+    setLoading(false);
+    ta?.focus();
+});
+
+connection.on('Error', msg => {
+    thinkingBubble?.remove(); thinkingBubble = null;
+    appendBubble('assistant', `⚠️ ${escHtml(msg)}`, null);
+    setLoading(false);
+});
+
+(async () => {
+    try { await connection.start(); }
+    catch (e) { console.error('SignalR start error:', e); }
+})();
+
+// ---- Send ----
+async function sendMessage() {
+    const q = ta?.value.trim();
+    if (!q) return;
+    if (connection.state !== signalR.HubConnectionState.Connected) {
+        alert('Đang kết nối lại... Vui lòng thử lại sau giây lát.');
+        return;
+    }
+
+    appendBubble('user', escHtml(q).replace(/\n/g, '<br>'), null);
+    ta.value = '';
+    ta.style.height = 'auto';
+    setLoading(true);
+
+    try {
+        await connection.invoke('SendMessageAsync', SESSION_ID, q);
+    } catch (e) {
+        thinkingBubble?.remove(); thinkingBubble = null;
+        appendBubble('assistant', '⚠️ Lỗi gửi tin nhắn. Vui lòng thử lại.', null);
+        setLoading(false);
+    }
+}
+
+btn?.addEventListener('click', sendMessage);
+ta?.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+});
 </script>
 }

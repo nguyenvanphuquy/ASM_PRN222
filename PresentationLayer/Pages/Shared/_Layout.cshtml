@@ -143,11 +143,45 @@ else
             <button class="btn btn-secondary btn-icon" id="sidebarToggle" style="display:none" title="Menu">☰</button>
             <h2 class="topbar-title" style="font-size:1rem;font-weight:600;">@topbarTitle</h2>
             <div class="topbar-actions">
+                <!-- 🔔 Notification Bell + Dropdown -->
+                <div style="position:relative;display:inline-flex;align-items:center" id="notifWrapper">
+                    <button id="notifBell" title="Thông báo"
+                            style="background:none;border:none;font-size:1.3rem;cursor:pointer;padding:4px 8px;position:relative;color:inherit"
+                            onclick="toggleNotifPanel(event)">
+                        🔔
+                        <span id="notifBadge" style="display:none;position:absolute;top:0;right:0;
+                              background:#ef4444;color:#fff;border-radius:50%;font-size:0.6rem;
+                              width:16px;height:16px;line-height:16px;text-align:center;font-weight:700">0</span>
+                    </button>
+
+                    <!-- Dropdown panel -->
+                    <div id="notifPanel" style="display:none;position:absolute;top:calc(100% + 8px);right:0;
+                         width:320px;max-height:400px;overflow-y:auto;
+                         background:var(--surface,#1e293b);border:1px solid var(--border-color,#334155);
+                         border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:9998">
+                        <div style="padding:12px 16px;border-bottom:1px solid var(--border-color,#334155);
+                                    display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-weight:600;font-size:0.9rem">🔔 Thông báo</span>
+                            <button onclick="clearNotifPanel()" style="background:none;border:none;
+                                    font-size:0.75rem;color:var(--text-muted,#94a3b8);cursor:pointer">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                        <div id="notifList">
+                            <div id="notifEmpty" style="padding:24px;text-align:center;color:var(--text-muted,#94a3b8);font-size:0.85rem">
+                                Chưa có thông báo nào
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <a href="/Chat" class="btn btn-primary btn-sm">
                     💬 Chat mới
                 </a>
             </div>
         </header>
+
+        <!-- 🍞 Toast container -->
+        <div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px"></div>
 
         <main class="page-content">
             @if (TempData["Success"] != null)
@@ -180,6 +214,160 @@ else
         if (window.innerWidth <= 768) toggle.style.display = 'flex';
         else { toggle.style.display = 'none'; sidebar.classList.remove('open'); }
     });
+</script>
+
+<!-- SignalR Notification -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function() {
+    const toastEl = document.getElementById('toastContainer');
+    const badge   = document.getElementById('notifBadge');
+    let unread = 0;
+
+    const colors = {
+        success: { bg: '#16a34a', icon: '✅' },
+        error:   { bg: '#dc2626', icon: '❌' },
+        warning: { bg: '#d97706', icon: '⚠️' },
+        info:    { bg: '#2563eb', icon: 'ℹ️' },
+    };
+
+    // Keep track of notifications in a list
+    const notifs = [];
+
+    window.toggleNotifPanel = async function(e) {
+        e.stopPropagation();
+        const panel = document.getElementById('notifPanel');
+        const isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            unread = 0;
+            badge.style.display = 'none';
+            // Mark as read in DB
+            try {
+                await fetch('/api/notifications/read-all', { method: 'POST' });
+            } catch(e) { console.error('Error marking notifications as read', e); }
+        }
+    };
+
+    window.clearNotifPanel = function() {
+        notifs.length = 0;
+        renderNotifList();
+    };
+
+    document.addEventListener('click', e => {
+        const panel = document.getElementById('notifPanel');
+        const wrapper = document.getElementById('notifWrapper');
+        if (panel && wrapper && panel.style.display === 'block' && !wrapper.contains(e.target)) {
+            panel.style.display = 'none';
+        }
+    });
+
+    function renderNotifList() {
+        const listEl = document.getElementById('notifList');
+        if (notifs.length === 0) {
+            listEl.innerHTML = '<div id="notifEmpty" style="padding:24px;text-align:center;color:var(--text-muted,#94a3b8);font-size:0.85rem">Chưa có thông báo nào</div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        notifs.forEach(n => {
+            const c = colors[n.type] || colors.info;
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:12px 16px;border-bottom:1px solid var(--border-color,#334155);display:flex;gap:12px;align-items:flex-start;';
+            item.innerHTML = `
+                <span style="font-size:1.2rem;flex-shrink:0">${c.icon}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:0.85rem;margin-bottom:2px ${!n.isRead ? ';color:var(--text-color)' : ';color:var(--text-muted)'}">${escHtml(n.title)}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted,#94a3b8);line-height:1.4">${escHtml(n.message)}</div>
+                    <div style="font-size:0.65rem;color:var(--text-muted,#94a3b8);margin-top:4px">${escHtml(n.time)}</div>
+                </div>`;
+            listEl.appendChild(item);
+        });
+    }
+
+    // Load initial notifications
+    async function loadNotifications() {
+        try {
+            const res = await fetch('/api/notifications');
+            if (res.ok) {
+                const data = await res.json();
+                notifs.push(...data);
+                unread = data.filter(x => !x.isRead).length;
+                if (unread > 0) {
+                    badge.textContent = unread > 9 ? '9+' : unread;
+                    badge.style.display = '';
+                }
+                renderNotifList();
+            }
+        } catch(e) { console.error('Failed to load notifications', e); }
+    }
+    
+    // Call load on startup
+    loadNotifications();
+
+    function showToast(data) {
+        const time = data.time || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const type = data.type;
+        const title = data.title;
+        const message = data.message;
+        
+        // Add to history list
+        notifs.unshift({ id: data.id, type, title, message, time, isRead: false });
+        if (notifs.length > 20) notifs.pop();
+        renderNotifList();
+
+        const c = colors[type] || colors.info;
+        const toast = document.createElement('div');
+        toast.innerHTML = `
+            <div style="background:${c.bg};color:#fff;border-radius:12px;padding:14px 16px;
+                        box-shadow:0 8px 24px rgba(0,0,0,0.3);display:flex;gap:12px;align-items:flex-start;
+                        animation:slideInToast 0.35s ease; cursor:pointer"
+                 onclick="this.remove()">
+                <span style="font-size:1.3rem;flex-shrink:0">${c.icon}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:0.9rem;margin-bottom:2px">${escHtml(title)}</div>
+                    <div style="font-size:0.82rem;opacity:0.92;line-height:1.4">${escHtml(message)}</div>
+                </div>
+                <button onclick="event.stopPropagation(); this.closest('div').parentElement.remove()"
+                        style="background:none;border:none;color:#fff;opacity:0.7;cursor:pointer;font-size:1.1rem;padding:0;flex-shrink:0">×</button>
+            </div>`;
+        toastEl.appendChild(toast);
+        setTimeout(() => toast.remove(), 7000);
+
+        // Update badge only if panel is closed
+        const panel = document.getElementById('notifPanel');
+        if (!panel || panel.style.display === 'none') {
+            unread++;
+            badge.textContent = unread > 9 ? '9+' : unread;
+            badge.style.display = '';
+        }
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `@@keyframes slideInToast {
+        from { transform: translateX(120%); opacity: 0; }
+        to   { transform: translateX(0);    opacity: 1; }
+    }`;
+    document.head.appendChild(style);
+
+    // Connect SignalR
+    const conn = new signalR.HubConnectionBuilder()
+        .withUrl('/hubs/notifications')
+        .withAutomaticReconnect()
+        .build();
+
+    conn.on('ReceiveNotification', data => {
+        showToast(data.type, data.title, data.message);
+    });
+
+    conn.start().catch(e => console.warn('Notification hub:', e));
+})();
 </script>
 }
 

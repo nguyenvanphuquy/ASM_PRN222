@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<FeedbackReply> FeedbackReplies => Set<FeedbackReply>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -157,6 +158,17 @@ public class AppDbContext : DbContext
             e.Property(a => a.Note).HasMaxLength(300).HasDefaultValue("");
             e.Property(a => a.AddedBy).HasMaxLength(200).HasDefaultValue("");
             e.HasIndex(a => a.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Notification>(e =>
+        {
+            e.HasKey(n => n.Id);
+            e.Property(n => n.Id).HasMaxLength(36);
+            e.Property(n => n.UserId).HasMaxLength(36);
+            e.Property(n => n.Type).HasMaxLength(20);
+            e.Property(n => n.Title).HasMaxLength(200);
+            e.Property(n => n.Message).HasColumnType("nvarchar(max)");
+            e.HasIndex(n => n.UserId);
         });
     }
 }

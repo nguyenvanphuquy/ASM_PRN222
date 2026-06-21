@@ -3,6 +3,9 @@ using DataAccessLayer.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using PresentationLayer.Hubs;
+using PresentationLayer.Services;
 using ServiceLayer.Services;
 using ServiceLayer.Services.Embeddings;
 using ServiceLayer.Settings;
@@ -83,6 +86,7 @@ public class Program
         builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
         builder.Services.AddScoped<IChunkingService, ChunkingService>();
         builder.Services.AddScoped<IRetrievalService, RetrievalService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
 
         // Groq (HTTP client)
         builder.Services.AddHttpClient<IGroqService, GroqService>(c =>
@@ -127,6 +131,32 @@ public class Program
         // === Razor Pages ===
         builder.Services.AddRazorPages();
 
+        // === Controllers (for API + Swagger) ===
+        builder.Services.AddControllers();
+
+        // === SignalR ===
+        builder.Services.AddSignalR();
+
+        // === Swagger ===
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "ChatBot PRN222 API",
+                Version = "v1",
+                Description = "REST API cho hệ thống RAG Chatbot học thuật — Chat, Document Management, Quality Check."
+            });
+            // Cookie auth scheme cho Swagger UI
+            c.AddSecurityDefinition("cookieAuth", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Cookie,
+                Name = ".AspNetCore.Cookies",
+                Description = "Đăng nhập web trước, rồi dùng cookie session để gọi API."
+            });
+        });
+
         var app = builder.Build();
 
         if (!app.Environment.IsDevelopment())
@@ -142,7 +172,19 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
 
+        // === Swagger UI ===
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatBot PRN222 API v1");
+            c.RoutePrefix = "swagger";
+            c.DocumentTitle = "ChatBot PRN222 – API Docs";
+        });
+
         app.MapRazorPages();
+        app.MapControllers();
+        app.MapHub<ChatHub>("/hubs/chat");
+        app.MapHub<NotificationHub>("/hubs/notifications");
 
         // === DB Init ===
         using (var scope = app.Services.CreateScope())
