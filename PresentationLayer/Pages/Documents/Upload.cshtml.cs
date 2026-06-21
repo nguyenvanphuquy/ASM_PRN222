@@ -21,7 +21,7 @@ public class UploadModel : PageModel
         _chapterService = chapterService;
     }
 
-    public List<Subject> Subjects { get; private set; } = [];
+    public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
     public List<Chapter> Chapters { get; private set; } = [];
 
     [BindProperty] public IFormFile? UploadFile { get; set; }
@@ -124,3 +124,5 @@ public class UploadModel : PageModel
         }
     }
 }
+
+

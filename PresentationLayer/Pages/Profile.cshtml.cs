@@ -13,7 +13,7 @@ public class ProfileModel : PageModel
     private readonly IUserService _userService;
     public ProfileModel(IUserService userService) => _userService = userService;
 
-    public User? UserInfo { get; private set; }
+    public ServiceLayer.DTOs.UserDto? UserInfo { get; private set; }
 
     [BindProperty] public string FullName { get; set; } = "";
     [BindProperty] public string Email { get; set; } = "";
@@ -52,3 +52,5 @@ public class ProfileModel : PageModel
         return RedirectToPage();
     }
 }
+
+

@@ -14,3 +14,5 @@ public interface INotificationService
     /// <summary>Gửi thông báo tới tất cả user đang online.</summary>
     Task BroadcastAsync(string type, string title, string message);
 }
+
+

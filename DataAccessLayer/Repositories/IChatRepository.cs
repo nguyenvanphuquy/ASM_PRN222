@@ -16,3 +16,6 @@ public interface IChatRepository
     Task<int> CountSessionsAsync();
     Task<int> CountMessagesAsync();
 }
+
+
+

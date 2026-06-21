@@ -38,3 +38,5 @@ public class RetrievalService : IRetrievalService
         return await _chunkRepo.SearchAsync(query, subjectId, limit, queryVector);
     }
 }
+
+

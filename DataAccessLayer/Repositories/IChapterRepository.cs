@@ -12,3 +12,6 @@ public interface IChapterRepository
     Task DeleteAsync(string id);
     Task<int> CountBySubjectAsync(string subjectId);
 }
+
+
+

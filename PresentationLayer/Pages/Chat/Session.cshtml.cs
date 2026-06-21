@@ -15,8 +15,8 @@ public class SessionModel : PageModel
 
     public SessionModel(IChatService chatService) => _chatService = chatService;
 
-    public ChatSession? Session { get; private set; }
-    public List<ChatMessage> Messages { get; private set; } = [];
+    public ServiceLayer.DTOs.ChatSessionDto? Session { get; private set; }
+    public List<ServiceLayer.DTOs.ChatMessageDto> Messages { get; private set; } = [];
     public ChatAnswer? LastAnswer { get; private set; }
 
     [BindProperty] public string Question { get; set; } = "";
@@ -60,3 +60,5 @@ public class SessionModel : PageModel
         return Page();
     }
 }
+
+

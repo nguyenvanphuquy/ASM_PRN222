@@ -39,3 +39,5 @@ public class SubjectRepository : ISubjectRepository
 
     public async Task<long> CountAsync() => await _context.Subjects.LongCountAsync();
 }
+
+

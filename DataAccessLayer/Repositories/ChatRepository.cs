@@ -54,3 +54,5 @@ public class ChatRepository : IChatRepository
     public Task<int> CountSessionsAsync() => _context.ChatSessions.CountAsync();
     public Task<int> CountMessagesAsync() => _context.ChatMessages.CountAsync();
 }
+
+

@@ -20,7 +20,7 @@ public class ChaptersModel : PageModel
 
     public string SubjectId { get; private set; } = "";
     public string SubjectName { get; private set; } = "";
-    public List<Chapter> Chapters { get; private set; } = [];
+    public List<ServiceLayer.DTOs.ChapterDto> Chapters { get; private set; } = [];
 
     public async Task<IActionResult> OnGetAsync(string subjectId)
     {
@@ -68,3 +68,5 @@ public class ChaptersModel : PageModel
         return RedirectToPage(new { subjectId });
     }
 }
+
+

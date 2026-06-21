@@ -12,3 +12,5 @@ public interface IAllowedEmailService
     // True nếu whitelist đang bật (có ít nhất 1 email).
     Task<bool> IsEnabledAsync();
 }
+
+

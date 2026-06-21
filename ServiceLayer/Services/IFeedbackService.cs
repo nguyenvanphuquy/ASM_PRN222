@@ -17,3 +17,5 @@ public interface IFeedbackService
     Task DeleteAsync(string feedbackId);
     Task<(int Total, double Average)> GetStatsAsync();
 }
+
+

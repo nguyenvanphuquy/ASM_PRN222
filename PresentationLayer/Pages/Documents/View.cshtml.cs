@@ -14,8 +14,8 @@ public class ViewModel : PageModel
         _documentService = documentService;
     }
 
-    public Document Document { get; set; } = default!;
-    public List<DocumentChunk> Chunks { get; set; } = new();
+    public ServiceLayer.DTOs.DocumentDto Document { get; set; } = default!;
+    public List<ServiceLayer.DTOs.DocumentChunkDto> Chunks { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(string id)
     {
@@ -46,3 +46,6 @@ public class ViewModel : PageModel
         return RedirectToPage(new { id });
     }
 }
+
+
+

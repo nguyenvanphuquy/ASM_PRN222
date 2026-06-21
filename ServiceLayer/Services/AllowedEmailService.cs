@@ -42,3 +42,5 @@ public class AllowedEmailService : IAllowedEmailService
 
     public async Task<bool> IsEnabledAsync() => await _repo.CountAsync() > 0;
 }
+
+

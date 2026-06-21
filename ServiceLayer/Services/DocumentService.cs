@@ -16,11 +16,12 @@ public class DocumentService : IDocumentService
     private readonly IQualityCheckService _qualityCheckService;
     private readonly IChunkingService _chunkingService;
     private readonly INotificationService _notifier;
+    private readonly AutoMapper.IMapper _mapper;
 
     public DocumentService(IDocumentRepository docRepo, IDocumentChunkRepository chunkRepo,
         ITextExtractor extractor, IDocumentFileStore fileStore,
         IQualityCheckService qualityCheckService, IChunkingService chunkingService,
-        INotificationService notifier)
+        INotificationService notifier, AutoMapper.IMapper mapper)
     {
         _docRepo = docRepo;
         _chunkRepo = chunkRepo;
@@ -29,6 +30,7 @@ public class DocumentService : IDocumentService
         _qualityCheckService = qualityCheckService;
         _chunkingService = chunkingService;
         _notifier = notifier;
+        _mapper = mapper;
     }
 
     public async Task<UploadResult> UploadAsync(Stream content, string fileName, string contentType,
@@ -42,7 +44,7 @@ public class DocumentService : IDocumentService
         // Exact same file (identical bytes) already indexed in this subject — skip re-indexing.
         var sameHash = await _docRepo.GetBySubjectAndHashAsync(subjectId, hash);
         if (sameHash != null)
-            return new UploadResult(sameHash, UploadOutcome.Duplicate);
+            return new UploadResult(_mapper.Map<ServiceLayer.DTOs.DocumentDto>(sameHash), UploadOutcome.Duplicate);
 
         // Same filename but different content — treat as an updated version: drop the old one first.
         var outcome = UploadOutcome.Created;
@@ -105,16 +107,16 @@ public class DocumentService : IDocumentService
             throw;
         }
 
-        return new UploadResult(doc, outcome);
+        return new UploadResult(_mapper.Map<ServiceLayer.DTOs.DocumentDto>(doc), outcome);
     }
 
-    public Task<List<Document>> GetBySubjectAsync(string subjectId) => _docRepo.GetBySubjectAsync(subjectId);
-    public Task<List<Document>> GetByChapterAsync(string chapterId) => _docRepo.GetByChapterAsync(chapterId);
-    public Task<List<Document>> GetAllAsync() => _docRepo.GetAllAsync();
-    public Task<List<Document>> SearchAsync(string? subjectId, string? query) => _docRepo.SearchAsync(subjectId, query);
-    public Task<Document?> GetByIdAsync(string documentId) => _docRepo.GetByIdAsync(documentId);
+    public async Task<List<ServiceLayer.DTOs.DocumentDto>> GetBySubjectAsync(string subjectId) { var entities = await _docRepo.GetBySubjectAsync(subjectId); return _mapper.Map<List<ServiceLayer.DTOs.DocumentDto>>(entities); }
+    public async Task<List<ServiceLayer.DTOs.DocumentDto>> GetByChapterAsync(string chapterId) { var entities = await _docRepo.GetByChapterAsync(chapterId); return _mapper.Map<List<ServiceLayer.DTOs.DocumentDto>>(entities); }
+    public async Task<List<ServiceLayer.DTOs.DocumentDto>> GetAllAsync() { var entities = await _docRepo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.DocumentDto>>(entities); }
+    public async Task<List<ServiceLayer.DTOs.DocumentDto>> SearchAsync(string? subjectId, string? query) { var entities = await _docRepo.SearchAsync(subjectId, query); return _mapper.Map<List<ServiceLayer.DTOs.DocumentDto>>(entities); }
+    public async Task<ServiceLayer.DTOs.DocumentDto?> GetByIdAsync(string documentId) { var entity = await _docRepo.GetByIdAsync(documentId); return _mapper.Map<ServiceLayer.DTOs.DocumentDto>(entity); }
 
-    public Task<List<DocumentChunk>> GetChunksAsync(string documentId) => _chunkRepo.GetByDocumentAsync(documentId);
+    public async Task<List<ServiceLayer.DTOs.DocumentChunkDto>> GetChunksAsync(string documentId) { var entities = await _chunkRepo.GetByDocumentAsync(documentId); return _mapper.Map<List<ServiceLayer.DTOs.DocumentChunkDto>>(entities); }
 
     public async Task<int?> ReChunkAsync(string documentId)
     {
@@ -274,3 +276,6 @@ public class DocumentService : IDocumentService
         return true;
     }
 }
+
+
+

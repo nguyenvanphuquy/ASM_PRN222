@@ -11,6 +11,7 @@ public class UserService : IUserService
         new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
 
     private readonly IUserRepository _repo;
+    private readonly AutoMapper.IMapper _mapper;
     private readonly IAllowedEmailService _allowedEmails;
     public UserService(IUserRepository repo, IAllowedEmailService allowedEmails)
     {
@@ -18,8 +19,8 @@ public class UserService : IUserService
         _allowedEmails = allowedEmails;
     }
 
-    public Task<List<User>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<User?> GetByIdAsync(string id) => _repo.GetByIdAsync(id);
+    public async Task<List<ServiceLayer.DTOs.UserDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.UserDto>>(entities); }
+    public async Task<ServiceLayer.DTOs.UserDto?> GetByIdAsync(string id) { var entity = await _repo.GetByIdAsync(id); return _mapper.Map<ServiceLayer.DTOs.UserDto>(entity); }
 
     public async Task<(bool, string?, string?)> CreateAsync(string username, string email, string fullName, string password, string role)
     {
@@ -171,3 +172,6 @@ public class UserService : IUserService
         return (total, admins, lecturers, students);
     }
 }
+
+
+

@@ -11,3 +11,6 @@ public interface ISubjectRepository
     Task DeleteAsync(string id);
     Task<long> CountAsync();
 }
+
+
+

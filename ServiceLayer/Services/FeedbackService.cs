@@ -68,3 +68,5 @@ public class FeedbackService : IFeedbackService
     public async Task<(int Total, double Average)> GetStatsAsync()
         => (await _repo.CountAsync(), await _repo.AverageRatingAsync());
 }
+
+

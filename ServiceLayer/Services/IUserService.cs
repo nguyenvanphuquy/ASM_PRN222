@@ -4,8 +4,8 @@ namespace ServiceLayer.Services;
 
 public interface IUserService
 {
-    Task<List<User>> GetAllAsync();
-    Task<User?> GetByIdAsync(string id);
+    Task<List<ServiceLayer.DTOs.UserDto>> GetAllAsync();
+    Task<ServiceLayer.DTOs.UserDto?> GetByIdAsync(string id);
     // Tạo tài khoản chưa kích hoạt; trả về token xác thực email để gửi link kích hoạt.
     Task<(bool Success, string? Error, string? VerificationToken)> CreateAsync(string username, string email, string fullName, string password, string role);
     // Kích hoạt tài khoản qua token xác thực email.
@@ -19,3 +19,6 @@ public interface IUserService
     Task<(bool Success, string? Error)> UpdateAvatarAsync(string id, string avatarPath);
     Task<(bool Success, string? Error)> ChangePasswordAsync(string id, string currentPassword, string newPassword);
 }
+
+
+

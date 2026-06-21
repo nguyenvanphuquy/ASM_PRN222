@@ -48,3 +48,5 @@ public class UserRepository : IUserRepository
     public async Task<long> CountByRoleAsync(string role)
         => await _context.Users.LongCountAsync(u => u.Role == role);
 }
+
+

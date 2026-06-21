@@ -20,3 +20,5 @@ public interface IFileComparisonService
         Stream stream2, string fileName2, string contentType2,
         CancellationToken ct = default);
 }
+
+

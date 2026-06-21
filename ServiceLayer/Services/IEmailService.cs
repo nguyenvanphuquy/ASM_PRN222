@@ -8,3 +8,5 @@ public interface IEmailService
     // cho tài khoản do Admin tạo.
     Task SendAccountCreatedAsync(string toEmail, string toName, string username, string password, string verifyUrl);
 }
+
+

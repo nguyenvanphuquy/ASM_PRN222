@@ -6,6 +6,7 @@ namespace ServiceLayer.Services;
 public class ChapterService : IChapterService
 {
     private readonly IChapterRepository _repo;
+    private readonly AutoMapper.IMapper _mapper;
     private readonly IDocumentRepository _docRepo;
 
     public ChapterService(IChapterRepository repo, IDocumentRepository docRepo)
@@ -14,8 +15,8 @@ public class ChapterService : IChapterService
         _docRepo = docRepo;
     }
 
-    public Task<List<Chapter>> GetBySubjectAsync(string subjectId) => _repo.GetBySubjectAsync(subjectId);
-    public Task<List<Chapter>> GetAllAsync() => _repo.GetAllAsync();
+    public async Task<List<ServiceLayer.DTOs.ChapterDto>> GetBySubjectAsync(string subjectId) { var entities = await _repo.GetBySubjectAsync(subjectId); return _mapper.Map<List<ServiceLayer.DTOs.ChapterDto>>(entities); }
+    public async Task<List<ServiceLayer.DTOs.ChapterDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.ChapterDto>>(entities); }
     public Task<Chapter?> GetByIdAsync(string id) => _repo.GetByIdAsync(id);
 
     public async Task<Chapter> CreateAsync(string subjectId, string title, string description, int orderIndex)
@@ -58,3 +59,7 @@ public class ChapterService : IChapterService
         await _repo.DeleteAsync(id);
     }
 }
+
+
+
+

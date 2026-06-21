@@ -12,3 +12,5 @@ public interface IGroqService
 
     Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default);
 }
+
+

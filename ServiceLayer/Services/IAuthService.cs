@@ -11,3 +11,5 @@ public interface IAuthService
     Task<RegisterResult> RegisterAsync(string username, string email, string password, string fullName);
     Task EnsureSeedUsersAsync();
 }
+
+

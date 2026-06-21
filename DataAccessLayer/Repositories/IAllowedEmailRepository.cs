@@ -10,3 +10,6 @@ public interface IAllowedEmailRepository
     Task CreateAsync(AllowedEmail allowedEmail);
     Task DeleteAsync(string id);
 }
+
+
+

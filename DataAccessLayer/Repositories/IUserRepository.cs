@@ -14,3 +14,6 @@ public interface IUserRepository
     Task<long> CountAsync();
     Task<long> CountByRoleAsync(string role);
 }
+
+
+

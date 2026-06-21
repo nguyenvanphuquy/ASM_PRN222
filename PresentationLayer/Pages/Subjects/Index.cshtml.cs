@@ -10,7 +10,7 @@ public class IndexModel : PageModel
 {
     private readonly ISubjectService _subjectService;
     public IndexModel(ISubjectService subjectService) => _subjectService = subjectService;
-    public List<Subject> Subjects { get; private set; } = [];
+    public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -19,3 +19,5 @@ public class IndexModel : PageModel
         Subjects = await _subjectService.GetAllAsync();
     }
 }
+
+

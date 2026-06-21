@@ -9,6 +9,7 @@ using PresentationLayer.Services;
 using ServiceLayer.Services;
 using ServiceLayer.Services.Embeddings;
 using ServiceLayer.Settings;
+using ServiceLayer.Mapping;
 
 namespace PresentationLayer;
 
@@ -17,6 +18,9 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // Register AutoMapper
+        builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
         // === Config ===
         builder.Services.Configure<GroqSettings>(builder.Configuration.GetSection("Groq"));
@@ -267,3 +271,5 @@ public class Program
         app.Run();
     }
 }
+
+

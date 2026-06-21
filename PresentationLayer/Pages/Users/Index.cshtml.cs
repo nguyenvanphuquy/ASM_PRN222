@@ -18,8 +18,8 @@ public class IndexModel : PageModel
         _subjectService = subjectService;
     }
 
-    public List<User> Users { get; private set; } = [];
-    public List<Subject> Subjects { get; private set; } = [];
+    public List<ServiceLayer.DTOs.UserDto> Users { get; private set; } = [];
+    public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -43,3 +43,5 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 }
+
+

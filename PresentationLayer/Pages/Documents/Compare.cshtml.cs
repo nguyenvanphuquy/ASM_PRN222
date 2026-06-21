@@ -19,7 +19,7 @@ public class CompareModel : PageModel
         _compareService = compareService;
     }
 
-    public List<Document> AllDocuments { get; private set; } = [];
+    public List<ServiceLayer.DTOs.DocumentDto> AllDocuments { get; private set; } = [];
 
     // Kết quả so sánh
     public FileComparisonResult? Result { get; private set; }
@@ -93,3 +93,5 @@ public class CompareModel : PageModel
         return Page();
     }
 }
+
+

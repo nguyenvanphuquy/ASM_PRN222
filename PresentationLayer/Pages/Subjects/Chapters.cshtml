@@ -1,5 +1,6 @@
 @page "{subjectId}"
 @model PresentationLayer.Pages.Subjects.ChaptersModel
+@using ServiceLayer.DTOs
 @{
     ViewData["Title"] = "Chương – " + Model.SubjectName;
     ViewData["TopbarTitle"] = "📖 " + Model.SubjectName + " — Danh sách chương";
@@ -143,3 +144,4 @@ function confirmDelete(form) {
 }
 </script>
 }
+

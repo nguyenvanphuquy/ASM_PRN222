@@ -10,3 +10,6 @@ public interface IDocumentChunkRepository
     Task DeleteByDocumentAsync(string documentId);
     Task<long> CountAsync();
 }
+
+
+

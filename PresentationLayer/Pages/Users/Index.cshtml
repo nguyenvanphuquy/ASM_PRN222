@@ -1,5 +1,6 @@
 @page
 @model PresentationLayer.Pages.Users.IndexModel
+@using ServiceLayer.DTOs
 @{
     ViewData["Title"] = "Người dùng";
 }
@@ -89,3 +90,4 @@
     </div>
 </div>
 <p class="text-sm text-muted mt-4">Tổng: @Model.Users.Count người dùng</p>
+

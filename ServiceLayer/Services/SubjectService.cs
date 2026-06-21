@@ -6,10 +6,11 @@ namespace ServiceLayer.Services;
 public class SubjectService : ISubjectService
 {
     private readonly ISubjectRepository _repo;
-    public SubjectService(ISubjectRepository repo) => _repo = repo;
+    private readonly AutoMapper.IMapper _mapper;
+    public SubjectService(ISubjectRepository repo, AutoMapper.IMapper mapper) => _repo = repo;
 
-    public Task<List<Subject>> GetAllAsync() => _repo.GetAllAsync();
-    public Task<Subject?> GetByIdAsync(string id) => _repo.GetByIdAsync(id);
+    public async Task<List<ServiceLayer.DTOs.SubjectDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<ServiceLayer.DTOs.SubjectDto>>(entities); }
+    public async Task<ServiceLayer.DTOs.SubjectDto?> GetByIdAsync(string id) { var entity = await _repo.GetByIdAsync(id); return _mapper.Map<ServiceLayer.DTOs.SubjectDto>(entity); }
 
     public Task CreateAsync(string code, string name, string description)
         => _repo.CreateAsync(new Subject { Code = code.Trim(), Name = name.Trim(), Description = description?.Trim() ?? string.Empty });
@@ -37,3 +38,7 @@ public class SubjectService : ISubjectService
         await _repo.CreateAsync(new Subject { Code = "OSG202", Name = "Operating Systems", Description = "Nguyên lý hệ điều hành: tiến trình, luồng và bộ nhớ." });
     }
 }
+
+
+
+

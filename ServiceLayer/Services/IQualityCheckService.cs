@@ -11,3 +11,5 @@ public interface IQualityCheckService
 {
     Task<QualityCheckResult> CheckQualityAsync(string extractedText);
 }
+
+

@@ -18,8 +18,8 @@ public class IndexModel : PageModel
         _subjectService = subjectService;
     }
 
-    public List<Document> Documents { get; private set; } = [];
-    public List<Subject> Subjects { get; private set; } = [];
+    public List<ServiceLayer.DTOs.DocumentDto> Documents { get; private set; } = [];
+    public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
 
     [BindProperty(SupportsGet = true)] public string? SubjectId { get; set; }
     [BindProperty(SupportsGet = true)] public string? Query { get; set; }
@@ -48,3 +48,5 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 }
+
+

@@ -44,3 +44,5 @@ public class ChapterRepository : IChapterRepository
     public async Task<int> CountBySubjectAsync(string subjectId)
         => await _context.Chapters.CountAsync(c => c.SubjectId == subjectId);
 }
+
+

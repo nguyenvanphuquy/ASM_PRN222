@@ -11,17 +11,18 @@ public class ChatService : IChatService
     private readonly IChatRepository _chatRepo;
     private readonly IRetrievalService _retrievalService;
     private readonly IGroqService _llm;
+    private readonly AutoMapper.IMapper _mapper;
 
-    public ChatService(IChatRepository chatRepo, IRetrievalService retrievalService, IGroqService llm)
+    public ChatService(IChatRepository chatRepo, IRetrievalService retrievalService, IGroqService llm, AutoMapper.IMapper mapper)
     {
         _chatRepo = chatRepo;
         _retrievalService = retrievalService;
         _llm = llm;
     }
 
-    public Task<List<ChatSession>> GetSessionsAsync(string userId) => _chatRepo.GetSessionsForUserAsync(userId);
+    public async Task<List<ServiceLayer.DTOs.ChatSessionDto>> GetSessionsAsync(string userId) { var entities = await _chatRepo.GetSessionsForUserAsync(userId); return _mapper.Map<List<ServiceLayer.DTOs.ChatSessionDto>>(entities); }
 
-    public async Task<ChatSession> CreateSessionAsync(string userId, string? subjectId)
+    public async Task<ServiceLayer.DTOs.ChatSessionDto> CreateSessionAsync(string userId, string? subjectId)
     {
         var session = new ChatSession
         {
@@ -30,12 +31,12 @@ public class ChatService : IChatService
             Title = "Cuộc hội thoại mới"
         };
         await _chatRepo.CreateSessionAsync(session);
-        return session;
+        return _mapper.Map<ServiceLayer.DTOs.ChatSessionDto>(session);
     }
 
-    public Task<ChatSession?> GetSessionAsync(string sessionId) => _chatRepo.GetSessionAsync(sessionId);
+    public async Task<ServiceLayer.DTOs.ChatSessionDto?> GetSessionAsync(string sessionId) { var entity = await _chatRepo.GetSessionAsync(sessionId); return _mapper.Map<ServiceLayer.DTOs.ChatSessionDto>(entity); }
     public Task DeleteSessionAsync(string sessionId) => _chatRepo.DeleteSessionAsync(sessionId);
-    public Task<List<ChatMessage>> GetMessagesAsync(string sessionId) => _chatRepo.GetMessagesAsync(sessionId);
+    public async Task<List<ServiceLayer.DTOs.ChatMessageDto>> GetMessagesAsync(string sessionId) { var entities = await _chatRepo.GetMessagesAsync(sessionId); return _mapper.Map<List<ServiceLayer.DTOs.ChatMessageDto>>(entities); }
 
     public async Task<ChatAnswer> AskAsync(string sessionId, string userId, string question)
     {
@@ -101,3 +102,8 @@ public class ChatService : IChatService
         return new ChatAnswer(answer, sources);
     }
 }
+
+
+
+
+

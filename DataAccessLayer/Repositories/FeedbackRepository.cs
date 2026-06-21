@@ -48,3 +48,5 @@ public class FeedbackRepository : IFeedbackRepository
             ? await _context.Feedbacks.AverageAsync(f => (double)f.Rating)
             : 0;
 }
+
+
