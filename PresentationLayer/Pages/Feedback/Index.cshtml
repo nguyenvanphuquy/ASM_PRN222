@@ -5,89 +5,224 @@
     ViewData["TopbarTitle"] = "💡 Phản hồi";
 }
 
-<div class="page-header">
-    <h1>💡 Phản hồi</h1>
-    <p>Gửi đánh giá và xem phản hồi của người dùng</p>
-</div>
+@if (Model.IsAdmin)
+{
+    <!-- ===================== ADMIN: QUẢN LÝ PHẢN HỒI ===================== -->
+    <div class="page-header">
+        <h1>💡 Quản lý phản hồi</h1>
+        <p>Xem, phân loại và phản hồi ý kiến của người dùng</p>
+    </div>
 
-<!-- New Feedback Form -->
-<div class="card mb-6">
-    <div class="card-header"><span class="card-title">✍️ Gửi phản hồi mới</span></div>
-    <form method="post">
-        @Html.AntiForgeryToken()
-        <div class="form-group">
-            <label class="form-label">Đánh giá</label>
-            <div style="display:flex;gap:8px" id="starRating">
-                @for (int i = 1; i <= 5; i++)
-                {
-                    <input type="radio" name="Rating" value="@i" id="star@i"
-                           checked="@(i == 5)" style="display:none" />
-                    <label for="star@i" style="font-size:1.8rem;cursor:pointer;transition:transform 0.1s"
-                           onmouseover="highlightStars(@i)" onmouseout="resetStars()"
-                           onclick="selectStar(@i)">⭐</label>
-                }
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="card" style="flex:1;min-width:160px">
+            <div class="text-sm text-muted">Tổng phản hồi</div>
+            <div style="font-size:1.6rem;font-weight:700">@Model.TotalCount</div>
+        </div>
+        <div class="card" style="flex:1;min-width:160px">
+            <div class="text-sm text-muted">Đánh giá trung bình</div>
+            <div style="font-size:1.6rem;font-weight:700">@Model.AverageRating.ToString("0.0") ⭐</div>
+        </div>
+    </div>
+
+    <div class="card mb-6">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="card-title">📨 Danh sách phản hồi</span>
+            <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="fbSearch" class="form-control" placeholder="🔎 Tìm theo người dùng / nội dung..."
+                       style="max-width:260px" oninput="filterFeedback()" />
+                <select id="fbRating" class="form-control" style="max-width:150px" onchange="filterFeedback()">
+                    <option value="">Mọi đánh giá</option>
+                    <option value="5">5 ⭐</option>
+                    <option value="4">4 ⭐</option>
+                    <option value="3">3 ⭐</option>
+                    <option value="2">2 ⭐</option>
+                    <option value="1">1 ⭐</option>
+                </select>
             </div>
         </div>
-        <div class="form-group">
-            <label class="form-label" for="Comment">Nội dung</label>
-            <textarea id="Comment" asp-for="Comment" class="form-control" rows="3"
-                      placeholder="Nhận xét về hệ thống, tài liệu..."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">📤 Gửi phản hồi</button>
-    </form>
-</div>
 
-<!-- List -->
-@if (Model.Items.Count == 0)
-{
-    <div class="card"><div class="empty-state">
-        <div class="empty-state-icon">💡</div>
-        <div class="empty-state-title">Chưa có phản hồi nào</div>
-    </div></div>
-}
-else
-{
-    <div style="display:flex;flex-direction:column;gap:12px">
-        @foreach (var fb in Model.Items.OrderByDescending(x => x.CreatedAt))
+        @if (Model.Items.Count == 0)
         {
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                    <div>
-                        <div style="font-weight:600;margin-bottom:4px">@fb.UserName</div>
-                        <div style="margin-bottom:8px">
-                            @for (int i = 1; i <= 5; i++)
-                            {
-                                <span style="color:@(i <= fb.Rating ? "var(--accent-orange)" : "var(--text-muted)")">★</span>
-                            }
+            <div class="empty-state">
+                <div class="empty-state-icon">💡</div>
+                <div class="empty-state-title">Chưa có phản hồi nào</div>
+            </div>
+        }
+        else
+        {
+            <div id="fbList" style="display:flex;flex-direction:column;gap:12px">
+                @foreach (var fb in Model.Items.OrderByDescending(x => x.CreatedAt))
+                {
+                    var replies = Model.Replies.TryGetValue(fb.Id, out var rs) ? rs : new();
+                    <div class="card fb-item" data-rating="@fb.Rating"
+                         data-text="@($"{fb.UserName} {fb.Content}".ToLower())"
+                         style="border:1px solid var(--border-color,#334155)">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:600;margin-bottom:4px">@fb.UserName</div>
+                                <div style="margin-bottom:8px">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span style="color:@(i <= fb.Rating ? "var(--accent-orange)" : "var(--text-muted)")">★</span>
+                                    }
+                                </div>
+                                <p class="text-sm">@fb.Content</p>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                                <div class="text-sm text-muted">@fb.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@fb.Id"
+                                      onsubmit="return confirm('Xoá phản hồi này?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">🗑 Xoá</button>
+                                </form>
+                            </div>
                         </div>
-                        <p class="text-sm">@fb.Content</p>
+
+                        @if (replies.Count > 0)
+                        {
+                            <div style="margin-top:12px;padding-left:12px;border-left:2px solid var(--border-color,#334155);display:flex;flex-direction:column;gap:8px">
+                                @foreach (var r in replies)
+                                {
+                                    <div>
+                                        <div class="text-sm" style="font-weight:600">
+                                            @(r.IsAdmin ? "🛡️ " : "")@r.UserName
+                                            <span class="text-muted" style="font-weight:400">· @r.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                        </div>
+                                        <div class="text-sm">@r.Content</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <form method="post" asp-page-handler="Reply" style="margin-top:12px;display:flex;gap:8px">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="FeedbackId" value="@fb.Id" />
+                            <input type="text" name="ReplyContent" class="form-control" placeholder="Nhập phản hồi tới người dùng..." required />
+                            <button type="submit" class="btn btn-primary btn-sm">↩️ Trả lời</button>
+                        </form>
                     </div>
-                    <div class="text-sm text-muted">@fb.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
-                </div>
+                }
             </div>
         }
     </div>
+
+}
+else
+{
+    <!-- ===================== NGƯỜI DÙNG: GỬI PHẢN HỒI ===================== -->
+    <div class="page-header">
+        <h1>💡 Phản hồi</h1>
+        <p>Gửi ý kiến của bạn về hệ thống. Phản hồi sẽ được quản trị viên xem xét.</p>
+    </div>
+
+    <div class="card mb-6">
+        <div class="card-header"><span class="card-title">✍️ Gửi phản hồi mới</span></div>
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label class="form-label">Đánh giá</label>
+                <div style="display:flex;gap:8px" id="starRating">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <input type="radio" name="Rating" value="@i" id="star@i"
+                               checked="@(i == 5)" style="display:none" />
+                        <label for="star@i" style="font-size:1.8rem;cursor:pointer;transition:transform 0.1s"
+                               onmouseover="highlightStars(@i)" onmouseout="resetStars()"
+                               onclick="selectStar(@i)">⭐</label>
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="Comment">Nội dung</label>
+                <textarea id="Comment" asp-for="Comment" class="form-control" rows="3"
+                          placeholder="Nhận xét về hệ thống, tài liệu..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">📤 Gửi phản hồi</button>
+        </form>
+    </div>
+
+    <!-- Phản hồi của chính người dùng -->
+    <h3 style="margin:0 0 12px">📌 Phản hồi của bạn</h3>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card"><div class="empty-state">
+            <div class="empty-state-icon">💡</div>
+            <div class="empty-state-title">Bạn chưa gửi phản hồi nào</div>
+        </div></div>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:12px">
+            @foreach (var fb in Model.Items.OrderByDescending(x => x.CreatedAt))
+            {
+                var replies = Model.Replies.TryGetValue(fb.Id, out var rs) ? rs : new();
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div>
+                            <div style="margin-bottom:8px">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span style="color:@(i <= fb.Rating ? "var(--accent-orange)" : "var(--text-muted)")">★</span>
+                                }
+                            </div>
+                            <p class="text-sm">@fb.Content</p>
+                        </div>
+                        <div class="text-sm text-muted">@fb.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                    </div>
+
+                    @if (replies.Count > 0)
+                    {
+                        <div style="margin-top:12px;padding-left:12px;border-left:2px solid var(--accent-orange);display:flex;flex-direction:column;gap:8px">
+                            @foreach (var r in replies)
+                            {
+                                <div>
+                                    <div class="text-sm" style="font-weight:600">
+                                        @(r.IsAdmin ? "🛡️ Quản trị viên" : r.UserName)
+                                        <span class="text-muted" style="font-weight:400">· @r.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <div class="text-sm">@r.Content</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
 }
 
 @section Scripts {
 <script>
-let selectedStar = 5;
-function highlightStars(n) {
-    document.querySelectorAll('#starRating label').forEach((l, i) => {
-        l.style.transform = i < n ? 'scale(1.2)' : 'scale(1)';
-        l.style.opacity = i < n ? '1' : '0.4';
-    });
-}
-function resetStars() {
-    document.querySelectorAll('#starRating label').forEach((l, i) => {
-        l.style.transform = 'scale(1)';
-        l.style.opacity = i < selectedStar ? '1' : '0.4';
-    });
-}
-function selectStar(n) {
-    selectedStar = n;
-    document.getElementById('star' + n).checked = true;
-}
-resetStars();
+    // ── Star rating (form gửi phản hồi của người dùng) ──
+    let selectedStar = 5;
+    function highlightStars(n) {
+        document.querySelectorAll('#starRating label').forEach((l, i) => {
+            l.style.transform = i < n ? 'scale(1.2)' : 'scale(1)';
+            l.style.opacity = i < n ? '1' : '0.4';
+        });
+    }
+    function resetStars() {
+        document.querySelectorAll('#starRating label').forEach((l, i) => {
+            l.style.transform = 'scale(1)';
+            l.style.opacity = i < selectedStar ? '1' : '0.4';
+        });
+    }
+    function selectStar(n) {
+        selectedStar = n;
+        document.getElementById('star' + n).checked = true;
+    }
+    if (document.getElementById('starRating')) resetStars();
+
+    // ── Lọc danh sách phản hồi (màn admin) ──
+    function filterFeedback() {
+        var q = (document.getElementById('fbSearch').value || '').toLowerCase();
+        var rating = document.getElementById('fbRating').value;
+        document.querySelectorAll('#fbList .fb-item').forEach(function (el) {
+            var okText = !q || (el.getAttribute('data-text') || '').indexOf(q) !== -1;
+            var okRating = !rating || el.getAttribute('data-rating') === rating;
+            el.style.display = (okText && okRating) ? '' : 'none';
+        });
+    }
 </script>
 }

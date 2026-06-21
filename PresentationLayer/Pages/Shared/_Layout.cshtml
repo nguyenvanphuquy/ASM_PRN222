@@ -48,19 +48,25 @@ else
             @if (role == "Lecturer")
             {
                 <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
-                    <span class="nav-icon">🏠</span> Dashboard
+                    <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
-                    <span class="nav-icon">📂</span> Document Management
+                    <span class="nav-icon">📂</span> Quản lý tài liệu
+                </a>
+                <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
+                    <span class="nav-icon">📖</span> Quản lý môn học
                 </a>
                 <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
-                    <span class="nav-icon">🤖</span> Chatbot Testing
+                    <span class="nav-icon">🤖</span> Kiểm thử Chatbot
                 </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
-                    <span class="nav-icon">📊</span> RBL Experiment
+                    <span class="nav-icon">⚙️</span> Cài đặt
+                </a>
+                <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
+                    <span class="nav-icon">💡</span> Gửi phản hồi
                 </a>
                 <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
-                    <span class="nav-icon">👤</span> Profile
+                    <span class="nav-icon">👤</span> Hồ sơ
                 </a>
                 <a class="nav-item nav-logout" href="/Auth/Logout">
                     <span class="nav-icon">🚪</span> Đăng xuất
@@ -69,25 +75,28 @@ else
             else if (role == "Admin")
             {
                 <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
-                    <span class="nav-icon">🏠</span> Dashboard
+                    <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
-                    <span class="nav-icon">👥</span> User Management
+                    <span class="nav-icon">👥</span> Quản lý người dùng
                 </a>
                 <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
-                    <span class="nav-icon">📖</span> Course Management
+                    <span class="nav-icon">📖</span> Quản lý môn học
                 </a>
                 <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
-                    <span class="nav-icon">📂</span> Document Monitoring
+                    <span class="nav-icon">📂</span> Giám sát tài liệu
                 </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
-                    <span class="nav-icon">⚙️</span> System Monitoring
+                    <span class="nav-icon">⚙️</span> Giám sát hệ thống
                 </a>
                 <a class="nav-item @(IsActive("/auditlogs") ? "active" : "")" href="/AuditLogs">
-                    <span class="nav-icon">📜</span> Audit Logs
+                    <span class="nav-icon">📜</span> Nhật ký hệ thống
+                </a>
+                <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
+                    <span class="nav-icon">💡</span> Quản lý phản hồi
                 </a>
                 <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
-                    <span class="nav-icon">👤</span> Profile
+                    <span class="nav-icon">👤</span> Hồ sơ
                 </a>
                 <a class="nav-item nav-logout" href="/Auth/Logout">
                     <span class="nav-icon">🚪</span> Đăng xuất
@@ -96,19 +105,22 @@ else
             else
             {
                 <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
-                    <span class="nav-icon">🏠</span> Dashboard
+                    <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
-                    <span class="nav-icon">📚</span> Subjects
+                    <span class="nav-icon">📚</span> Môn học
                 </a>
                 <a class="nav-item @(IsActive("/chat/session") ? "active" : "")" href="/Chat">
-                    <span class="nav-icon">🤖</span> AI Chatbot
+                    <span class="nav-icon">🤖</span> Trợ lý AI
                 </a>
                 <a class="nav-item @(path == "/chat" || path == "/chat/" ? "active" : "")" href="/Chat">
-                    <span class="nav-icon">🕒</span> Chat History
+                    <span class="nav-icon">🕒</span> Lịch sử trò chuyện
+                </a>
+                <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
+                    <span class="nav-icon">💡</span> Gửi phản hồi
                 </a>
                 <a class="nav-item @(IsActive("/profile") ? "active" : "")" href="/Profile">
-                    <span class="nav-icon">👤</span> Profile
+                    <span class="nav-icon">👤</span> Hồ sơ
                 </a>
                 <a class="nav-item nav-logout" href="/Auth/Logout">
                     <span class="nav-icon">🚪</span> Đăng xuất

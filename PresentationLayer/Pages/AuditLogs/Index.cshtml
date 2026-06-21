@@ -1,0 +1,82 @@
+@page
+@model PresentationLayer.Pages.AuditLogs.IndexModel
+@{
+    ViewData["Title"] = "Nhật ký hệ thống";
+    ViewData["TopbarTitle"] = "📜 Nhật ký hệ thống";
+}
+
+<div class="page-header">
+    <h1>📜 Nhật ký hệ thống</h1>
+    <p>Theo dõi các hoạt động gần đây trên toàn hệ thống</p>
+</div>
+
+<div class="card mb-6">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="card-title">🕒 Hoạt động gần đây</span>
+        <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="auditSearch" class="form-control" placeholder="🔎 Tìm theo người dùng / nội dung..."
+                   style="max-width:280px" oninput="filterAudit()" />
+            <select id="auditCat" class="form-control" style="max-width:160px" onchange="filterAudit()">
+                <option value="">Tất cả loại</option>
+                <option value="Tài khoản">Tài khoản</option>
+                <option value="Tài liệu">Tài liệu</option>
+                <option value="Phản hồi">Phản hồi</option>
+            </select>
+        </div>
+    </div>
+
+    @if (Model.Entries.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">📜</div>
+            <div class="empty-state-title">Chưa có hoạt động nào</div>
+        </div>
+    }
+    else
+    {
+        <div style="overflow-x:auto">
+            <table class="table" id="auditTable" style="width:100%">
+                <thead>
+                    <tr>
+                        <th style="width:160px">Thời gian</th>
+                        <th style="width:130px">Loại</th>
+                        <th style="width:180px">Người thực hiện</th>
+                        <th>Mô tả</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model.Entries)
+                    {
+                        <tr class="audit-row" data-cat="@e.Category" data-text="@($"{e.Actor} {e.Description}".ToLower())">
+                            <td class="text-sm text-muted">@e.Time.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td><span class="badge">@e.Icon @e.Category</span></td>
+                            <td class="text-sm" style="font-weight:600">@e.Actor</td>
+                            <td class="text-sm">@e.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="text-sm text-muted" style="margin-top:12px">Tổng: <span id="auditCount">@Model.Entries.Count</span> hoạt động</p>
+    }
+</div>
+
+@section Scripts {
+<script>
+function filterAudit() {
+    var q = (document.getElementById('auditSearch').value || '').toLowerCase();
+    var cat = document.getElementById('auditCat').value;
+    var rows = document.querySelectorAll('#auditTable .audit-row');
+    var shown = 0;
+    rows.forEach(function (r) {
+        var okText = !q || (r.getAttribute('data-text') || '').indexOf(q) !== -1;
+        var okCat = !cat || r.getAttribute('data-cat') === cat;
+        var show = okText && okCat;
+        r.style.display = show ? '' : 'none';
+        if (show) shown++;
+    });
+    var c = document.getElementById('auditCount');
+    if (c) c.textContent = shown;
+}
+</script>
+}
