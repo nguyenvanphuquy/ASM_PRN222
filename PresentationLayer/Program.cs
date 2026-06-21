@@ -193,6 +193,7 @@ public class Program
         app.MapControllers();
         app.MapHub<ChatHub>("/hubs/chat");
         app.MapHub<NotificationHub>("/hubs/notifications");
+        app.MapHub<SubjectsHub>("/hubs/subjects");
 
         // === DB Init ===
         using (var scope = app.Services.CreateScope())

@@ -1,0 +1,35 @@
+@page
+@model PresentationLayer.Pages.Auth.VerifyEmailModel
+@{
+    ViewData["Title"] = "Xác thực tài khoản";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xác thực tài khoản – ChatBot PRN222</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card" style="text-align:center">
+        @if (Model.IsSuccess)
+        {
+            <div style="font-size:4rem;margin-bottom:16px">✅</div>
+            <h2>Kích hoạt thành công</h2>
+            <p style="margin:16px 0;color:var(--text-secondary)">@Model.Message</p>
+            <a href="/Auth/Login" class="btn btn-primary">Đăng nhập ngay →</a>
+        }
+        else
+        {
+            <div style="font-size:4rem;margin-bottom:16px">❌</div>
+            <h2>Kích hoạt thất bại</h2>
+            <p style="margin:16px 0;color:var(--text-secondary)">@Model.Message</p>
+            <a href="/Auth/Login" class="btn btn-secondary">Quay lại đăng nhập</a>
+        }
+    </div>
+</div>
+</body>
+</html>
