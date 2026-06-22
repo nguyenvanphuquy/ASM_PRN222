@@ -10,4 +10,8 @@ public class FeedbackReply
     public string Content { get; set; } = string.Empty;
     public bool IsAdmin { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Properties
+    public virtual Feedback? Feedback { get; set; }
+    public virtual User? User { get; set; }
 }

@@ -20,4 +20,7 @@ public class User
     public bool IsEmailVerified { get; set; }
     // Token một lần dùng để xác thực email (null sau khi đã xác thực).
     public string? EmailVerificationToken { get; set; }
+
+    // Navigation Properties
+    public virtual Subject? AssignedSubject { get; set; }
 }

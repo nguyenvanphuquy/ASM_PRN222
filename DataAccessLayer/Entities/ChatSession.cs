@@ -8,4 +8,9 @@ public class ChatSession
     public string Title { get; set; } = "New chat";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Properties
+    public virtual User? User { get; set; }
+    public virtual Subject? Subject { get; set; }
+    public virtual ICollection<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
 }
