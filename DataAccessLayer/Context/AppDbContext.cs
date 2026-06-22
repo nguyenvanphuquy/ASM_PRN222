@@ -35,6 +35,11 @@ public class AppDbContext : DbContext
             e.Property(u => u.AvatarPath).HasMaxLength(500);
             e.Property(u => u.AssignedSubjectId).HasMaxLength(36);
             e.Property(u => u.EmailVerificationToken).HasMaxLength(64);
+
+            e.HasOne<Subject>()
+             .WithMany()
+             .HasForeignKey(u => u.AssignedSubjectId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Subject>(e =>
@@ -43,6 +48,12 @@ public class AppDbContext : DbContext
             e.Property(s => s.Id).HasMaxLength(36);
             e.Property(s => s.Code).HasMaxLength(50);
             e.Property(s => s.Name).HasMaxLength(200);
+            e.Property(s => s.CreatedByUserId).HasMaxLength(36);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(s => s.CreatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Chapter>(e =>
@@ -53,6 +64,11 @@ public class AppDbContext : DbContext
             e.Property(c => c.Title).HasMaxLength(300).HasDefaultValue("");
             e.Property(c => c.Description).HasColumnType("nvarchar(max)");
             e.HasIndex(c => c.SubjectId);
+
+            e.HasOne<Subject>()
+             .WithMany()
+             .HasForeignKey(c => c.SubjectId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Document>(e =>
@@ -72,6 +88,21 @@ public class AppDbContext : DbContext
             e.Property(d => d.QualityWarnings).HasColumnType("nvarchar(max)");
             e.HasIndex(d => d.SubjectId);
             e.HasIndex(d => d.ChapterId);
+
+            e.HasOne<Subject>()
+             .WithMany()
+             .HasForeignKey(d => d.SubjectId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<Chapter>()
+             .WithMany()
+             .HasForeignKey(d => d.ChapterId)
+             .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(d => d.UploadedBy)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DocumentChunk>(e =>
@@ -86,6 +117,16 @@ public class AppDbContext : DbContext
             e.Property(c => c.EmbeddingModel).HasMaxLength(100);
             e.HasIndex(c => c.SubjectId);
             e.HasIndex(c => c.DocumentId);
+
+            e.HasOne<Document>()
+             .WithMany()
+             .HasForeignKey(c => c.DocumentId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<Subject>()
+             .WithMany()
+             .HasForeignKey(c => c.SubjectId)
+             .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<SystemSetting>(e =>
@@ -96,6 +137,12 @@ public class AppDbContext : DbContext
             e.HasIndex(s => s.Key).IsUnique();
             e.Property(s => s.Value).HasColumnType("nvarchar(max)");
             e.Property(s => s.Description).HasMaxLength(500);
+            e.Property(s => s.LastModifiedByUserId).HasMaxLength(36);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(s => s.LastModifiedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ChatSession>(e =>
@@ -106,6 +153,16 @@ public class AppDbContext : DbContext
             e.Property(s => s.SubjectId).HasMaxLength(36);
             e.Property(s => s.Title).HasMaxLength(500);
             e.HasIndex(s => s.UserId);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<Subject>()
+             .WithMany()
+             .HasForeignKey(s => s.SubjectId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ChatMessage>(e =>
@@ -122,6 +179,11 @@ public class AppDbContext : DbContext
                     v => JsonSerializer.Deserialize<List<ChatSource>>(v, (JsonSerializerOptions?)null) ?? new List<ChatSource>()
                 )
                 .HasColumnType("nvarchar(max)");
+
+            e.HasOne<ChatSession>()
+             .WithMany()
+             .HasForeignKey(m => m.SessionId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Feedback>(e =>
@@ -136,6 +198,11 @@ public class AppDbContext : DbContext
             e.Property(f => f.RepliedBy).HasMaxLength(200);
             e.Property(f => f.RepliedByAvatar).HasMaxLength(500);
             e.HasIndex(f => f.UserId);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(f => f.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<FeedbackReply>(e =>
@@ -148,6 +215,16 @@ public class AppDbContext : DbContext
             e.Property(r => r.UserAvatar).HasMaxLength(500);
             e.Property(r => r.Content).HasColumnType("nvarchar(max)");
             e.HasIndex(r => r.FeedbackId);
+
+            e.HasOne<Feedback>()
+             .WithMany()
+             .HasForeignKey(r => r.FeedbackId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<AllowedEmail>(e =>
@@ -157,7 +234,13 @@ public class AppDbContext : DbContext
             e.Property(a => a.Email).HasMaxLength(200);
             e.Property(a => a.Note).HasMaxLength(300).HasDefaultValue("");
             e.Property(a => a.AddedBy).HasMaxLength(200).HasDefaultValue("");
+            e.Property(a => a.AddedByUserId).HasMaxLength(36);
             e.HasIndex(a => a.Email).IsUnique();
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(a => a.AddedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Notification>(e =>
@@ -169,6 +252,11 @@ public class AppDbContext : DbContext
             e.Property(n => n.Title).HasMaxLength(200);
             e.Property(n => n.Message).HasColumnType("nvarchar(max)");
             e.HasIndex(n => n.UserId);
+
+            e.HasOne<User>()
+             .WithMany()
+             .HasForeignKey(n => n.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

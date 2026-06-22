@@ -13,5 +13,6 @@ public class AllowedEmail
     public string Note { get; set; } = string.Empty;
     // Username của admin đã thêm email này.
     public string AddedBy { get; set; } = string.Empty;
+    public string? AddedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
