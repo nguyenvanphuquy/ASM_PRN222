@@ -60,7 +60,7 @@ public class ChatService : IChatService
 
         if (searchResults.Count == 0 || searchResults.All(x => x.Score < 0.2f))
         {
-            answer = "Không tìm thấy thông tin này trong tài liệu đã được giảng viên cung cấp.";
+            answer = "Tôi không tìm thấy thông tin này trong tài liệu môn học.";
         }
         else
         {

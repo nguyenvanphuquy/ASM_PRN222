@@ -42,4 +42,18 @@ public class NotificationService : INotificationService
         await _hub.Clients.All
             .SendAsync("ReceiveNotification", new { type, title, message, time = DateTime.Now.ToString("HH:mm") });
     }
+
+    public async Task DocumentStatusChangedAsync(string documentId, string status)
+    {
+        // Phát tới mọi client — trang Tài liệu sẽ tự lọc theo documentId có trên bảng của mình.
+        await _hub.Clients.All
+            .SendAsync("DocumentStatusChanged", new { documentId, status });
+    }
+
+    public async Task UserChangedAsync(string action, string userId, string? value = null)
+    {
+        // Phát tới mọi client — trang Quản lý người dùng tự lọc theo userId có trên bảng.
+        await _hub.Clients.All
+            .SendAsync("UserChanged", new { action, userId, value });
+    }
 }

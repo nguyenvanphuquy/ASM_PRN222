@@ -355,6 +355,7 @@ a:hover { color: var(--accent-purple); }
 .stat-card.blue::before   { background: var(--accent-blue); }
 .stat-card.green::before  { background: var(--accent-green); }
 .stat-card.orange::before { background: var(--accent-orange); }
+.stat-card.red::before    { background: var(--accent-red); }
 
 .stat-card:hover { transform: translateY(-2px); border-color: var(--border-glass); }
 
@@ -516,6 +517,28 @@ tbody tr:hover td { background: var(--bg-card-hover); color: var(--text-primary)
 .badge-orange  { background: rgba(245,158,11,0.2);  color: var(--accent-orange); border: 1px solid rgba(245,158,11,0.3); }
 .badge-red     { background: rgba(239,68,68,0.2);   color: var(--accent-red);    border: 1px solid rgba(239,68,68,0.3); }
 .badge-gray    { background: rgba(100,116,139,0.2); color: var(--text-muted);    border: 1px solid rgba(100,116,139,0.3); }
+
+/* Inline role selector styled like a badge */
+.role-form { margin: 0; }
+.role-select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    padding: 4px 26px 4px 10px;
+    font-weight: 600;
+    font-size: 0.72rem;
+    outline: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 14px) center, calc(100% - 9px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    transition: var(--transition);
+}
+.role-select:hover { filter: brightness(1.15); }
+.role-select:focus { box-shadow: 0 0 0 3px rgba(124,58,237,0.2); }
+.role-select option { background: var(--bg-secondary); color: var(--text-primary); font-weight: 500; }
 
 /* ── Alerts ─────────────────────────────────────────────────── */
 .alert {

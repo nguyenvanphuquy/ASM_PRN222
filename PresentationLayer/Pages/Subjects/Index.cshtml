@@ -3,36 +3,247 @@
 @using ServiceLayer.DTOs
 @{
     ViewData["Title"] = "Môn học";
+    var isAdmin = User.IsInRole("Admin");
 }
 
-<div class="page-header">
-    <h1>📚 Môn học</h1>
-    <p>Danh sách môn học trong hệ thống</p>
+<div class="page-header flex items-center justify-between" style="flex-wrap:wrap;gap:12px">
+    <div>
+        <h1>📚 Môn học</h1>
+        <p>Danh sách môn học trong hệ thống · <span class="text-sm" style="color:var(--accent-green)">● cập nhật trực tiếp</span></p>
+    </div>
+    @if (isAdmin)
+    {
+        <button type="button" class="btn btn-primary" onclick="subjOpenCreate()">➕ Thêm môn học</button>
+    }
 </div>
 
-@if (Model.Subjects.Count == 0)
-{
-    <div class="card"><div class="empty-state">
+<!-- Empty state (ẩn khi đã có môn học) -->
+<div id="subjectsEmpty" class="card" style="@(Model.Subjects.Count == 0 ? "" : "display:none")">
+    <div class="empty-state">
         <div class="empty-state-icon">📚</div>
         <div class="empty-state-title">Chưa có môn học</div>
-    </div></div>
-}
-else
-{
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-        @foreach (var s in Model.Subjects)
+        @if (isAdmin)
         {
-            <div class="card" style="cursor:pointer" onclick="location.href='/Documents?SubjectId=@s.Id'">
-                <div style="font-size:2rem;margin-bottom:12px">📚</div>
-                <h3 style="font-size:1rem;margin-bottom:6px">@s.Name</h3>
-                <p class="text-sm text-muted">@s.Code</p>
-                <div class="flex gap-2 mt-4">
-                    <a href="/Documents?SubjectId=@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📄 Tài liệu</a>
-                    <a href="/Subjects/Chapters/@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📖 Chương</a>
-                    <a href="/Chat" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">💬 Chat</a>
-                </div>
-            </div>
+            <button type="button" class="btn btn-primary mt-4" onclick="subjOpenCreate()">➕ Thêm môn học đầu tiên</button>
         }
+    </div>
+</div>
+
+<!-- Grid môn học (luôn render; rỗng thì không chiếm chỗ) -->
+<div id="subjectsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+    @foreach (var s in Model.Subjects)
+    {
+        <div class="card subject-card" style="cursor:pointer;position:relative" data-subject-id="@s.Id"
+             onclick="location.href='/Documents?SubjectId=@s.Id'">
+            @if (isAdmin)
+            {
+                <div style="position:absolute;top:10px;right:10px;display:flex;gap:6px">
+                    <button type="button" class="btn btn-secondary btn-sm btn-icon" title="Sửa môn"
+                            onclick="event.stopPropagation();subjOpenEdit('@s.Id')">✏️</button>
+                    <button type="button" class="btn btn-danger btn-sm btn-icon" title="Xoá môn"
+                            onclick="event.stopPropagation();subjDelete('@s.Id','@s.Code')">🗑️</button>
+                </div>
+            }
+            <div style="font-size:2rem;margin-bottom:12px">📚</div>
+            <h3 style="font-size:1rem;margin-bottom:6px" class="subj-name">@s.Name</h3>
+            <p class="text-sm text-muted subj-code">@s.Code</p>
+            <div class="flex gap-2 mt-4">
+                <a href="/Documents?SubjectId=@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📄 Tài liệu</a>
+                <a href="/Subjects/Chapters/@s.Id" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📖 Chương</a>
+                <a href="/Chat" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">💬 Chat</a>
+            </div>
+        </div>
+    }
+</div>
+
+@if (isAdmin)
+{
+    <!-- Modal thêm/sửa môn học (Admin) -->
+    <div id="subjModal" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px"
+         onclick="if(event.target===this) subjCloseModal()">
+        <div class="card" style="width:100%;max-width:460px;background:var(--bg-secondary);box-shadow:var(--shadow-lg)">
+            <h3 id="subjModalTitle" style="margin-bottom:16px">➕ Thêm môn học</h3>
+            <div id="subjModalError" class="alert alert-danger" style="display:none;margin-bottom:14px"></div>
+            <input type="hidden" id="subjId" />
+            <div class="form-group">
+                <label class="form-label" for="subjCode">Mã môn *</label>
+                <input id="subjCode" class="form-control" maxlength="20" placeholder="VD: PRN222" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="subjName">Tên môn *</label>
+                <input id="subjName" class="form-control" maxlength="300" placeholder="VD: Lập trình .NET" />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" for="subjDesc">Mô tả</label>
+                <textarea id="subjDesc" class="form-control" rows="3" placeholder="Mô tả ngắn (tuỳ chọn)"></textarea>
+            </div>
+            <div class="flex gap-2 mt-4" style="justify-content:flex-end">
+                <button type="button" class="btn btn-secondary" onclick="subjCloseModal()">Huỷ</button>
+                <button type="button" class="btn btn-primary" id="subjSaveBtn" onclick="subjSave()">💾 Lưu</button>
+            </div>
+        </div>
     </div>
 }
 
+@section Scripts {
+<script>
+(function () {
+    const IS_ADMIN = @(isAdmin ? "true" : "false");
+    const API = '/api/subjects';
+    const grid  = document.getElementById('subjectsGrid');
+    const empty = document.getElementById('subjectsEmpty');
+
+    function esc(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function syncEmpty() {
+        const has = grid.querySelector('[data-subject-id]');
+        empty.style.display = has ? 'none' : '';
+        grid.style.display  = has ? 'grid' : 'none';
+    }
+    syncEmpty();
+
+    function adminButtons(s) {
+        if (!IS_ADMIN) return '';
+        return '<div style="position:absolute;top:10px;right:10px;display:flex;gap:6px">' +
+            '<button type="button" class="btn btn-secondary btn-sm btn-icon" title="Sửa môn" ' +
+                'onclick="event.stopPropagation();subjOpenEdit(\'' + s.id + '\')">✏️</button>' +
+            '<button type="button" class="btn btn-danger btn-sm btn-icon" title="Xoá môn" ' +
+                'onclick="event.stopPropagation();subjDelete(\'' + s.id + '\',\'' + esc(s.code) + '\')">🗑️</button>' +
+            '</div>';
+    }
+
+    function buildCard(s) {
+        const div = document.createElement('div');
+        div.className = 'card subject-card';
+        div.style.cssText = 'cursor:pointer;position:relative';
+        div.dataset.subjectId = s.id;
+        div.setAttribute('onclick', "location.href='/Documents?SubjectId=" + s.id + "'");
+        div.innerHTML =
+            adminButtons(s) +
+            '<div style="font-size:2rem;margin-bottom:12px">📚</div>' +
+            '<h3 style="font-size:1rem;margin-bottom:6px" class="subj-name">' + esc(s.name) + '</h3>' +
+            '<p class="text-sm text-muted subj-code">' + esc(s.code) + '</p>' +
+            '<div class="flex gap-2 mt-4">' +
+                '<a href="/Documents?SubjectId=' + s.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📄 Tài liệu</a>' +
+                '<a href="/Subjects/Chapters/' + s.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">📖 Chương</a>' +
+                '<a href="/Chat" class="btn btn-primary btn-sm" onclick="event.stopPropagation()">💬 Chat</a>' +
+            '</div>';
+        return div;
+    }
+
+    function flash(el) {
+        el.style.transition = 'box-shadow .35s ease, border-color .35s ease';
+        el.style.boxShadow  = '0 0 0 2px var(--accent-purple)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1400);
+    }
+
+    // Cập nhật grid khi có sự kiện (idempotent — gọi từ cả SignalR lẫn sau khi tự thao tác)
+    function onChange(p) {
+        if (!p) return;
+        if (p.action === 'deleted') {
+            const card = grid.querySelector('[data-subject-id="' + p.id + '"]');
+            if (card) card.remove();
+            syncEmpty();
+            return;
+        }
+        const s = p.subject;
+        if (!s) return;
+        let card = grid.querySelector('[data-subject-id="' + s.id + '"]');
+        if (card) {
+            card.querySelector('.subj-name').textContent = s.name;
+            card.querySelector('.subj-code').textContent = s.code;
+        } else {
+            card = buildCard(s);
+            grid.prepend(card);
+            syncEmpty();
+        }
+        flash(card);
+    }
+
+    // ── CRUD UI (Admin) — gọi REST API; grid tự cập nhật qua onChange/SignalR ──
+    function modal() { return document.getElementById('subjModal'); }
+    function showError(m) { const e = document.getElementById('subjModalError'); e.textContent = m; e.style.display = 'block'; }
+    function hideError() { const e = document.getElementById('subjModalError'); e.style.display = 'none'; }
+    function openModal() { hideError(); modal().style.display = 'flex'; setTimeout(() => document.getElementById('subjCode').focus(), 50); }
+
+    window.subjCloseModal = function () { if (modal()) modal().style.display = 'none'; };
+
+    window.subjOpenCreate = function () {
+        document.getElementById('subjModalTitle').textContent = '➕ Thêm môn học';
+        document.getElementById('subjId').value = '';
+        document.getElementById('subjCode').value = '';
+        document.getElementById('subjName').value = '';
+        document.getElementById('subjDesc').value = '';
+        openModal();
+    };
+
+    window.subjOpenEdit = async function (id) {
+        try {
+            const s = await (await fetch(API + '/' + id)).json();
+            document.getElementById('subjModalTitle').textContent = '✏️ Sửa môn học';
+            document.getElementById('subjId').value = s.id;
+            document.getElementById('subjCode').value = s.code;
+            document.getElementById('subjName').value = s.name;
+            document.getElementById('subjDesc').value = s.description || '';
+            openModal();
+        } catch (e) { alert('Không tải được thông tin môn học.'); }
+    };
+
+    window.subjSave = async function () {
+        const id = document.getElementById('subjId').value;
+        const code = document.getElementById('subjCode').value.trim();
+        const name = document.getElementById('subjName').value.trim();
+        const description = document.getElementById('subjDesc').value.trim();
+        if (!code || !name) { showError('Vui lòng nhập Mã môn và Tên môn.'); return; }
+
+        const btn = document.getElementById('subjSaveBtn');
+        btn.disabled = true;
+        try {
+            const res = await fetch(id ? (API + '/' + id) : API, {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, name, description })
+            });
+            if (!res.ok) {
+                let msg = 'Lưu thất bại.';
+                try {
+                    const j = await res.json();
+                    msg = j.message || (j.errors ? Object.values(j.errors).flat().join(' ') : msg);
+                } catch (e) {}
+                showError(msg); btn.disabled = false; return;
+            }
+            const saved = await res.json();
+            onChange({ action: id ? 'updated' : 'created', subject: saved }); // phản hồi tức thì
+            window.subjCloseModal();
+        } catch (e) {
+            showError('Lỗi mạng: ' + e.message);
+        } finally {
+            btn.disabled = false;
+        }
+    };
+
+    window.subjDelete = async function (id, code) {
+        if (!confirm('Xoá môn học "' + code + '"? Hành động này không thể hoàn tác.')) return;
+        try {
+            const res = await fetch(API + '/' + id, { method: 'DELETE' });
+            if (res.ok || res.status === 204) onChange({ action: 'deleted', id });
+            else { let m = 'Xoá thất bại.'; try { m = (await res.json()).message || m; } catch (e) {} alert(m); }
+        } catch (e) { alert('Lỗi mạng: ' + e.message); }
+    };
+
+    // ── SignalR: nhận thay đổi từ bất kỳ client/admin nào ──
+    if (typeof signalR !== 'undefined') {
+        const conn = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/subjects')
+            .withAutomaticReconnect()
+            .build();
+        conn.on('SubjectsChanged', onChange);
+        conn.start().catch(e => console.warn('Subjects hub:', e));
+    }
+})();
+</script>
+}

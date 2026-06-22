@@ -8,14 +8,10 @@ namespace ServiceLayer.Services.Implementations;
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepo;
-    private readonly IAllowedEmailService _allowedEmails;
-    public AuthService(IUserRepository userRepo, IAllowedEmailService allowedEmails)
+    public AuthService(IUserRepository userRepo)
     {
         _userRepo = userRepo;
-        _allowedEmails = allowedEmails;
     }
-
-    public Task<bool> IsEmailAllowedAsync(string email) => _allowedEmails.IsAllowedAsync(email);
 
     public async Task<LoginResult> LoginAsync(string username, string password)
     {
@@ -36,35 +32,6 @@ public class AuthService : IAuthService
         return new LoginResult(true, null, user.Id, user.Username, user.FullName, user.Role, user.AvatarPath, user.CanUploadDocuments, user.AssignedSubjectId);
     }
 
-    public async Task<bool> UsernameExistsAsync(string username)
-        => await _userRepo.GetByUsernameAsync(username.Trim()) is not null;
-
-    public async Task<RegisterResult> RegisterAsync(string username, string email, string password, string fullName)
-    {
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-            return new RegisterResult(false, "Username và password bắt buộc");
-        if (password.Length < 6)
-            return new RegisterResult(false, "Mật khẩu phải ít nhất 6 ký tự");
-
-        // Whitelist: nếu admin đã bật danh sách email cho phép, email phải nằm trong đó.
-        if (!await _allowedEmails.IsAllowedAsync(email ?? string.Empty))
-            return new RegisterResult(false, "Email của bạn chưa được cho phép đăng ký. Vui lòng liên hệ quản trị viên.");
-
-        var existing = await _userRepo.GetByUsernameAsync(username.Trim());
-        if (existing is not null)
-            return new RegisterResult(false, "Username đã tồn tại");
-
-        var user = new User
-        {
-            Username = username.Trim(),
-            Email = email?.Trim() ?? string.Empty,
-            FullName = fullName?.Trim() ?? string.Empty,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Role = "Student"
-        };
-        await _userRepo.CreateAsync(user);
-        return new RegisterResult(true, null);
-    }
 
     public async Task EnsureSeedUsersAsync()
     {

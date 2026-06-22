@@ -109,7 +109,7 @@ public class GroqService : IGroqService
         sb.AppendLine("Bạn là trợ lý học tập AI cho sinh viên Việt Nam, trả lời bằng tiếng Việt.");
         sb.AppendLine("Quy tắc bắt buộc:");
         sb.AppendLine("1. CHỈ trả lời dựa trên nội dung tài liệu được cung cấp bên dưới.");
-        sb.AppendLine("2. Nếu tài liệu không đủ thông tin, nói rõ \"Mình chưa tìm thấy trong tài liệu\" — KHÔNG được bịa.");
+        sb.AppendLine("2. Nếu tài liệu không đủ thông tin để trả lời, hãy trả lời chính xác câu sau và không nói gì thêm: \"Tôi không tìm thấy thông tin này trong tài liệu môn học.\"");
         sb.AppendLine("3. KHÔNG tự ý chèn Nguồn (Source) hay Độ tin cậy vào câu trả lời vì giao diện đã tự động hiển thị chúng bên dưới.");
         sb.AppendLine("4. Giọng thân thiện, ngắn gọn, có thể dùng markdown.");
         sb.AppendLine();
@@ -136,7 +136,7 @@ public class GroqService : IGroqService
     private static string BuildFallback(IReadOnlyList<DocumentChunk> chunks)
     {
         if (chunks.Count == 0)
-            return "Mình chưa tìm thấy thông tin liên quan trong tài liệu môn học. Bạn thử upload thêm tài liệu hoặc đặt câu hỏi khác nhé.";
+            return "Tôi không tìm thấy thông tin này trong tài liệu môn học.";
 
         var sb = new StringBuilder();
         sb.AppendLine("Dựa trên tài liệu môn học, mình tìm thấy các đoạn liên quan sau:");

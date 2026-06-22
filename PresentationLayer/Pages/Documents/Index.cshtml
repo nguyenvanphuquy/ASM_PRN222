@@ -83,9 +83,9 @@ else
                                    doc.FileName.EndsWith(".docx") ? "📘" :
                                    doc.FileName.EndsWith(".pptx") ? "📙" : "📄";
                         var statusClass = doc.Status == "Indexed" ? "badge-green" :
-                                          doc.Status == "Processing" ? "badge-orange" :
-                                          doc.Status == "Failed" ? "badge-red" : "badge-gray";
-                        <tr>
+                                          (doc.Status == "Processing" || doc.Status == "Reviewing" || doc.Status == "Indexing") ? "badge-orange" :
+                                          (doc.Status == "Failed" || doc.Status == "Rejected") ? "badge-red" : "badge-gray";
+                        <tr data-doc-id="@doc.Id">
                             <td>
                                 <div class="flex items-center gap-2">
                                     <span style="font-size:1.3rem">@icon</span>
@@ -95,8 +95,14 @@ else
                                     </div>
                                 </div>
                             </td>
-                            <td><span class="badge badge-blue">@(doc.SubjectId ?? "–")</span></td>
-                            <td><span class="badge @statusClass">@doc.Status</span></td>
+                            <td>
+                                @{
+                                    var subj = Model.Subjects.FirstOrDefault(s => s.Id == doc.SubjectId);
+                                    var displaySubj = subj != null ? $"{subj.Code} - {subj.Name}" : (doc.SubjectId ?? "–");
+                                }
+                                <span class="badge badge-blue" title="@displaySubj">@(subj?.Code ?? doc.SubjectId ?? "–")</span>
+                            </td>
+                            <td><span class="badge @statusClass doc-status-badge">@doc.Status</span></td>
                             <td class="text-sm text-muted">@(doc.FileSize / 1024) KB</td>
                             <td class="text-sm text-muted">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
                             <td>
@@ -119,5 +125,42 @@ else
         </div>
     </div>
     <p class="text-sm text-muted mt-4">Tổng: @Model.Documents.Count tài liệu</p>
+}
+
+@section Scripts {
+<script>
+(function () {
+    // Cập nhật badge trạng thái tài liệu theo thời gian thực (không cần reload).
+    function statusClass(s) {
+        if (s === 'Indexed') return 'badge-green';
+        if (s === 'Processing' || s === 'Reviewing' || s === 'Indexing') return 'badge-orange';
+        if (s === 'Failed' || s === 'Rejected') return 'badge-red';
+        return 'badge-gray';
+    }
+
+    function applyStatus(documentId, status) {
+        const row = document.querySelector(`tr[data-doc-id="${documentId}"]`);
+        if (!row) return; // tài liệu không nằm trong bảng hiện tại (đã lọc) → bỏ qua
+        const badge = row.querySelector('.doc-status-badge');
+        if (!badge) return;
+        badge.textContent = status;
+        badge.className = 'badge ' + statusClass(status) + ' doc-status-badge';
+        // Nhấp nháy nhẹ để người dùng thấy dòng vừa đổi
+        row.style.transition = 'background 0.4s ease';
+        row.style.background = 'rgba(124,58,237,0.15)';
+        setTimeout(() => { row.style.background = ''; }, 1400);
+    }
+
+    function subscribe() {
+        if (window.appNotifHub) {
+            window.appNotifHub.on('DocumentStatusChanged', d => applyStatus(d.documentId, d.status));
+        } else {
+            // _Layout chưa kịp tạo connection → thử lại sau giây lát
+            setTimeout(subscribe, 300);
+        }
+    }
+    subscribe();
+})();
+</script>
 }
 

@@ -14,11 +14,13 @@ public class UserService : IUserService
     private readonly IUserRepository _repo;
     private readonly AutoMapper.IMapper _mapper;
     private readonly IAllowedEmailService _allowedEmails;
-    public UserService(IUserRepository repo, IAllowedEmailService allowedEmails, AutoMapper.IMapper mapper)
+    private readonly INotificationService _notifier;
+    public UserService(IUserRepository repo, IAllowedEmailService allowedEmails, AutoMapper.IMapper mapper, INotificationService notifier)
     {
         _repo = repo;
         _allowedEmails = allowedEmails;
         _mapper = mapper;
+        _notifier = notifier;
     }
 
     public async Task<List<DTOs.UserDto>> GetAllAsync() { var entities = await _repo.GetAllAsync(); return _mapper.Map<List<DTOs.UserDto>>(entities); }
@@ -69,6 +71,7 @@ public class UserService : IUserService
         user.IsEmailVerified = true;
         user.EmailVerificationToken = null;
         await _repo.UpdateAsync(user);
+        await _notifier.UserChangedAsync("verified", user.Id);
         return (true, null);
     }
 
@@ -85,6 +88,7 @@ public class UserService : IUserService
             user.AssignedSubjectId = null;
         }
         await _repo.UpdateAsync(user);
+        await _notifier.UserChangedAsync("role", id, newRole);
         return (true, null);
     }
 
@@ -129,6 +133,7 @@ public class UserService : IUserService
         if (user.Role == Roles.Admin && await _repo.CountByRoleAsync(Roles.Admin) <= 1)
             return (false, "Không thể xoá Admin cuối cùng");
         await _repo.DeleteAsync(id);
+        await _notifier.UserChangedAsync("deleted", id);
         return (true, null);
     }
 

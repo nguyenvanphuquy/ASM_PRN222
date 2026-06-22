@@ -15,6 +15,28 @@
     <!-- Profile info -->
     <div class="card">
         <div class="card-header"><span class="card-title">📝 Thông tin cá nhân</span></div>
+        
+        @{
+            var initials = Model.FullName.Length > 0 ? Model.FullName[0].ToString().ToUpper() : "?";
+        }
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin:16px 0;padding-bottom:16px;border-bottom:1px solid var(--border-color,#334155)">
+            <div class="user-avatar" style="width:80px;height:80px;font-size:1.8rem;border-radius:50%;overflow:hidden;background:#a855f7;color:#fff;display:flex;align-items:center;justify-content:center">
+                @if (Model.UserInfo != null && !string.IsNullOrEmpty(Model.UserInfo.AvatarPath))
+                {
+                    <img src="@Model.UserInfo.AvatarPath" alt="Avatar" style="width:100%;height:100%;object-fit:cover" />
+                }
+                else
+                {
+                    @initials
+                }
+            </div>
+            <form method="post" asp-page-handler="UploadAvatar" enctype="multipart/form-data" id="avatarForm">
+                @Html.AntiForgeryToken()
+                <input type="file" asp-for="AvatarFile" id="avatarFileInput" accept="image/*" style="display:none" onchange="document.getElementById('avatarForm').submit()" />
+                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('avatarFileInput').click()">📷 Thay đổi ảnh</button>
+            </form>
+        </div>
+
         <form method="post" asp-page-handler="Update">
             @Html.AntiForgeryToken()
             <div class="form-group">

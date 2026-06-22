@@ -7,12 +7,89 @@
 
 <div class="page-header">
     <h1>👥 Quản lý người dùng</h1>
-    <p>Danh sách tất cả người dùng trong hệ thống</p>
+    <p>Tạo tài khoản, phân quyền, đặt lại mật khẩu và quản lý người dùng · <span class="text-sm" style="color:var(--accent-green)">● cập nhật trực tiếp</span></p>
 </div>
 
+<!-- ── Stat summary ── -->
+<div class="stats-grid">
+    <div class="stat-card purple">
+        <div class="stat-icon purple">👥</div>
+        <div class="stat-value" data-stat="total">@Model.TotalCount</div>
+        <div class="stat-label">Tổng người dùng</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.2);color:var(--accent-red)">🛡️</div>
+        <div class="stat-value" data-stat="admin">@Model.AdminCount</div>
+        <div class="stat-label">Quản trị viên</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-icon blue">👨‍🏫</div>
+        <div class="stat-value" data-stat="lecturer">@Model.LecturerCount</div>
+        <div class="stat-label">Giảng viên</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">🎓</div>
+        <div class="stat-value" data-stat="student">@Model.StudentCount</div>
+        <div class="stat-label">Sinh viên</div>
+    </div>
+</div>
+
+<!-- ── Toolbar: search + create ── -->
+<div class="flex items-center justify-between gap-4 mb-4" style="flex-wrap:wrap">
+    <div style="position:relative;flex:1;min-width:240px;max-width:360px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.5">🔍</span>
+        <input id="userSearch" class="form-control" style="padding-left:36px" placeholder="Tìm theo tên, username, email…"
+               onkeyup="filterUsers(this.value)" />
+    </div>
+    <button type="button" class="btn btn-primary" onclick="toggleCreateForm()">
+        <span id="createToggleIcon">➕</span> Thêm người dùng
+    </button>
+</div>
+
+<!-- ── Create user form (collapsible) ── -->
+<div id="createForm" class="card animate-fade-in" style="display:none;margin-bottom:20px;border-color:rgba(124,58,237,0.3)">
+    <h3 style="margin-bottom:16px;font-size:1.1rem;display:flex;align-items:center;gap:6px">
+        <span>🆕</span> Tạo tài khoản mới
+    </h3>
+    <form method="post" asp-page-handler="Create">
+        @Html.AntiForgeryToken()
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Tên đăng nhập *</label>
+                <input name="username" class="form-control" placeholder="VD: sv001" required />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Họ và tên *</label>
+                <input name="fullName" class="form-control" placeholder="VD: Nguyễn Văn A" required />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Email *</label>
+                <input name="email" type="email" class="form-control" placeholder="a@fpt.edu.vn" required />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Mật khẩu *</label>
+                <input name="password" type="password" class="form-control" placeholder="≥ 6 ký tự" minlength="6" required />
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Vai trò *</label>
+                <select name="role" class="form-control" required>
+                    <option value="Student">🎓 Sinh viên</option>
+                    <option value="Lecturer">👨‍🏫 Giảng viên</option>
+                    <option value="Admin">🛡️ Quản trị viên</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">💾 Tạo tài khoản</button>
+            <button type="button" class="btn btn-secondary" onclick="toggleCreateForm()">Huỷ</button>
+        </div>
+    </form>
+</div>
+
+<!-- ── Users table ── -->
 <div class="card" style="padding:0">
     <div class="table-wrapper">
-        <table>
+        <table id="usersTable">
             <thead>
                 <tr>
                     <th>Người dùng</th>
@@ -20,7 +97,7 @@
                     <th>Vai trò</th>
                     <th>Trạng thái</th>
                     <th>Ngày tạo</th>
-                    <th>Thao tác</th>
+                    <th class="text-right" style="text-align:right">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,7 +105,7 @@
                 {
                     var roleClass = u.Role == "Admin" ? "badge-red" :
                                     u.Role == "Lecturer" ? "badge-blue" : "badge-green";
-                    <tr>
+                    <tr class="user-row" data-user-id="@u.Id" data-role="@u.Role" data-search="@($"{u.FullName} {u.Username} {u.Email}".ToLower())">
                         <td>
                             <div class="flex items-center gap-2">
                                 <div class="user-avatar" style="background:var(--grad-primary)">
@@ -36,50 +113,55 @@
                                 </div>
                                 <div>
                                     <div style="font-weight:600;color:var(--text-primary)">@u.FullName</div>
-                                    <div class="text-sm text-muted">@u.Username</div>
+                                    <div class="text-sm text-muted">@@@u.Username</div>
                                 </div>
                             </div>
                         </td>
                         <td class="text-sm">@u.Email</td>
-                        <td><span class="badge @roleClass">@u.Role</span></td>
+                        <td>
+                            <form method="post" asp-page-handler="ChangeRole" asp-route-id="@u.Id" class="role-form">
+                                @Html.AntiForgeryToken()
+                                <select name="role" class="role-select badge @roleClass"
+                                        onchange="this.form.submit()" title="Đổi vai trò">
+                                    <option value="Student" selected="@(u.Role == "Student")">Sinh viên</option>
+                                    <option value="Lecturer" selected="@(u.Role == "Lecturer")">Giảng viên</option>
+                                    <option value="Admin" selected="@(u.Role == "Admin")">Quản trị viên</option>
+                                </select>
+                            </form>
+                        </td>
                         <td>
                             @if (u.IsEmailVerified)
                             {
-                                <span class="badge badge-green">✅ Đã xác thực</span>
+                                <span class="badge badge-green user-status">✅ Đã xác thực</span>
                             }
                             else
                             {
-                                <span class="badge badge-orange">⏳ Chờ xác thực</span>
+                                <span class="badge badge-orange user-status">⏳ Chờ xác thực</span>
                             }
                         </td>
                         <td class="text-sm text-muted">@u.CreatedAt.ToString("dd/MM/yyyy")</td>
                         <td>
-                            <div class="flex gap-2 items-center flex-wrap">
+                            <div class="flex gap-2 items-center flex-wrap" style="justify-content:flex-end">
                                 @if (u.Role == "Lecturer")
                                 {
                                     <form method="post" asp-page-handler="AssignSubject" asp-route-id="@u.Id" class="flex gap-2">
                                         @Html.AntiForgeryToken()
-                                        <select name="subjectId" class="form-control" style="padding: 0.25rem; font-size: 0.875rem; height: auto;" required>
-                                            <option value="">– Chọn môn –</option>
+                                        <select name="subjectId" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.8rem;height:auto;width:auto" required>
+                                            <option value="">– Gán môn –</option>
                                             @foreach (var s in Model.Subjects)
                                             {
-                                                if (s.Id == u.AssignedSubjectId)
-                                                {
-                                                    <option value="@s.Id" selected>@s.Name</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="@s.Id">@s.Name</option>
-                                                }
+                                                <option value="@s.Id" selected="@(s.Id == u.AssignedSubjectId)">@s.Name</option>
                                             }
                                         </select>
-                                        <button type="submit" class="btn btn-primary btn-sm">Gán môn</button>
+                                        <button type="submit" class="btn btn-secondary btn-sm" title="Gán môn học">📌</button>
                                     </form>
                                 }
+                                <button type="button" class="btn btn-secondary btn-sm" title="Đặt lại mật khẩu"
+                                        onclick="resetPwd('@u.Id', '@u.Username')">🔑</button>
                                 <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id"
                                       onsubmit="return confirm('Xoá người dùng @u.Username?')">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-danger btn-sm">🗑️ Xoá</button>
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Xoá">🗑️</button>
                                 </form>
                             </div>
                         </td>
@@ -88,6 +170,99 @@
             </tbody>
         </table>
     </div>
+    <div id="noResults" class="empty-state" style="display:none">
+        <div class="empty-state-icon">🔍</div>
+        <div class="empty-state-title">Không tìm thấy người dùng</div>
+        <div class="empty-state-text">Thử từ khoá khác.</div>
+    </div>
 </div>
-<p class="text-sm text-muted mt-4">Tổng: @Model.Users.Count người dùng</p>
+<p class="text-sm text-muted mt-4">Tổng: <strong id="userTotalFooter">@Model.TotalCount</strong> người dùng</p>
 
+<!-- Hidden form for password reset -->
+<form method="post" asp-page-handler="ResetPassword" id="resetPwdForm" style="display:none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="resetPwdId" />
+    <input type="hidden" name="newPassword" id="resetPwdValue" />
+</form>
+
+@section Scripts {
+<script>
+    function toggleCreateForm() {
+        const f = document.getElementById('createForm');
+        const open = f.style.display === 'none' || !f.style.display;
+        f.style.display = open ? 'block' : 'none';
+        document.getElementById('createToggleIcon').textContent = open ? '✖️' : '➕';
+        if (open) f.querySelector('input[name=username]')?.focus();
+    }
+
+    function filterUsers(q) {
+        q = (q || '').trim().toLowerCase();
+        let visible = 0;
+        document.querySelectorAll('#usersTable .user-row').forEach(row => {
+            const match = row.dataset.search.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        document.getElementById('noResults').style.display = visible === 0 ? 'flex' : 'none';
+    }
+
+    function resetPwd(id, username) {
+        const pw = prompt('Đặt lại mật khẩu cho "' + username + '" (tối thiểu 6 ký tự):');
+        if (!pw) return;
+        if (pw.length < 6) { alert('Mật khẩu phải có ít nhất 6 ký tự.'); return; }
+        document.getElementById('resetPwdId').value = id;
+        document.getElementById('resetPwdValue').value = pw;
+        document.getElementById('resetPwdForm').submit();
+    }
+
+    // ── Realtime: tự động cập nhật trạng thái tài khoản qua SignalR ──
+    (function () {
+        function findRow(userId) {
+            return document.querySelector('#usersTable .user-row[data-user-id="' + userId + '"]');
+        }
+        function roleClass(role) {
+            return role === 'Admin' ? 'badge-red' : role === 'Lecturer' ? 'badge-blue' : 'badge-green';
+        }
+        function flash(row) {
+            row.style.transition = 'background 0.4s ease';
+            row.style.background = 'rgba(124,58,237,0.15)';
+            setTimeout(function () { row.style.background = ''; }, 1400);
+        }
+        function recount() {
+            var rows = Array.prototype.slice.call(document.querySelectorAll('#usersTable .user-row'));
+            var a = 0, l = 0, s = 0;
+            rows.forEach(function (r) {
+                var role = r.dataset.role;
+                if (role === 'Admin') a++; else if (role === 'Lecturer') l++; else s++;
+            });
+            var set = function (k, v) { var el = document.querySelector('[data-stat="' + k + '"]'); if (el) el.textContent = v; };
+            set('total', rows.length); set('admin', a); set('lecturer', l); set('student', s);
+            var f = document.getElementById('userTotalFooter'); if (f) f.textContent = rows.length;
+        }
+        function onUserChange(d) {
+            if (!d) return;
+            var row = findRow(d.userId);
+            if (d.action === 'deleted') {
+                if (row) { row.remove(); recount(); }
+                return;
+            }
+            if (!row) return;
+            if (d.action === 'verified') {
+                var cell = row.querySelector('.user-status');
+                if (cell) { cell.className = 'badge badge-green user-status'; cell.textContent = '✅ Đã xác thực'; }
+                flash(row);
+            } else if (d.action === 'role') {
+                var sel = row.querySelector('.role-select');
+                if (sel) { sel.value = d.value; sel.className = 'badge ' + roleClass(d.value) + ' role-select'; }
+                row.dataset.role = d.value;
+                recount();
+                flash(row);
+            }
+        }
+        (function subscribe() {
+            if (window.appNotifHub) window.appNotifHub.on('UserChanged', onUserChange);
+            else setTimeout(subscribe, 300);
+        })();
+    })();
+</script>
+}

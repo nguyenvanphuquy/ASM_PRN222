@@ -259,6 +259,19 @@ public class Program
                             UpdatedAt   datetime2     NOT NULL DEFAULT GETUTCDATE()
                         );
                         CREATE UNIQUE INDEX UX_SystemSettings_Key ON SystemSettings ([Key]);
+                    END;
+                    IF OBJECT_ID('Notifications') IS NULL
+                    BEGIN
+                        CREATE TABLE Notifications (
+                            Id        nvarchar(36)  NOT NULL PRIMARY KEY,
+                            UserId    nvarchar(36)  NOT NULL DEFAULT '',
+                            Type      nvarchar(20)  NOT NULL DEFAULT 'info',
+                            Title     nvarchar(200) NOT NULL DEFAULT '',
+                            Message   nvarchar(max) NOT NULL DEFAULT '',
+                            IsRead    bit           NOT NULL DEFAULT 0,
+                            CreatedAt datetime2     NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE INDEX IX_Notifications_UserId ON Notifications (UserId);
                     END;");
 
                 var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();

@@ -91,6 +91,7 @@ public class DocumentService : IDocumentService
 
             doc.Status = "Reviewing";
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
             // 🔔 Thông báo cho giảng viên: tài liệu đã qua kiểm tra AI, chờ duyệt
             await _notifier.SendAsync(uploadedByUserId, "info",
@@ -101,6 +102,7 @@ public class DocumentService : IDocumentService
         {
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
             await _notifier.SendAsync(uploadedByUserId, "error",
                 "❌ Upload thất bại",
@@ -145,6 +147,7 @@ public class DocumentService : IDocumentService
             doc.ChunkCount = chunkCount;
             doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
             return chunkCount;
         }
@@ -152,6 +155,7 @@ public class DocumentService : IDocumentService
         {
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
             throw;
         }
     }
@@ -234,6 +238,7 @@ public class DocumentService : IDocumentService
 
         doc.Status = "Indexing";
         await _docRepo.UpdateAsync(doc);
+        await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
         try
         {
@@ -241,6 +246,7 @@ public class DocumentService : IDocumentService
             doc.ChunkCount = chunkCount;
             doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
             // 🔔 Thông báo Indexed thành công
             await _notifier.SendAsync(doc.UploadedBy, "success",
@@ -253,6 +259,7 @@ public class DocumentService : IDocumentService
         {
             doc.Status = DocumentStatuses.Failed;
             await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
             await _notifier.SendAsync(doc.UploadedBy, "error",
                 "❌ Index thất bại",
@@ -268,6 +275,7 @@ public class DocumentService : IDocumentService
 
         doc.Status = "Rejected";
         await _docRepo.UpdateAsync(doc);
+        await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
         // 🔔 Thông báo từ chối
         await _notifier.SendAsync(doc.UploadedBy, "warning",

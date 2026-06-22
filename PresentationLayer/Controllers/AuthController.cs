@@ -74,24 +74,6 @@ public class AuthController : ControllerBase
         });
     }
 
-    /// <summary>Đăng ký tài khoản mới cho Sinh viên.</summary>
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest req)
-    {
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
-
-        var result = await _authService.RegisterAsync(req.Username, req.Email, req.Password, req.FullName);
-        if (!result.Success)
-        {
-            return BadRequest(new { message = result.ErrorMessage ?? "Đăng ký thất bại." });
-        }
-
-        return Ok(new { message = "Đăng ký tài khoản thành công. Tài khoản của bạn đã được kích hoạt mặc định." });
-    }
-
     /// <summary>Kích hoạt tài khoản qua token email.</summary>
     [HttpGet("verify-email")]
     [AllowAnonymous]

@@ -80,6 +80,9 @@ else
                 <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
                     <span class="nav-icon">👥</span> Quản lý người dùng
                 </a>
+                <a class="nav-item @(IsActive("/allowedemails") ? "active" : "")" href="/AllowedEmails">
+                    <span class="nav-icon">📧</span> Whitelist Email
+                </a>
                 <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
                     <span class="nav-icon">📖</span> Quản lý môn học
                 </a>
@@ -375,8 +378,13 @@ else
         .build();
 
     conn.on('ReceiveNotification', data => {
-        showToast(data.type, data.title, data.message);
+        showToast(data);
     });
+
+    // Expose the live notification connection so individual pages (e.g. Documents)
+    // can subscribe to extra realtime events like 'DocumentStatusChanged'
+    // without opening a second connection.
+    window.appNotifHub = conn;
 
     conn.start().catch(e => console.warn('Notification hub:', e));
 })();

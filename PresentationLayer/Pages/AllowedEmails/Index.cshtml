@@ -5,21 +5,21 @@
 }
 
 <div class="page-header">
-    <h1>📧 Whitelist Email đăng ký</h1>
-    <p>Quản lý danh sách email được phép tự đăng ký tài khoản Student</p>
+    <h1>📧 Whitelist Email</h1>
+    <p>Danh sách email được phép cấp tài khoản. Quản trị viên chỉ tạo được tài khoản cho các email nằm trong danh sách này.</p>
 </div>
 
 <!-- Whitelist Status Banner -->
 @if (Model.IsWhitelistEnabled)
 {
     <div class="alert alert-success" style="margin-bottom:24px">
-        🔒 <strong>Chế độ Whitelist Đang Bật</strong>: Chỉ những email thuộc danh sách bên dưới mới có thể tự đăng ký tài khoản. Các email khác sẽ bị chặn.
+        🔒 <strong>Chế độ Whitelist Đang Bật</strong>: Quản trị viên chỉ có thể tạo tài khoản cho những email thuộc danh sách bên dưới. Các email khác sẽ bị chặn.
     </div>
 }
 else
 {
     <div class="alert alert-info" style="margin-bottom:24px;border-color:var(--accent-orange);color:var(--accent-orange)">
-        🔓 <strong>Chế độ Tự Do Đang Bật (Whitelist trống)</strong>: Hệ thống hiện đang mở tự do cho mọi email đăng ký tài khoản Student. Thêm ít nhất một email để kích hoạt chế độ chặn whitelist.
+        🔓 <strong>Chế độ Tự Do Đang Bật (Whitelist trống)</strong>: Quản trị viên hiện có thể tạo tài khoản cho mọi email. Thêm ít nhất một email để chỉ cho phép cấp tài khoản trong danh sách.
     </div>
 }
 
@@ -45,7 +45,21 @@ else
 
     <!-- Right: Allowed emails table -->
     <div class="card" style="padding:0">
-        <div class="table-wrapper">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-subtle)">
+            <h3 style="font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px">
+                <span>📋</span> Danh sách email được phép
+                <span class="badge badge-purple">@Model.AllowedEmails.Count</span>
+            </h3>
+            @if (Model.IsWhitelistEnabled)
+            {
+                <span class="badge badge-green">🔒 Whitelist bật</span>
+            }
+            else
+            {
+                <span class="badge badge-orange">🔓 Tự do</span>
+            }
+        </div>
+        <div class="table-wrapper" style="border:none;border-radius:0">
             <table>
                 <thead>
                     <tr>

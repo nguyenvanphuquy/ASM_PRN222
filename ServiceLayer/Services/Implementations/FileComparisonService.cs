@@ -38,21 +38,93 @@ public class FileComparisonService : IFileComparisonService
         string documentId2,
         CancellationToken ct = default)
     {
-        // Mở file 1
-        var file1 = await _documentService.OpenAsync(documentId1)
+        var doc1 = await _documentService.GetByIdAsync(documentId1)
             ?? throw new InvalidOperationException($"Không tìm thấy file với ID: {documentId1}");
-        // Mở file 2
-        var file2 = await _documentService.OpenAsync(documentId2)
+        var doc2 = await _documentService.GetByIdAsync(documentId2)
             ?? throw new InvalidOperationException($"Không tìm thấy file với ID: {documentId2}");
 
-        using (file1.Content)
-        using (file2.Content)
+        string text1 = "";
+        if (!string.IsNullOrWhiteSpace(doc1.ExtractedText))
         {
-            return await CompareStreamsAsync(
-                file1.Content, file1.FileName, file1.ContentType,
-                file2.Content, file2.FileName, file2.ContentType,
-                ct);
+            text1 = doc1.ExtractedText;
         }
+        else
+        {
+            // Thử tái cấu trúc văn bản từ các chunks trong DB
+            var chunks1 = await _documentService.GetChunksAsync(documentId1);
+            if (chunks1 != null && chunks1.Any())
+            {
+                text1 = string.Join("\n\n", chunks1.OrderBy(c => c.ChunkIndex).Select(c => c.Content));
+            }
+
+            if (string.IsNullOrWhiteSpace(text1))
+            {
+                var file1 = await _documentService.OpenAsync(documentId1);
+                if (file1 != null)
+                {
+                    using (file1.Content)
+                    {
+                        var pages = _extractor.Extract(file1.Content, file1.FileName, file1.ContentType);
+                        text1 = BuildFullText(pages, file1.FileName);
+                    }
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(text1))
+        {
+            throw new InvalidOperationException($"Không tìm thấy nội dung hoặc file vật lý của tài liệu: {doc1.Title}");
+        }
+
+        string text2 = "";
+        if (!string.IsNullOrWhiteSpace(doc2.ExtractedText))
+        {
+            text2 = doc2.ExtractedText;
+        }
+        else
+        {
+            // Thử tái cấu trúc văn bản từ các chunks trong DB
+            var chunks2 = await _documentService.GetChunksAsync(documentId2);
+            if (chunks2 != null && chunks2.Any())
+            {
+                text2 = string.Join("\n\n", chunks2.OrderBy(c => c.ChunkIndex).Select(c => c.Content));
+            }
+
+            if (string.IsNullOrWhiteSpace(text2))
+            {
+                var file2 = await _documentService.OpenAsync(documentId2);
+                if (file2 != null)
+                {
+                    using (file2.Content)
+                    {
+                        var pages = _extractor.Extract(file2.Content, file2.FileName, file2.ContentType);
+                        text2 = BuildFullText(pages, file2.FileName);
+                    }
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(text2))
+        {
+            throw new InvalidOperationException($"Không tìm thấy nội dung hoặc file vật lý của tài liệu: {doc2.Title}");
+        }
+
+        // Giới hạn 6000 ký tự mỗi file để không vượt giới hạn token (context limit)
+        if (text1.Length > 6000)
+        {
+            text1 = text1.Substring(0, 6000) + "\n...[bị cắt bớt]";
+        }
+        if (text2.Length > 6000)
+        {
+            text2 = text2.Substring(0, 6000) + "\n...[bị cắt bớt]";
+        }
+
+        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+        {
+            return BuildFallbackResult(doc1.FileName, doc2.FileName, text1, text2);
+        }
+
+        return await CallGroqForComparisonAsync(doc1.FileName, text1, doc2.FileName, text2, ct);
     }
 
     public async Task<FileComparisonResult> CompareStreamsAsync(
