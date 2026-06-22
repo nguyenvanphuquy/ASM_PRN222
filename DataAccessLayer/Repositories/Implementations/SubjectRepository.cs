@@ -33,7 +33,15 @@ public class SubjectRepository : ISubjectRepository
         var subject = await _context.Subjects.FindAsync(id);
         if (subject != null)
         {
-            _context.Subjects.Remove(subject);
+            subject.IsDeleted = true;
+            
+            // Gỡ môn học khỏi các Giảng viên đang được phân công
+            var users = await _context.Users.Where(u => u.AssignedSubjectId == id).ToListAsync();
+            foreach (var u in users)
+            {
+                u.AssignedSubjectId = null;
+            }
+
             await _context.SaveChangesAsync();
         }
     }

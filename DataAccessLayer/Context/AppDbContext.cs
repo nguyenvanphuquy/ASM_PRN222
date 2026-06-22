@@ -54,6 +54,8 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(s => s.CreatedByUserId)
              .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasQueryFilter(s => !s.IsDeleted);
         });
 
         modelBuilder.Entity<Chapter>(e =>
@@ -69,6 +71,8 @@ public class AppDbContext : DbContext
                 .WithMany(s => s.Chapters)
                 .HasForeignKey(c => c.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(c => c.Subject != null && !c.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<Document>(e =>
@@ -103,6 +107,8 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.UploadedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(d => d.Subject != null && !d.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<DocumentChunk>(e =>
@@ -127,6 +133,8 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(c => c.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(c => c.Subject != null && !c.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<SystemSetting>(e =>
@@ -163,6 +171,8 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(s => s.SubjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(s => s.SubjectId == null || (s.Subject != null && !s.Subject.IsDeleted));
         });
 
         modelBuilder.Entity<ChatMessage>(e =>

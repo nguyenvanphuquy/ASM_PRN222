@@ -8,6 +8,7 @@ public class Subject
     public string Description { get; set; } = string.Empty;
     public string? CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
 
     // Navigation Properties
     public virtual ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();
