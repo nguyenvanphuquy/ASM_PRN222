@@ -36,7 +36,12 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
         var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
-        var canManage = role == "Admin" || role == "Lecturer" || User.HasClaim("CanUpload", "true");
+        if (role == "Admin")
+        {
+            TempData["Error"] = "Admin không được phép xoá tài liệu.";
+            return RedirectToPage();
+        }
+        var canManage = role == "Lecturer" || User.HasClaim("CanUpload", "true");
         if (!canManage)
         {
             TempData["Error"] = "Bạn không có quyền thực hiện hành động này.";
@@ -48,5 +53,7 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 }
+
+
 
 

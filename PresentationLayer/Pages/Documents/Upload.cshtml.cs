@@ -58,6 +58,12 @@ public class UploadModel : PageModel
         Subjects = await _subjectService.GetAllAsync();
 
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role == "Admin")
+        {
+            ModelState.AddModelError("", "Admin không được phép upload tài liệu.");
+            return Page();
+        }
+
         var assignedSubjectId = User.FindFirst("AssignedSubjectId")?.Value;
 
         if (role != "Admin")
