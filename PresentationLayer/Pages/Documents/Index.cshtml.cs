@@ -37,7 +37,12 @@ public class IndexModel : PageModel
     {
         var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
         // Admin KHÔNG được quản lý tài liệu (kể cả xoá) — chỉ giảng viên.
-        var canManage = role != "Admin" && (role == "Lecturer" || User.HasClaim("CanUpload", "true"));
+        if (role == "Admin")
+        {
+            TempData["Error"] = "Admin không được phép xoá tài liệu.";
+            return RedirectToPage();
+        }
+        var canManage = role == "Lecturer" || User.HasClaim("CanUpload", "true");
         if (!canManage)
         {
             TempData["Error"] = "Bạn không có quyền thực hiện hành động này.";
@@ -49,5 +54,7 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 }
+
+
 
 

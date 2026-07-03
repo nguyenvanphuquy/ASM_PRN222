@@ -4,6 +4,7 @@ using DataAccessLayer.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260622055242_AddForeignKeys")]
+    partial class AddForeignKeys
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,10 +38,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(200)")
                         .HasDefaultValue("");
 
-                    b.Property<string>("AddedByUserId")
-                        .HasMaxLength(36)
-                        .HasColumnType("nvarchar(36)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -55,8 +54,6 @@ namespace DataAccessLayer.Migrations
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AddedByUserId");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -448,16 +445,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CreatedByUserId")
-                        .HasMaxLength(36)
-                        .HasColumnType("nvarchar(36)");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -465,8 +455,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Subjects");
                 });
@@ -487,10 +475,6 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("LastModifiedByUserId")
-                        .HasMaxLength(36)
-                        .HasColumnType("nvarchar(36)");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -502,8 +486,6 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("Key")
                         .IsUnique();
-
-                    b.HasIndex("LastModifiedByUserId");
 
                     b.ToTable("SystemSettings");
                 });
@@ -572,14 +554,6 @@ namespace DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("DataAccessLayer.Entities.AllowedEmail", b =>
-                {
-                    b.HasOne("DataAccessLayer.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("AddedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("DataAccessLayer.Entities.Chapter", b =>
@@ -706,22 +680,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DataAccessLayer.Entities.Subject", b =>
-                {
-                    b.HasOne("DataAccessLayer.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("DataAccessLayer.Entities.SystemSetting", b =>
-                {
-                    b.HasOne("DataAccessLayer.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("LastModifiedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("DataAccessLayer.Entities.User", b =>

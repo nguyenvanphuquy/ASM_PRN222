@@ -15,4 +15,8 @@ public class Feedback
     public string? RepliedBy { get; set; }
     public string? RepliedByAvatar { get; set; }
     public DateTime? RepliedAt { get; set; }
+
+    // Navigation Properties
+    public virtual User? User { get; set; }
+    public virtual ICollection<FeedbackReply> Replies { get; set; } = new List<FeedbackReply>();
 }

@@ -20,4 +20,9 @@ public class Document
     public int QualityScore { get; set; }
     public string? QualitySummary { get; set; }
     public string? QualityWarnings { get; set; }
+
+    // Navigation Properties
+    public virtual Subject? Subject { get; set; }
+    public virtual Chapter? Chapter { get; set; }
+    public virtual User? Uploader { get; set; }
 }

@@ -13,4 +13,7 @@ public class Chapter
     // Thứ tự hiển thị các chương trong một môn (Chương 1, 2, 3...).
     public int OrderIndex { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Properties
+    public virtual Subject? Subject { get; set; }
 }

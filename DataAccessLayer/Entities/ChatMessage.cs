@@ -8,6 +8,9 @@ public class ChatMessage
     public string Content { get; set; } = string.Empty;
     public List<ChatSource> Sources { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Properties
+    public virtual ChatSession? Session { get; set; }
 }
 
 public class ChatSource

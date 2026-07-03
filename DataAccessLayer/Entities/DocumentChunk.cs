@@ -12,4 +12,8 @@ public class DocumentChunk
     public string? VectorJson { get; set; }
     public string? EmbeddingModel { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Properties
+    public virtual Document? Document { get; set; }
+    public virtual Subject? Subject { get; set; }
 }

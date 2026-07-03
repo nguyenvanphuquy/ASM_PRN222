@@ -220,6 +220,8 @@ public class Program
                         ALTER TABLE Users ADD IsEmailVerified bit NOT NULL DEFAULT 1;
                     IF COL_LENGTH('Users', 'EmailVerificationToken') IS NULL
                         ALTER TABLE Users ADD EmailVerificationToken nvarchar(64) NULL;
+                    IF COL_LENGTH('Subjects', 'IsDeleted') IS NULL
+                        ALTER TABLE Subjects ADD IsDeleted bit NOT NULL DEFAULT 0;
                     IF OBJECT_ID('Chapters') IS NULL
                     BEGIN
                         CREATE TABLE Chapters (

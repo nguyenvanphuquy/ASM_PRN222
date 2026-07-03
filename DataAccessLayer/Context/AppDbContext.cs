@@ -40,10 +40,10 @@ public class AppDbContext : DbContext
             e.Property(u => u.AssignedSubjectId).HasMaxLength(36);
             e.Property(u => u.EmailVerificationToken).HasMaxLength(64);
 
-            e.HasOne<Subject>()
-             .WithMany()
-             .HasForeignKey(u => u.AssignedSubjectId)
-             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(u => u.AssignedSubject)
+                .WithMany()
+                .HasForeignKey(u => u.AssignedSubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Subject>(e =>
@@ -58,6 +58,8 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(s => s.CreatedByUserId)
              .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasQueryFilter(s => !s.IsDeleted);
         });
 
         modelBuilder.Entity<Chapter>(e =>
@@ -69,10 +71,12 @@ public class AppDbContext : DbContext
             e.Property(c => c.Description).HasColumnType("nvarchar(max)");
             e.HasIndex(c => c.SubjectId);
 
-            e.HasOne<Subject>()
-             .WithMany()
-             .HasForeignKey(c => c.SubjectId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.Subject)
+                .WithMany(s => s.Chapters)
+                .HasForeignKey(c => c.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(c => c.Subject != null && !c.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<Document>(e =>
@@ -93,20 +97,22 @@ public class AppDbContext : DbContext
             e.HasIndex(d => d.SubjectId);
             e.HasIndex(d => d.ChapterId);
 
-            e.HasOne<Subject>()
-             .WithMany()
-             .HasForeignKey(d => d.SubjectId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.Subject)
+                .WithMany(s => s.Documents)
+                .HasForeignKey(d => d.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne<Chapter>()
-             .WithMany()
-             .HasForeignKey(d => d.ChapterId)
-             .OnDelete(DeleteBehavior.NoAction);
+            e.HasOne(d => d.Chapter)
+                .WithMany()
+                .HasForeignKey(d => d.ChapterId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne<User>()
-             .WithMany()
-             .HasForeignKey(d => d.UploadedBy)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(d => d.Uploader)
+                .WithMany()
+                .HasForeignKey(d => d.UploadedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(d => d.Subject != null && !d.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<DocumentChunk>(e =>
@@ -122,15 +128,17 @@ public class AppDbContext : DbContext
             e.HasIndex(c => c.SubjectId);
             e.HasIndex(c => c.DocumentId);
 
-            e.HasOne<Document>()
-             .WithMany()
-             .HasForeignKey(c => c.DocumentId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.Document)
+                .WithMany()
+                .HasForeignKey(c => c.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasOne<Subject>()
-             .WithMany()
-             .HasForeignKey(c => c.SubjectId)
-             .OnDelete(DeleteBehavior.NoAction);
+            e.HasOne(c => c.Subject)
+                .WithMany()
+                .HasForeignKey(c => c.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(c => c.Subject != null && !c.Subject.IsDeleted);
         });
 
         modelBuilder.Entity<SystemSetting>(e =>
@@ -158,15 +166,17 @@ public class AppDbContext : DbContext
             e.Property(s => s.Title).HasMaxLength(500);
             e.HasIndex(s => s.UserId);
 
-            e.HasOne<User>()
-             .WithMany()
-             .HasForeignKey(s => s.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne<Subject>()
-             .WithMany()
-             .HasForeignKey(s => s.SubjectId)
-             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(s => s.Subject)
+                .WithMany()
+                .HasForeignKey(s => s.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasQueryFilter(s => s.SubjectId == null || (s.Subject != null && !s.Subject.IsDeleted));
         });
 
         modelBuilder.Entity<ChatMessage>(e =>
@@ -184,10 +194,10 @@ public class AppDbContext : DbContext
                 )
                 .HasColumnType("nvarchar(max)");
 
-            e.HasOne<ChatSession>()
-             .WithMany()
-             .HasForeignKey(m => m.SessionId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.Session)
+                .WithMany(s => s.Messages)
+                .HasForeignKey(m => m.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Feedback>(e =>
@@ -203,10 +213,10 @@ public class AppDbContext : DbContext
             e.Property(f => f.RepliedByAvatar).HasMaxLength(500);
             e.HasIndex(f => f.UserId);
 
-            e.HasOne<User>()
-             .WithMany()
-             .HasForeignKey(f => f.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<FeedbackReply>(e =>
@@ -220,15 +230,15 @@ public class AppDbContext : DbContext
             e.Property(r => r.Content).HasColumnType("nvarchar(max)");
             e.HasIndex(r => r.FeedbackId);
 
-            e.HasOne<Feedback>()
-             .WithMany()
-             .HasForeignKey(r => r.FeedbackId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Feedback)
+                .WithMany(f => f.Replies)
+                .HasForeignKey(r => r.FeedbackId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasOne<User>()
-             .WithMany()
-             .HasForeignKey(r => r.UserId)
-             .OnDelete(DeleteBehavior.NoAction);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AllowedEmail>(e =>
@@ -257,10 +267,10 @@ public class AppDbContext : DbContext
             e.Property(n => n.Message).HasColumnType("nvarchar(max)");
             e.HasIndex(n => n.UserId);
 
-            e.HasOne<User>()
-             .WithMany()
-             .HasForeignKey(n => n.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LecturerSubject>(e =>
