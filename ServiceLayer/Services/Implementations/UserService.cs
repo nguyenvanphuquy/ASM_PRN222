@@ -81,44 +81,56 @@ public class UserService : IUserService
         var user = await _repo.GetByIdAsync(id);
         if (user is null) return (false, "User không tồn tại");
         user.Role = newRole;
-        // Upload permission only applies to lecturers — clear it for other roles.
+        // Upload permission only applies to lecturers — clear all subject assignments for other roles.
         if (newRole != Roles.Lecturer)
         {
             user.CanUploadDocuments = false;
             user.AssignedSubjectId = null;
+            await _repo.ReplaceAssignedSubjectsAsync(id, Array.Empty<string>());
         }
         await _repo.UpdateAsync(user);
         await _notifier.UserChangedAsync("role", id, newRole);
         return (true, null);
     }
 
-    public async Task<(bool, string?)> SetUploadPermissionAsync(string id, bool canUpload, string? subjectId)
+    public Task<List<string>> GetAssignedSubjectIdsAsync(string id) => _repo.GetAssignedSubjectIdsAsync(id);
+
+    public async Task<Dictionary<string, string>> GetSubjectOwnersAsync()
+    {
+        var all = await _repo.GetAllLecturerSubjectsAsync();
+        // Mỗi môn chỉ có một chủ, nên groupBy an toàn.
+        return all.GroupBy(x => x.SubjectId).ToDictionary(g => g.Key, g => g.First().UserId);
+    }
+
+    /// <summary>
+    /// Giao danh sách môn cho một giảng viên. Một giảng viên có thể phụ trách NHIỀU môn,
+    /// nhưng mỗi môn chỉ được giao cho ĐÚNG MỘT giảng viên.
+    /// </summary>
+    public async Task<(bool, string?)> SetAssignedSubjectsAsync(string id, IReadOnlyList<string> subjectIds)
     {
         var user = await _repo.GetByIdAsync(id);
         if (user is null) return (false, "User không tồn tại");
         if (user.Role != Roles.Lecturer) return (false, "Chỉ áp dụng quyền upload cho giảng viên");
 
-        if (canUpload)
-        {
-            // Granting requires choosing exactly one subject the lecturer may upload to.
-            if (string.IsNullOrWhiteSpace(subjectId))
-                return (false, "Vui lòng chọn bộ môn (môn học) khi cấp quyền upload");
+        var ids = subjectIds?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList() ?? new List<string>();
 
-            // Mỗi môn học chỉ được giao cho ĐÚNG MỘT giảng viên — chặn nếu môn đã giao cho người khác.
-            var all = await _repo.GetAllAsync();
-            var holder = all.FirstOrDefault(u => u.Id != id && u.AssignedSubjectId == subjectId);
-            if (holder != null)
-                return (false, $"Môn học này đã được giao cho giảng viên \"{holder.FullName}\". Mỗi môn chỉ được giao cho duy nhất một giảng viên.");
-
-            user.CanUploadDocuments = true;
-            user.AssignedSubjectId = subjectId;
-        }
-        else
+        // Kiểm tra độc quyền: môn đã được giao cho GIẢNG VIÊN KHÁC thì không được giao lại.
+        var all = await _repo.GetAllLecturerSubjectsAsync();
+        var conflict = all.FirstOrDefault(x => x.UserId != id && ids.Contains(x.SubjectId));
+        if (conflict != null)
         {
-            user.CanUploadDocuments = false;
-            user.AssignedSubjectId = null;
+            var holder = await _repo.GetByIdAsync(conflict.UserId);
+            return (false, $"Môn học đã được giao cho giảng viên \"{holder?.FullName ?? "khác"}\". Mỗi môn chỉ giao cho duy nhất một giảng viên.");
         }
+
+        await _repo.ReplaceAssignedSubjectsAsync(id, ids);
+
+        // Giữ cột đơn (AssignedSubjectId/CanUploadDocuments) đồng bộ để tương thích hiển thị cũ.
+        user.CanUploadDocuments = ids.Count > 0;
+        user.AssignedSubjectId = ids.FirstOrDefault();
         await _repo.UpdateAsync(user);
+
+        await _notifier.UserChangedAsync("assign", id, ids.Count.ToString());
         return (true, null);
     }
 

@@ -144,21 +144,11 @@
                             <div class="flex gap-2 items-center flex-wrap" style="justify-content:flex-end">
                                 @if (u.Role == "Lecturer")
                                 {
-                                    <form method="post" asp-page-handler="AssignSubject" asp-route-id="@u.Id" class="flex gap-2">
-                                        @Html.AntiForgeryToken()
-                                        <select name="subjectId" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.8rem;height:auto;width:auto" required>
-                                            <option value="">– Gán môn –</option>
-                                            @foreach (var s in Model.Subjects)
-                                            {
-                                                var holder = Model.Users.FirstOrDefault(x => x.AssignedSubjectId == s.Id);
-                                                var takenByOther = holder != null && holder.Id != u.Id;
-                                                <option value="@s.Id" selected="@(s.Id == u.AssignedSubjectId)" disabled="@takenByOther">
-                                                    @s.Name@(takenByOther ? $" (đã giao: {holder!.FullName})" : "")
-                                                </option>
-                                            }
-                                        </select>
-                                        <button type="submit" class="btn btn-secondary btn-sm" title="Gán môn học">📌</button>
-                                    </form>
+                                    var myCount = Model.SubjectOwners.Count(kv => kv.Value == u.Id);
+                                    <button type="button" class="btn btn-secondary btn-sm" title="Giao môn học (nhiều môn)"
+                                            onclick="openAssign('@u.Id', '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(u.FullName))')">
+                                        📚 Giao môn <span class="badge badge-purple" style="margin-left:4px">@myCount</span>
+                                    </button>
                                 }
                                 <button type="button" class="btn btn-secondary btn-sm" title="Đặt lại mật khẩu"
                                         onclick="resetPwd('@u.Id', '@u.Username')">🔑</button>
@@ -189,8 +179,58 @@
     <input type="hidden" name="newPassword" id="resetPwdValue" />
 </form>
 
+<!-- ── Assign subjects modal (multi-select checkbox) ── -->
+<div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(43,37,33,0.35);z-index:9998;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)">
+        <div class="card-header">
+            <span class="card-title">📚 Giao môn học — <span id="assignUserName"></span></span>
+            <button type="button" class="btn btn-secondary btn-icon btn-sm" onclick="closeAssign()">✖️</button>
+        </div>
+        <p class="text-sm text-muted mb-4">Một giảng viên có thể phụ trách <strong>nhiều môn</strong>; mỗi môn chỉ giao cho <strong>một</strong> giảng viên. Môn đang do người khác phụ trách sẽ bị khoá.</p>
+        <form method="post" asp-page-handler="AssignSubjects" id="assignForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="assignUserId" />
+            <div id="assignSubjectList" style="overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px"></div>
+            <div class="flex gap-2 mt-4" style="justify-content:flex-end">
+                <button type="button" class="btn btn-secondary" onclick="closeAssign()">Huỷ</button>
+                <button type="submit" class="btn btn-primary">💾 Lưu phân công</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
 <script>
+    // ── Data cho modal giao môn ──
+    const ASSIGN_SUBJECTS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Subjects.Select(s => new { id = s.Id, name = s.Name })));
+    const ASSIGN_OWNERS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SubjectOwners));
+    const ASSIGN_USERNAMES = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Users.ToDictionary(u => u.Id, u => u.FullName)));
+
+    function openAssign(userId, userName) {
+        document.getElementById('assignUserId').value = userId;
+        document.getElementById('assignUserName').textContent = userName;
+        const list = document.getElementById('assignSubjectList');
+        if (!ASSIGN_SUBJECTS.length) {
+            list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-state-icon">📖</div><div class="empty-state-title">Chưa có môn học nào</div></div>';
+        } else {
+            list.innerHTML = ASSIGN_SUBJECTS.map(s => {
+                const owner = ASSIGN_OWNERS[s.id];
+                const mine = owner === userId;
+                const takenByOther = owner && owner !== userId;
+                const ownerName = takenByOther ? (ASSIGN_USERNAMES[owner] || 'GV khác') : '';
+                return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--radius-md);${takenByOther ? 'opacity:.55' : 'cursor:pointer'}">
+                    <input type="checkbox" name="subjectIds" value="${s.id}" ${mine ? 'checked' : ''} ${takenByOther ? 'disabled' : ''} style="width:18px;height:18px;accent-color:var(--accent-purple)">
+                    <span style="flex:1;font-weight:500">${escapeHtml(s.name)}</span>
+                    ${takenByOther ? `<span class="badge badge-gray">🔒 ${escapeHtml(ownerName)}</span>` : (mine ? '<span class="badge badge-green">Đang phụ trách</span>' : '')}
+                </label>`;
+            }).join('');
+        }
+        document.getElementById('assignModal').style.display = 'flex';
+    }
+    function closeAssign() { document.getElementById('assignModal').style.display = 'none'; }
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    document.getElementById('assignModal').addEventListener('click', e => { if (e.target.id === 'assignModal') closeAssign(); });
+
     function toggleCreateForm() {
         const f = document.getElementById('createForm');
         const open = f.style.display === 'none' || !f.style.display;

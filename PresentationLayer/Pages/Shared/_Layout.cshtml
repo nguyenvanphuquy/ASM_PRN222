@@ -59,6 +59,9 @@ else
                 <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
                     <span class="nav-icon">🤖</span> Kiểm thử Chatbot
                 </a>
+                <a class="nav-item @(IsActive("/compare") ? "active" : "")" href="/Compare/Models">
+                    <span class="nav-icon">🧪</span> So sánh Model
+                </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
                     <span class="nav-icon">⚙️</span> Cài đặt
                 </a>
@@ -89,6 +92,15 @@ else
                 <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
                     <span class="nav-icon">📂</span> Giám sát tài liệu
                 </a>
+                <a class="nav-item @(IsActive("/reports") ? "active" : "")" href="/Reports">
+                    <span class="nav-icon">📈</span> Báo cáo &amp; Thống kê
+                </a>
+                <a class="nav-item @(IsActive("/packages") ? "active" : "")" href="/Packages">
+                    <span class="nav-icon">🏷️</span> Quản lý gói
+                </a>
+                <a class="nav-item @(IsActive("/compare") ? "active" : "")" href="/Compare/Models">
+                    <span class="nav-icon">🧪</span> So sánh Model
+                </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
                     <span class="nav-icon">⚙️</span> Giám sát hệ thống
                 </a>
@@ -118,6 +130,9 @@ else
                 </a>
                 <a class="nav-item @(path == "/chat" || path == "/chat/" ? "active" : "")" href="/Chat">
                     <span class="nav-icon">🕒</span> Lịch sử trò chuyện
+                </a>
+                <a class="nav-item @(IsActive("/store") ? "active" : "")" href="/Store">
+                    <span class="nav-icon">🛒</span> Cửa hàng gói
                 </a>
                 <a class="nav-item @(IsActive("/feedback") ? "active" : "")" href="/Feedback">
                     <span class="nav-icon">💡</span> Gửi phản hồi

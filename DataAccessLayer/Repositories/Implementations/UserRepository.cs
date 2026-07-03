@@ -48,6 +48,27 @@ public class UserRepository : IUserRepository
 
     public async Task<long> CountByRoleAsync(string role)
         => await _context.Users.LongCountAsync(u => u.Role == role);
+
+    public Task<List<LecturerSubject>> GetAllLecturerSubjectsAsync()
+        => _context.LecturerSubjects.ToListAsync();
+
+    public async Task<List<string>> GetAssignedSubjectIdsAsync(string userId)
+        => await _context.LecturerSubjects
+            .Where(x => x.UserId == userId)
+            .Select(x => x.SubjectId)
+            .ToListAsync();
+
+    public async Task ReplaceAssignedSubjectsAsync(string userId, IEnumerable<string> subjectIds)
+    {
+        var existing = await _context.LecturerSubjects.Where(x => x.UserId == userId).ToListAsync();
+        _context.LecturerSubjects.RemoveRange(existing);
+
+        foreach (var sid in subjectIds.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct())
+        {
+            _context.LecturerSubjects.Add(new LecturerSubject { UserId = userId, SubjectId = sid });
+        }
+        await _context.SaveChangesAsync();
+    }
 }
 
 

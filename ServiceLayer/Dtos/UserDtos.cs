@@ -47,8 +47,8 @@ public class UserRoleUpdateRequest
 
 public class UserUploadPermissionRequest
 {
-    public bool CanUpload { get; set; }
-    public string? SubjectId { get; set; }
+    // Danh sách môn được giao cho giảng viên (rỗng = thu hồi toàn bộ quyền upload).
+    public List<string> SubjectIds { get; set; } = new();
 }
 
 public class UserResetPasswordRequest

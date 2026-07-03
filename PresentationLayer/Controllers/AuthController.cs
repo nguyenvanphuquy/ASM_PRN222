@@ -51,8 +51,9 @@ public class AuthController : ControllerBase
 
         if (!string.IsNullOrEmpty(result.AvatarPath))
             claims.Add(new("AvatarPath", result.AvatarPath));
-        if (!string.IsNullOrEmpty(result.AssignedSubjectId))
-            claims.Add(new("AssignedSubjectId", result.AssignedSubjectId));
+        var assignedApi = result.AssignedSubjectIds ?? Array.Empty<string>();
+        if (assignedApi.Count > 0)
+            claims.Add(new("AssignedSubjects", string.Join(",", assignedApi)));
 
         var principal = new ClaimsPrincipal(
             new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));

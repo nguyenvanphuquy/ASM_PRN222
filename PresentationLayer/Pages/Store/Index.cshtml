@@ -1,0 +1,104 @@
+@page
+@model PresentationLayer.Pages.Store.IndexModel
+@{
+    ViewData["Title"] = "Cửa hàng gói";
+    var b = Model.Balance;
+    var unlimited = Model.Role is "Admin" or "Lecturer";
+    var usedPct = b.Granted > 0 ? (int)(b.Used * 100L / b.Granted) : 0;
+}
+
+<div class="page-header">
+    <h1>Cửa hàng gói token</h1>
+    <p>Mua gói để có thêm token cho hỏi đáp AI. Thanh toán giả lập — token được cộng ngay lập tức.</p>
+</div>
+
+<!-- Số dư token -->
+<div class="card mb-6" style="background:var(--grad-surface)">
+    <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:16px">
+        <div>
+            <div class="text-sm text-muted" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Số dư token khả dụng</div>
+            @if (unlimited)
+            {
+                <div style="font-size:2.2rem;font-weight:800;color:var(--accent-purple)">Không giới hạn</div>
+                <div class="text-sm text-muted">Tài khoản @Model.Role không bị tính phí token.</div>
+            }
+            else
+            {
+                <div style="font-size:2.2rem;font-weight:800;color:var(--accent-purple)">@b.Remaining.ToString("N0")</div>
+                <div class="text-sm text-muted">Đã dùng @b.Used.ToString("N0") / @b.Granted.ToString("N0") token@(b.NextExpiry != null ? $" · hết hạn {b.NextExpiry.Value.ToLocalTime():dd/MM/yyyy}" : "")</div>
+            }
+        </div>
+        @if (!unlimited)
+        {
+            <div style="flex:1;min-width:220px;max-width:420px">
+                <div style="height:12px;background:rgba(43,37,33,0.08);border-radius:var(--radius-full);overflow:hidden">
+                    <div style="height:100%;width:@(usedPct)%;background:var(--grad-primary)"></div>
+                </div>
+                <div class="text-sm text-muted text-right" style="margin-top:6px">@usedPct% đã sử dụng</div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Danh sách gói -->
+<h3 class="mb-4">📦 Chọn gói</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:28px">
+    @foreach (var p in Model.Packages)
+    {
+        <div class="card" style="position:relative;display:flex;flex-direction:column;@(p.IsPopular ? "border-color:var(--accent-purple);box-shadow:var(--shadow-glow)" : "")">
+            @if (p.IsPopular)
+            {
+                <span class="badge badge-purple" style="position:absolute;top:16px;right:16px">🔥 Phổ biến</span>
+            }
+            <div style="font-size:1.15rem;font-weight:700;margin-bottom:4px">@p.Name</div>
+            <div class="text-sm text-muted" style="min-height:2.6em;margin-bottom:12px">@p.Description</div>
+            <div style="font-size:1.8rem;font-weight:800;color:var(--accent-purple);line-height:1">
+                @(p.PriceVnd == 0 ? "Miễn phí" : $"{p.PriceVnd:N0}₫")
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin:14px 0;font-size:0.85rem;color:var(--text-secondary)">
+                <div>🔢 <strong>@p.TokenQuota.ToString("N0")</strong> token</div>
+                <div>⏳ Hiệu lực @(p.DurationDays > 0 ? $"{p.DurationDays} ngày" : "vĩnh viễn")</div>
+            </div>
+            <form method="post" asp-page-handler="Buy" style="margin-top:auto">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="packageId" value="@p.Id" />
+                <button type="submit" class="btn @(p.IsPopular ? "btn-primary" : "btn-secondary") w-full"
+                        onclick="return confirm('Xác nhận mua @p.Name với giá @(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")? (thanh toán giả lập)')">
+                    🛒 Mua gói
+                </button>
+            </form>
+        </div>
+    }
+</div>
+
+<!-- Lịch sử giao dịch -->
+<div class="card" style="padding:0">
+    <div class="card-header" style="padding:20px 24px 16px"><span class="card-title">🧾 Lịch sử mua gói</span></div>
+    <div class="table-wrapper" style="border:none">
+        <table>
+            <thead>
+                <tr><th>Mã GD</th><th>Gói</th><th class="text-right">Số tiền</th><th class="text-right">Token</th><th>Trạng thái</th><th class="text-right">Ngày</th></tr>
+            </thead>
+            <tbody>
+                @if (Model.History.Count == 0)
+                {
+                    <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted)">Chưa có giao dịch nào.</td></tr>
+                }
+                else
+                {
+                    foreach (var h in Model.History)
+                    {
+                        <tr>
+                            <td class="text-sm text-muted">@h.TransactionRef</td>
+                            <td style="font-weight:600;color:var(--text-primary)">@h.PackageName</td>
+                            <td class="text-right">@(h.AmountVnd == 0 ? "Miễn phí" : $"{h.AmountVnd:N0}₫")</td>
+                            <td class="text-right text-muted">@h.TokensUsed.ToString("N0") / @h.TokensGranted.ToString("N0")</td>
+                            <td><span class="badge @(h.Status == "Paid" ? "badge-green" : "badge-gray")">@h.Status</span></td>
+                            <td class="text-right text-sm text-muted">@h.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

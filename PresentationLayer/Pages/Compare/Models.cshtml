@@ -1,0 +1,119 @@
+@page
+@model PresentationLayer.Pages.Compare.ModelsModel
+@{
+    ViewData["Title"] = "So sánh Model";
+    var res = Model.Result;
+}
+
+<div class="page-header">
+    <h1>🧪 So sánh Model AI</h1>
+    <p>Hỏi cùng một câu trên nhiều model (≥ 3) với cùng ngữ cảnh tài liệu, đo token · độ trễ · chi phí để chọn model phù hợp.</p>
+</div>
+
+<div class="card mb-6">
+    <form method="post" id="cmpForm">
+        @Html.AntiForgeryToken()
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:end">
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Câu hỏi *</label>
+                <input asp-for="Question" class="form-control" placeholder="VD: Trình bày khái niệm SignalR và ứng dụng?" required />
+                <span asp-validation-for="Question" class="form-error"></span>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Môn học (ngữ cảnh)</label>
+                <select asp-for="SubjectId" class="form-control">
+                    <option value="">– Không giới hạn môn –</option>
+                    @foreach (var s in Model.Subjects)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mt-4">
+            <button type="submit" id="cmpBtn" class="btn btn-primary">
+                <span id="cmpText">⚡ Chạy so sánh @ServiceLayer.Settings.ModelCatalog.All.Count model</span>
+                <span id="cmpSpin" class="hidden animate-spin">⏳</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+@if (res != null)
+{
+    <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:8px">
+        <h3>Kết quả cho: <span style="color:var(--accent-purple)">"@res.Question"</span></h3>
+        <span class="badge badge-blue">📎 @res.ContextChunks đoạn ngữ cảnh</span>
+    </div>
+
+    <!-- Bảng chỉ số (benchmark) -->
+    <div class="card mb-6" style="padding:0">
+        <div class="card-header" style="padding:20px 24px 16px"><span class="card-title">📊 Chỉ số so sánh</span></div>
+        <div class="table-wrapper" style="border:none">
+            <table>
+                <thead>
+                    <tr><th>Model</th><th>Nhà cung cấp</th><th class="text-right">Token vào</th><th class="text-right">Token ra</th><th class="text-right">Tổng token</th><th class="text-right">Độ trễ</th><th class="text-right">Chi phí</th></tr>
+                </thead>
+                <tbody>
+                    @{
+                        var okAnswers = res.Answers.Where(a => !a.IsError).ToList();
+                        var fastest = okAnswers.Count > 0 ? okAnswers.Min(a => a.LatencyMs) : 0;
+                        var cheapest = okAnswers.Count > 0 ? okAnswers.Min(a => a.TotalTokens) : 0;
+                    }
+                    @foreach (var a in res.Answers)
+                    {
+                        <tr>
+                            <td style="font-weight:600;color:var(--text-primary)">@a.DisplayName</td>
+                            <td class="text-sm text-muted">@a.Vendor</td>
+                            <td class="text-right">@a.PromptTokens.ToString("N0")</td>
+                            <td class="text-right">@a.CompletionTokens.ToString("N0")</td>
+                            <td class="text-right" style="font-weight:600">
+                                @a.TotalTokens.ToString("N0")
+                                @if (!a.IsError && a.TotalTokens == cheapest && okAnswers.Count > 1) { <span class="badge badge-green" style="margin-left:4px">ít nhất</span> }
+                            </td>
+                            <td class="text-right">
+                                @a.LatencyMs ms
+                                @if (!a.IsError && a.LatencyMs == fastest && okAnswers.Count > 1) { <span class="badge badge-purple" style="margin-left:4px">nhanh nhất</span> }
+                            </td>
+                            <td class="text-right text-muted">$@a.CostUsd.ToString("N5")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Câu trả lời từng model -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+        @foreach (var a in res.Answers)
+        {
+            <div class="card" style="display:flex;flex-direction:column">
+                <div class="flex items-center justify-between mb-4" style="padding-bottom:12px;border-bottom:1px solid var(--border-subtle)">
+                    <div>
+                        <div style="font-weight:700">@a.DisplayName</div>
+                        <div class="text-sm text-muted">@a.Vendor</div>
+                    </div>
+                    @if (a.IsError)
+                    {
+                        <span class="badge badge-red">Lỗi</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-blue">@a.TotalTokens tok · @a.LatencyMs ms</span>
+                    }
+                </div>
+                <div style="white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary)">@a.Answer</div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+    document.getElementById('cmpForm').addEventListener('submit', function () {
+        document.getElementById('cmpText').classList.add('hidden');
+        document.getElementById('cmpSpin').classList.remove('hidden');
+        document.getElementById('cmpBtn').disabled = true;
+    });
+</script>
+}

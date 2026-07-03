@@ -57,6 +57,7 @@ public class Program
         builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         builder.Services.AddScoped<IFeedbackReplyRepository, FeedbackReplyRepository>();
         builder.Services.AddScoped<IAllowedEmailRepository, AllowedEmailRepository>();
+        builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 
         // === Services ===
         builder.Services.AddScoped<IAuthService, AuthService>();
@@ -91,6 +92,9 @@ public class Program
         builder.Services.AddScoped<IFeedbackService, FeedbackService>();
         builder.Services.AddScoped<IDashboardService, DashboardService>();
         builder.Services.AddScoped<IChatService, ChatService>();
+        builder.Services.AddScoped<IBillingService, BillingService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IModelComparisonService, ModelComparisonService>();
         builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
         builder.Services.AddScoped<IChunkingService, ChunkingService>();
         builder.Services.AddScoped<IRetrievalService, RetrievalService>();
@@ -124,11 +128,12 @@ public class Program
         {
             options.AddPolicy("LecturerOrAdmin", p => p.RequireRole("Lecturer", "Admin"));
             options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
-            // Chỉ giảng viên ĐƯỢC ADMIN GIAO MÔN (có AssignedSubjectId) mới được upload tài liệu.
-            // Admin KHÔNG được upload — mỗi môn chỉ có đúng một người upload là giảng viên phụ trách.
+            // Chỉ giảng viên ĐƯỢC ADMIN GIAO MÔN (có ít nhất một môn trong AssignedSubjects)
+            // mới được upload tài liệu. Admin KHÔNG được upload — mỗi môn chỉ có đúng một
+            // giảng viên phụ trách, nhưng một giảng viên có thể phụ trách nhiều môn.
             options.AddPolicy("CanUploadDocuments", p => p.RequireAssertion(ctx =>
                 !ctx.User.IsInRole("Admin") &&
-                !string.IsNullOrEmpty(ctx.User.FindFirst("AssignedSubjectId")?.Value)));
+                !string.IsNullOrEmpty(ctx.User.FindFirst("AssignedSubjects")?.Value)));
         });
 
         builder.Services.AddHttpContextAccessor();
@@ -275,12 +280,75 @@ public class Program
                             CreatedAt datetime2     NOT NULL DEFAULT GETUTCDATE()
                         );
                         CREATE INDEX IX_Notifications_UserId ON Notifications (UserId);
+                    END;
+                    IF OBJECT_ID('LecturerSubjects') IS NULL
+                    BEGIN
+                        CREATE TABLE LecturerSubjects (
+                            Id        nvarchar(36) NOT NULL PRIMARY KEY,
+                            UserId    nvarchar(36) NOT NULL DEFAULT '',
+                            SubjectId nvarchar(36) NOT NULL DEFAULT '',
+                            CreatedAt datetime2    NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE INDEX IX_LecturerSubjects_UserId ON LecturerSubjects (UserId);
+                        CREATE UNIQUE INDEX UX_LecturerSubjects_SubjectId ON LecturerSubjects (SubjectId);
+                    END;
+                    IF OBJECT_ID('TokenUsageLogs') IS NULL
+                    BEGIN
+                        CREATE TABLE TokenUsageLogs (
+                            Id               nvarchar(36)  NOT NULL PRIMARY KEY,
+                            UserId           nvarchar(36)  NOT NULL DEFAULT '',
+                            SessionId        nvarchar(36)  NULL,
+                            Model            nvarchar(100) NOT NULL DEFAULT '',
+                            PromptTokens     int           NOT NULL DEFAULT 0,
+                            CompletionTokens int           NOT NULL DEFAULT 0,
+                            TotalTokens      int           NOT NULL DEFAULT 0,
+                            CostUsd          decimal(18,8) NOT NULL DEFAULT 0,
+                            Kind             nvarchar(20)  NOT NULL DEFAULT 'chat',
+                            CreatedAt        datetime2     NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE INDEX IX_TokenUsageLogs_UserId ON TokenUsageLogs (UserId);
+                        CREATE INDEX IX_TokenUsageLogs_CreatedAt ON TokenUsageLogs (CreatedAt);
+                    END;
+                    IF OBJECT_ID('Packages') IS NULL
+                    BEGIN
+                        CREATE TABLE Packages (
+                            Id           nvarchar(36)  NOT NULL PRIMARY KEY,
+                            Name         nvarchar(150) NOT NULL DEFAULT '',
+                            Description  nvarchar(500) NOT NULL DEFAULT '',
+                            PriceVnd     bigint        NOT NULL DEFAULT 0,
+                            TokenQuota   int           NOT NULL DEFAULT 0,
+                            DurationDays int           NOT NULL DEFAULT 0,
+                            IsActive     bit           NOT NULL DEFAULT 1,
+                            IsPopular    bit           NOT NULL DEFAULT 0,
+                            CreatedAt    datetime2     NOT NULL DEFAULT GETUTCDATE()
+                        );
+                    END;
+                    IF OBJECT_ID('PackagePurchases') IS NULL
+                    BEGIN
+                        CREATE TABLE PackagePurchases (
+                            Id            nvarchar(36)  NOT NULL PRIMARY KEY,
+                            UserId        nvarchar(36)  NOT NULL DEFAULT '',
+                            PackageId     nvarchar(36)  NOT NULL DEFAULT '',
+                            PackageName   nvarchar(150) NOT NULL DEFAULT '',
+                            AmountVnd     bigint        NOT NULL DEFAULT 0,
+                            TokensGranted int           NOT NULL DEFAULT 0,
+                            TokensUsed    int           NOT NULL DEFAULT 0,
+                            Status        nvarchar(20)  NOT NULL DEFAULT 'Paid',
+                            PaymentMethod nvarchar(30)  NOT NULL DEFAULT 'Mock',
+                            TransactionRef nvarchar(60) NOT NULL DEFAULT '',
+                            CreatedAt     datetime2     NOT NULL DEFAULT GETUTCDATE(),
+                            ExpiresAt     datetime2     NULL
+                        );
+                        CREATE INDEX IX_PackagePurchases_UserId ON PackagePurchases (UserId);
+                        CREATE INDEX IX_PackagePurchases_CreatedAt ON PackagePurchases (CreatedAt);
                     END;");
 
                 var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();
                 var subjects = scope.ServiceProvider.GetRequiredService<ISubjectService>();
+                var billing = scope.ServiceProvider.GetRequiredService<IBillingService>();
                 await auth.EnsureSeedUsersAsync();
                 await subjects.EnsureSeedAsync();
+                await billing.EnsureSeedPackagesAsync();
             }
             catch (Exception ex)
             {

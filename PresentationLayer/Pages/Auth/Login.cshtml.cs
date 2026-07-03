@@ -50,8 +50,9 @@ public class LoginModel : PageModel
 
         if (!string.IsNullOrEmpty(result.AvatarPath))
             claims.Add(new("AvatarPath", result.AvatarPath));
-        if (!string.IsNullOrEmpty(result.AssignedSubjectId))
-            claims.Add(new("AssignedSubjectId", result.AssignedSubjectId));
+        var assigned = result.AssignedSubjectIds ?? Array.Empty<string>();
+        if (assigned.Count > 0)
+            claims.Add(new("AssignedSubjects", string.Join(",", assigned)));
 
         var principal = new ClaimsPrincipal(
             new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));

@@ -29,7 +29,9 @@ public class AuthService : IAuthService
         if (!user.IsEmailVerified)
             return new LoginResult(false, "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email và bấm link kích hoạt.", null, null, null, null, null);
 
-        return new LoginResult(true, null, user.Id, user.Username, user.FullName, user.Role, user.AvatarPath, user.CanUploadDocuments, user.AssignedSubjectId);
+        // Danh sách môn được giao (một giảng viên có thể phụ trách nhiều môn).
+        var assignedIds = await _userRepo.GetAssignedSubjectIdsAsync(user.Id);
+        return new LoginResult(true, null, user.Id, user.Username, user.FullName, user.Role, user.AvatarPath, assignedIds.Count > 0, assignedIds);
     }
 
 

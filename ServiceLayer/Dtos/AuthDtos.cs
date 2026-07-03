@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ServiceLayer.Dtos;
 
-public record LoginResult(bool Success, string? ErrorMessage, string? UserId, string? Username, string? FullName, string? Role, string? AvatarPath, bool CanUploadDocuments = false, string? AssignedSubjectId = null);
+public record LoginResult(bool Success, string? ErrorMessage, string? UserId, string? Username, string? FullName, string? Role, string? AvatarPath, bool CanUploadDocuments = false, IReadOnlyList<string>? AssignedSubjectIds = null);
 
 public class LoginRequest
 {

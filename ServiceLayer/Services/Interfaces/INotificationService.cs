@@ -34,6 +34,12 @@ public interface INotificationService
     /// Trang Quản lý người dùng lắng nghe để cập nhật badge/danh sách mà không cần reload.
     /// </summary>
     Task UserChangedAsync(string action, string userId, string? value = null);
+
+    /// <summary>
+    /// Phát sự kiện realtime khi có giao dịch mua gói mới — trang Báo cáo &amp; Thống kê
+    /// của admin cập nhật doanh thu/token mà không cần reload.
+    /// </summary>
+    Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens);
 }
 
 

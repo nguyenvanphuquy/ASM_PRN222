@@ -22,6 +22,8 @@ public class IndexModel : PageModel
 
     public List<ServiceLayer.DTOs.UserDto> Users { get; private set; } = [];
     public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
+    // subjectId -> userId của giảng viên đang phụ trách môn đó (để tick/khoá checkbox).
+    public Dictionary<string, string> SubjectOwners { get; private set; } = new();
 
     // Thống kê nhanh theo vai trò (hiển thị stat cards ở đầu trang)
     public int TotalCount { get; private set; }
@@ -40,6 +42,7 @@ public class IndexModel : PageModel
     {
         Users = await _userService.GetAllAsync();
         Subjects = await _subjectService.GetAllAsync();
+        SubjectOwners = await _userService.GetSubjectOwnersAsync();
 
         TotalCount = Users.Count;
         AdminCount = Users.Count(u => u.Role == "Admin");
@@ -112,10 +115,12 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostAssignSubjectAsync(string id, string subjectId)
+    public async Task<IActionResult> OnPostAssignSubjectsAsync(string id, List<string> subjectIds)
     {
-        var (ok, err) = await _userService.SetUploadPermissionAsync(id, true, subjectId);
-        TempData[ok ? "Success" : "Error"] = ok ? "Đã phân công môn học thành công." : err;
+        var (ok, err) = await _userService.SetAssignedSubjectsAsync(id, subjectIds ?? new List<string>());
+        TempData[ok ? "Success" : "Error"] = ok
+            ? (subjectIds is { Count: > 0 } ? $"Đã giao {subjectIds.Count} môn cho giảng viên." : "Đã thu hồi toàn bộ môn của giảng viên.")
+            : err;
         return RedirectToPage();
     }
 }

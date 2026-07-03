@@ -20,6 +20,10 @@ public class AppDbContext : DbContext
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<FeedbackReply> FeedbackReplies => Set<FeedbackReply>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<LecturerSubject> LecturerSubjects => Set<LecturerSubject>();
+    public DbSet<TokenUsageLog> TokenUsageLogs => Set<TokenUsageLog>();
+    public DbSet<Package> Packages => Set<Package>();
+    public DbSet<PackagePurchase> PackagePurchases => Set<PackagePurchase>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -257,6 +261,57 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(n => n.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LecturerSubject>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.UserId).HasMaxLength(36);
+            e.Property(x => x.SubjectId).HasMaxLength(36);
+            e.HasIndex(x => x.UserId);
+            // Mỗi môn chỉ được giao cho ĐÚNG MỘT giảng viên.
+            e.HasIndex(x => x.SubjectId).IsUnique();
+
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Subject>().WithMany().HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TokenUsageLog>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.UserId).HasMaxLength(36);
+            e.Property(x => x.SessionId).HasMaxLength(36);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Kind).HasMaxLength(20);
+            e.Property(x => x.CostUsd).HasColumnType("decimal(18,8)");
+            e.HasIndex(x => x.UserId);
+            e.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<Package>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Description).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<PackagePurchase>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.UserId).HasMaxLength(36);
+            e.Property(x => x.PackageId).HasMaxLength(36);
+            e.Property(x => x.PackageName).HasMaxLength(150);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.PaymentMethod).HasMaxLength(30);
+            e.Property(x => x.TransactionRef).HasMaxLength(60);
+            e.HasIndex(x => x.UserId);
+            e.HasIndex(x => x.CreatedAt);
+
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

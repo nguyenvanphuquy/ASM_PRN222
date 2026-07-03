@@ -81,20 +81,20 @@ public class UsersController : ControllerBase
         return Ok(new { message = "Cập nhật vai trò thành công." });
     }
 
-    /// <summary>Cập nhật quyền upload tài liệu của người dùng.</summary>
-    [HttpPut("{id}/upload-permission")]
+    /// <summary>Giao danh sách môn học cho giảng viên (nhiều môn / 1 GV; mỗi môn chỉ 1 GV).</summary>
+    [HttpPut("{id}/subjects")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetUploadPermission(string id, [FromBody] UserUploadPermissionRequest req)
+    public async Task<IActionResult> SetAssignedSubjects(string id, [FromBody] UserUploadPermissionRequest req)
     {
         var existing = await _service.GetByIdAsync(id);
         if (existing is null) return NotFound(new { message = "Không tìm thấy người dùng." });
 
-        var (success, err) = await _service.SetUploadPermissionAsync(id, req.CanUpload, req.SubjectId);
-        if (!success) return BadRequest(new { message = err ?? "Cập nhật quyền upload thất bại." });
+        var (success, err) = await _service.SetAssignedSubjectsAsync(id, req.SubjectIds);
+        if (!success) return BadRequest(new { message = err ?? "Cập nhật phân công môn thất bại." });
 
-        return Ok(new { message = "Cập nhật quyền upload thành công." });
+        return Ok(new { message = "Cập nhật phân công môn thành công." });
     }
 
     /// <summary>Reset mật khẩu của người dùng.</summary>

@@ -11,7 +11,11 @@ public interface IUserService
     // Kích hoạt tài khoản qua token xác thực email.
     Task<(bool Success, string? Error)> VerifyEmailAsync(string token);
     Task<(bool Success, string? Error)> UpdateRoleAsync(string id, string newRole);
-    Task<(bool Success, string? Error)> SetUploadPermissionAsync(string id, bool canUpload, string? subjectId);
+    // Giao danh sách môn cho một giảng viên (nhiều môn / 1 GV; mỗi môn chỉ 1 GV).
+    Task<(bool Success, string? Error)> SetAssignedSubjectsAsync(string id, IReadOnlyList<string> subjectIds);
+    Task<List<string>> GetAssignedSubjectIdsAsync(string id);
+    // subjectId -> userId của giảng viên đang phụ trách môn đó.
+    Task<Dictionary<string, string>> GetSubjectOwnersAsync();
     Task<(bool Success, string? Error)> ResetPasswordAsync(string id, string newPassword);
     Task<(bool Success, string? Error)> DeleteAsync(string id);
     Task<(long Total, long Admins, long Lecturers, long Students)> GetCountsAsync();

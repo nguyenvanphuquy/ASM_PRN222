@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DataAccessLayer.Entities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ServiceLayer.Dtos;
 using ServiceLayer.Services.Interfaces;
 using ServiceLayer.Settings;
 
@@ -21,20 +23,25 @@ public class GroqService : IGroqService
         _logger = logger;
     }
 
-    public async Task<string> GenerateAnswerAsync(
+    public Task<LlmResult> GenerateAnswerAsync(
+        string question,
+        IReadOnlyList<DocumentChunk> contextChunks,
+        IReadOnlyList<ChatMessage> history,
+        CancellationToken ct = default)
+        => GenerateAnswerWithModelAsync(_groq.Model, question, contextChunks, history, ct);
+
+    public async Task<LlmResult> GenerateAnswerWithModelAsync(
+        string model,
         string question,
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_groq.ApiKey))
-            return BuildFallback(contextChunks);
+            return new LlmResult(BuildFallback(contextChunks), model, 0, 0, 0, 0, IsError: true);
 
         var systemPrompt = BuildSystemPrompt(contextChunks);
-        var messages = new List<object>
-        {
-            new { role = "system", content = systemPrompt }
-        };
+        var messages = new List<object> { new { role = "system", content = systemPrompt } };
 
         // Add recent history (last 6 turns) as conversation context
         foreach (var msg in history.TakeLast(6))
@@ -42,16 +49,35 @@ public class GroqService : IGroqService
 
         messages.Add(new { role = "user", content = question });
 
-        var payload = new
+        var result = await CallAsync(model, messages, 1024, ct);
+        if (result.IsError)
         {
-            model = _groq.Model,
-            messages,
-            temperature = 0.3,
-            max_tokens = 1024
-        };
+            var fb = BuildFallback(contextChunks) + $"\n\n_(Không gọi được model {model}, đã dùng fallback.)_";
+            return result with { Content = fb };
+        }
+        return result;
+    }
 
+    public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+            return "Chưa cấu hình API Key cho Groq.";
+
+        var messages = new List<object> { new { role = "user", content = prompt } };
+        var result = await CallAsync(_groq.Model, messages, 2048, ct);
+        return result.IsError ? "Lỗi khi gọi API phân tích." : result.Content;
+    }
+
+    /// <summary>
+    /// Gọi Groq chat/completions, trả về nội dung + số token (usage) + độ trễ.
+    /// Tự động retry khi bị 429 (rate limit).
+    /// </summary>
+    private async Task<LlmResult> CallAsync(string model, List<object> messages, int maxTokens, CancellationToken ct)
+    {
+        var payload = new { model, messages, temperature = 0.3, max_tokens = maxTokens };
         var url = $"{_groq.BaseUrl}/chat/completions";
         var body = JsonSerializer.Serialize(payload);
+        var sw = Stopwatch.StartNew();
 
         try
         {
@@ -75,31 +101,39 @@ public class GroqService : IGroqService
 
                 if (attempt < retryDelaysMs.Length)
                 {
-                    _logger.LogWarning("Groq 429 – retry {Attempt}/{Max} after {Delay}ms", attempt + 1, retryDelaysMs.Length, retryDelaysMs[attempt]);
+                    _logger.LogWarning("Groq 429 ({Model}) – retry {Attempt}/{Max} after {Delay}ms", model, attempt + 1, retryDelaysMs.Length, retryDelaysMs[attempt]);
                     await Task.Delay(retryDelaysMs[attempt], ct);
                 }
             }
 
+            sw.Stop();
+
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Groq API error {Status}: {Body}", res.StatusCode, text);
-                return BuildFallback(contextChunks) +
-                       $"\n\n_(Groq API trả về {(int)res.StatusCode}, đã dùng fallback.)_";
+                _logger.LogWarning("Groq API error {Status} ({Model}): {Body}", res.StatusCode, model, text);
+                return new LlmResult(string.Empty, model, 0, 0, 0, sw.ElapsedMilliseconds, IsError: true);
             }
 
             using var doc = JsonDocument.Parse(text);
-            var content = doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString();
+            var root = doc.RootElement;
 
-            return content?.Trim() ?? BuildFallback(contextChunks);
+            var content = root.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
+
+            int prompt = 0, completion = 0, total = 0;
+            if (root.TryGetProperty("usage", out var usage))
+            {
+                prompt = usage.TryGetProperty("prompt_tokens", out var p) ? p.GetInt32() : 0;
+                completion = usage.TryGetProperty("completion_tokens", out var c) ? c.GetInt32() : 0;
+                total = usage.TryGetProperty("total_tokens", out var t) ? t.GetInt32() : prompt + completion;
+            }
+
+            return new LlmResult(content.Trim(), model, prompt, completion, total, sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Groq call failed");
-            return BuildFallback(contextChunks) + "\n\n_(Lỗi mạng khi gọi Groq, đã dùng fallback.)_";
+            sw.Stop();
+            _logger.LogError(ex, "Groq call failed ({Model})", model);
+            return new LlmResult(string.Empty, model, 0, 0, 0, sw.ElapsedMilliseconds, IsError: true);
         }
     }
 
@@ -152,57 +186,4 @@ public class GroqService : IGroqService
         }
         return sb.ToString().Trim();
     }
-
-    public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
-            return "Chưa cấu hình API Key cho Groq.";
-
-        var messages = new List<object>
-        {
-            new { role = "user", content = prompt }
-        };
-
-        var payload = new
-        {
-            model = _groq.Model,
-            messages,
-            temperature = 0.3,
-            max_tokens = 2048
-        };
-
-        var url = $"{_groq.BaseUrl}/chat/completions";
-        var body = JsonSerializer.Serialize(payload);
-
-        try
-        {
-            using var req = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
-            };
-            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _groq.ApiKey);
-
-            var res = await _http.SendAsync(req, ct);
-            var text = await res.Content.ReadAsStringAsync(ct);
-
-            if (!res.IsSuccessStatusCode)
-                return $"Lỗi gọi API: {res.StatusCode}";
-
-            using var doc = JsonDocument.Parse(text);
-            var content = doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString();
-
-            return content?.Trim() ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Groq call failed in GenerateTextAsync");
-            return "Lỗi khi gọi API phân tích.";
-        }
-    }
 }
-
-

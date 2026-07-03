@@ -1,0 +1,125 @@
+@page
+@model PresentationLayer.Pages.Packages.IndexModel
+@{
+    ViewData["Title"] = "Quản lý gói";
+}
+
+<div class="page-header flex items-center justify-between" style="flex-wrap:wrap;gap:12px">
+    <div>
+        <h1>🏷️ Quản lý gói token</h1>
+        <p>Tạo, sửa, xoá các gói bán cho người dùng. Doanh thu xem tại <a href="/Reports">Báo cáo &amp; Thống kê</a>.</p>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="openPkg()">➕ Thêm gói</button>
+</div>
+
+<div class="card" style="padding:0">
+    <div class="table-wrapper" style="border:none">
+        <table>
+            <thead>
+                <tr><th>Tên gói</th><th class="text-right">Giá</th><th class="text-right">Token</th><th class="text-right">Hiệu lực</th><th>Trạng thái</th><th class="text-right">Thao tác</th></tr>
+            </thead>
+            <tbody>
+                @if (Model.Packages.Count == 0)
+                {
+                    <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted)">Chưa có gói nào.</td></tr>
+                }
+                else
+                {
+                    foreach (var p in Model.Packages)
+                    {
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;color:var(--text-primary)">@p.Name @(p.IsPopular ? "🔥" : "")</div>
+                                <div class="text-sm text-muted">@p.Description</div>
+                            </td>
+                            <td class="text-right" style="font-weight:600">@(p.PriceVnd == 0 ? "Miễn phí" : $"{p.PriceVnd:N0}₫")</td>
+                            <td class="text-right">@p.TokenQuota.ToString("N0")</td>
+                            <td class="text-right">@(p.DurationDays > 0 ? $"{p.DurationDays} ngày" : "∞")</td>
+                            <td><span class="badge @(p.IsActive ? "badge-green" : "badge-gray")">@(p.IsActive ? "Đang bán" : "Ẩn")</span></td>
+                            <td>
+                                <div class="flex gap-2" style="justify-content:flex-end">
+                                    <button type="button" class="btn btn-secondary btn-sm" title="Sửa"
+                                            onclick='openPkg(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { id = p.Id, name = p.Name, description = p.Description, priceVnd = p.PriceVnd, tokenQuota = p.TokenQuota, durationDays = p.DurationDays, isPopular = p.IsPopular, isActive = p.IsActive })))'>✏️</button>
+                                    <form method="post" asp-page-handler="Delete" onsubmit="return confirm('Xoá gói @p.Name?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id" />
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Xoá">🗑️</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal thêm/sửa gói -->
+<div id="pkgModal" style="display:none;position:fixed;inset:0;background:rgba(43,37,33,0.35);z-index:9998;align-items:center;justify-content:center;padding:20px">
+    <div class="card" style="width:100%;max-width:520px;box-shadow:var(--shadow-lg)">
+        <div class="card-header">
+            <span class="card-title" id="pkgModalTitle">➕ Thêm gói</span>
+            <button type="button" class="btn btn-secondary btn-icon btn-sm" onclick="closePkg()">✖️</button>
+        </div>
+        <form method="post" id="pkgForm" asp-page-handler="Create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="pkgId" />
+            <div class="form-group"><label class="form-label">Tên gói *</label><input name="name" id="pkgName" class="form-control" required /></div>
+            <div class="form-group"><label class="form-label">Mô tả</label><input name="description" id="pkgDesc" class="form-control" /></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group"><label class="form-label">Giá (VND) *</label><input name="priceVnd" id="pkgPrice" type="number" min="0" class="form-control" value="0" required /></div>
+                <div class="form-group"><label class="form-label">Số token *</label><input name="tokenQuota" id="pkgTokens" type="number" min="1" class="form-control" required /></div>
+                <div class="form-group"><label class="form-label">Hiệu lực (ngày)</label><input name="durationDays" id="pkgDays" type="number" min="0" class="form-control" value="30" /></div>
+                <div class="form-group">
+                    <label class="form-label">Tuỳ chọn</label>
+                    <div style="display:flex;flex-direction:column;gap:8px;padding-top:6px">
+                        <label style="display:flex;gap:8px;align-items:center;font-size:0.88rem"><input type="checkbox" name="isPopular" id="pkgPopular" value="true" style="width:16px;height:16px;accent-color:var(--accent-purple)"> Gói phổ biến 🔥</label>
+                        <label style="display:flex;gap:8px;align-items:center;font-size:0.88rem" id="pkgActiveWrap"><input type="checkbox" name="isActive" id="pkgActive" value="true" checked style="width:16px;height:16px;accent-color:var(--accent-purple)"> Đang bán</label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-4" style="justify-content:flex-end">
+                <button type="button" class="btn btn-secondary" onclick="closePkg()">Huỷ</button>
+                <button type="submit" class="btn btn-primary">💾 Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const pkgForm = document.getElementById('pkgForm');
+    function openPkg(data) {
+        if (data) {
+            document.getElementById('pkgModalTitle').textContent = '✏️ Sửa gói';
+            pkgForm.setAttribute('asp-page-handler', 'Edit');
+            pkgForm.action = '?handler=Edit';
+            document.getElementById('pkgId').value = data.id;
+            document.getElementById('pkgName').value = data.name;
+            document.getElementById('pkgDesc').value = data.description || '';
+            document.getElementById('pkgPrice').value = data.priceVnd;
+            document.getElementById('pkgTokens').value = data.tokenQuota;
+            document.getElementById('pkgDays').value = data.durationDays;
+            document.getElementById('pkgPopular').checked = !!data.isPopular;
+            document.getElementById('pkgActive').checked = !!data.isActive;
+            document.getElementById('pkgActiveWrap').style.display = 'flex';
+        } else {
+            document.getElementById('pkgModalTitle').textContent = '➕ Thêm gói';
+            pkgForm.action = '?handler=Create';
+            document.getElementById('pkgId').value = '';
+            document.getElementById('pkgName').value = '';
+            document.getElementById('pkgDesc').value = '';
+            document.getElementById('pkgPrice').value = 0;
+            document.getElementById('pkgTokens').value = '';
+            document.getElementById('pkgDays').value = 30;
+            document.getElementById('pkgPopular').checked = false;
+            document.getElementById('pkgActive').checked = true;
+            document.getElementById('pkgActiveWrap').style.display = 'none';
+        }
+        document.getElementById('pkgModal').style.display = 'flex';
+    }
+    function closePkg() { document.getElementById('pkgModal').style.display = 'none'; }
+    document.getElementById('pkgModal').addEventListener('click', e => { if (e.target.id === 'pkgModal') closePkg(); });
+</script>
+}

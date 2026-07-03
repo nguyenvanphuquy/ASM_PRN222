@@ -1,5 +1,6 @@
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.Repositories.Interfaces;
 using ServiceLayer.Dtos;
 using ServiceLayer.Services.Embeddings;
 using ServiceLayer.Services.Interfaces;
@@ -9,15 +10,25 @@ namespace ServiceLayer.Services.Implementations;
 public class ChatService : IChatService
 {
     private readonly IChatRepository _chatRepo;
+    private readonly IUserRepository _userRepo;
     private readonly IRetrievalService _retrievalService;
     private readonly IGroqService _llm;
+    private readonly IBillingService _billing;
     private readonly AutoMapper.IMapper _mapper;
 
-    public ChatService(IChatRepository chatRepo, IRetrievalService retrievalService, IGroqService llm, AutoMapper.IMapper mapper)
+    public ChatService(
+        IChatRepository chatRepo,
+        IUserRepository userRepo,
+        IRetrievalService retrievalService,
+        IGroqService llm,
+        IBillingService billing,
+        AutoMapper.IMapper mapper)
     {
         _chatRepo = chatRepo;
+        _userRepo = userRepo;
         _retrievalService = retrievalService;
         _llm = llm;
+        _billing = billing;
         _mapper = mapper;
     }
 
@@ -44,6 +55,11 @@ public class ChatService : IChatService
         var session = await _chatRepo.GetSessionAsync(sessionId)
             ?? throw new InvalidOperationException("Session không tồn tại");
 
+        // Chỉ tính phí token cho sinh viên; Admin/Giảng viên dùng không giới hạn (nhưng vẫn ghi log).
+        var user = await _userRepo.GetByIdAsync(userId);
+        bool meter = user?.Role == "Student";
+        if (meter) await _billing.EnsureFreeGrantAsync(userId);
+
         var history = await _chatRepo.GetMessagesAsync(sessionId);
 
         await _chatRepo.AddMessageAsync(new ChatMessage
@@ -52,6 +68,14 @@ public class ChatService : IChatService
             Role = "user",
             Content = question
         });
+
+        // Chặn khi sinh viên hết token — yêu cầu mua thêm gói.
+        if (meter && !await _billing.HasQuotaAsync(userId))
+        {
+            var blocked = "⚠️ Bạn đã dùng hết token trong gói. Vui lòng mua thêm gói tại **Cửa hàng gói** để tiếp tục hỏi đáp.";
+            await _chatRepo.AddMessageAsync(new ChatMessage { SessionId = sessionId, Role = "assistant", Content = blocked });
+            return new ChatAnswer(blocked, new List<ChatSource>());
+        }
 
         var searchResults = await _retrievalService.SearchAsync(question, session.SubjectId, 5);
 
@@ -84,7 +108,12 @@ public class ChatService : IChatService
                 .OrderByDescending(s => s.ConfidenceScore)
                 .ToList();
 
-            answer = await _llm.GenerateAnswerAsync(question, chunks, history);
+            var llm = await _llm.GenerateAnswerAsync(question, chunks, history);
+            answer = llm.Content;
+
+            // Ghi nhật ký token + trừ quota (nếu là sinh viên) khi thực sự gọi model thành công.
+            if (!llm.IsError)
+                await _billing.RecordUsageAsync(userId, sessionId, llm, "chat", meter);
         }
 
         await _chatRepo.AddMessageAsync(new ChatMessage
@@ -103,10 +132,3 @@ public class ChatService : IChatService
         return new ChatAnswer(answer, sources);
     }
 }
-
-
-
-
-
-
-
