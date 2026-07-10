@@ -78,6 +78,7 @@
                     <th>Trạng thái</th>
                     <th>Kích thước</th>
                     <th>Ngày tải</th>
+                    <th>Người đăng</th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
@@ -110,6 +111,7 @@
                         <td><span class="badge @statusClass doc-status-badge">@doc.Status</span></td>
                         <td class="text-sm text-muted">@(doc.FileSize / 1024) KB</td>
                         <td class="text-sm text-muted">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
+                        <td class="text-sm text-muted">@(Model.UserNames.GetValueOrDefault(doc.UploadedBy) ?? "Ẩn danh")</td>
                         <td>
                             <div class="flex gap-2">
                                 <a href="/Documents/View?id=@doc.Id" class="btn btn-secondary btn-sm">👁️</a>
@@ -138,6 +140,7 @@
     const FILTER_SUBJECT = @Json.Serialize(Model.SubjectId ?? "");
     const FILTER_QUERY   = @Json.Serialize(Model.Query ?? "");
     const SUBJECTS       = @Json.Serialize(Model.Subjects.ToDictionary(s => s.Id, s => new { code = s.Code, name = s.Name }));
+    const USERNAMES      = @Json.Serialize(Model.UserNames);
 
     const tbody    = document.getElementById('docsTbody');
     const emptyEl  = document.getElementById('docsEmpty');
@@ -230,6 +233,7 @@
             '<td><span class="badge ' + statusClass(d.status) + ' doc-status-badge">' + esc(d.status) + '</span></td>' +
             '<td class="text-sm text-muted">' + sizeKb + ' KB</td>' +
             '<td class="text-sm text-muted">' + fmtDate(d.uploadedAt) + '</td>' +
+            '<td class="text-sm text-muted">' + esc(USERNAMES[d.uploadedBy] || 'Ẩn danh') + '</td>' +
             '<td><div class="flex gap-2">' + actions + '</div></td>';
         return tr;
     }

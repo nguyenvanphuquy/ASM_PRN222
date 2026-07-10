@@ -45,7 +45,8 @@ public class Program
 
         // === Database ===
         builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions => sqlOptions.UseCompatibilityLevel(120)));
 
         // === DAL ===
         builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -222,6 +223,8 @@ public class Program
                         ALTER TABLE Users ADD EmailVerificationToken nvarchar(64) NULL;
                     IF COL_LENGTH('Subjects', 'IsDeleted') IS NULL
                         ALTER TABLE Subjects ADD IsDeleted bit NOT NULL DEFAULT 0;
+                    IF COL_LENGTH('Subjects', 'CreatedByUserId') IS NULL
+                        ALTER TABLE Subjects ADD CreatedByUserId nvarchar(36) NULL;
                     IF OBJECT_ID('Chapters') IS NULL
                     BEGIN
                         CREATE TABLE Chapters (
@@ -255,6 +258,8 @@ public class Program
                         );
                         CREATE UNIQUE INDEX UX_AllowedEmails_Email ON AllowedEmails (Email);
                     END;
+                    IF COL_LENGTH('AllowedEmails', 'AddedByUserId') IS NULL
+                        ALTER TABLE AllowedEmails ADD AddedByUserId nvarchar(36) NULL;
                     IF COL_LENGTH('DocumentChunks', 'VectorJson') IS NULL
                         ALTER TABLE DocumentChunks ADD VectorJson nvarchar(max) NULL;
                     IF COL_LENGTH('DocumentChunks', 'EmbeddingModel') IS NULL
@@ -270,6 +275,8 @@ public class Program
                         );
                         CREATE UNIQUE INDEX UX_SystemSettings_Key ON SystemSettings ([Key]);
                     END;
+                    IF COL_LENGTH('SystemSettings', 'LastModifiedByUserId') IS NULL
+                        ALTER TABLE SystemSettings ADD LastModifiedByUserId nvarchar(36) NULL;
                     IF OBJECT_ID('Notifications') IS NULL
                     BEGIN
                         CREATE TABLE Notifications (
