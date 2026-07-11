@@ -1,7 +1,7 @@
 using DataAccessLayer.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 namespace DataAccessLayer.Context;
 
 public class AppDbContext : DbContext
@@ -192,12 +192,19 @@ public class AppDbContext : DbContext
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                     v => JsonSerializer.Deserialize<List<ChatSource>>(v, (JsonSerializerOptions?)null) ?? new List<ChatSource>()
                 )
-                .HasColumnType("nvarchar(max)");
+                .HasColumnType("nvarchar(max)")
+                .Metadata.SetValueComparer(new ValueComparer<List<ChatSource>>(
+                    (c1, c2) => JsonSerializer.Serialize(c1, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(c2, (JsonSerializerOptions?)null),
+                    c => c == null ? 0 : JsonSerializer.Serialize(c, (JsonSerializerOptions?)null).GetHashCode(),
+                    c => JsonSerializer.Deserialize<List<ChatSource>>(JsonSerializer.Serialize(c, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null)!
+                ));
 
             e.HasOne(m => m.Session)
                 .WithMany(s => s.Messages)
                 .HasForeignKey(m => m.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasQueryFilter(m => m.Session != null && (m.Session.SubjectId == null || (m.Session.Subject != null && !m.Session.Subject.IsDeleted)));
         });
 
         modelBuilder.Entity<Feedback>(e =>
