@@ -114,6 +114,11 @@ public class ChatService : IChatService
             // Ghi nhật ký token + trừ quota (nếu là sinh viên) khi thực sự gọi model thành công.
             if (!llm.IsError)
                 await _billing.RecordUsageAsync(userId, sessionId, llm, "chat", meter);
+
+            // Nếu model vẫn từ chối (ngữ cảnh không thực sự liên quan) thì KHÔNG hiển thị nguồn —
+            // tránh trường hợp "không tìm thấy trong tài liệu" nhưng vẫn kèm nguồn + độ tin cậy.
+            if (answer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase))
+                sources = new List<ChatSource>();
         }
 
         await _chatRepo.AddMessageAsync(new ChatMessage

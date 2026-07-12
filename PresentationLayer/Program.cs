@@ -82,6 +82,12 @@ public class Program
         // Embeddings
         builder.Services.AddHttpClient<IEmbeddingProvider, OpenAIEmbeddingProvider>();
         builder.Services.AddHttpClient<IEmbeddingProvider, HuggingFaceEmbeddingProvider>();
+        // Local (offline) embedder — no API key needed, so the RBL benchmarks always run.
+        builder.Services.AddSingleton<IEmbeddingProvider, LocalEmbeddingProvider>();
+        // Local sentence-transformers sidecar — runs the real open models (e5/bge-m3/PhoBERT) offline.
+        builder.Services.AddHttpClient<IEmbeddingProvider, LocalStEmbeddingProvider>(c => c.Timeout = TimeSpan.FromMinutes(3));
+        // Tự khởi động sidecar Python khi app chạy (tắt: "Embedding:AutoStartSidecar": false).
+        builder.Services.AddHostedService<EmbeddingSidecarLauncher>();
         builder.Services.AddScoped<IEmbeddingFactory>(sp => 
         {
             var providers = sp.GetServices<IEmbeddingProvider>();

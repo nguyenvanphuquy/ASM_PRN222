@@ -61,15 +61,22 @@ public class ChunkingComparisonService : IChunkingComparisonService
         _experiments = experiments;
     }
 
-    public async Task<ChunkingComparisonResult> CompareAsync(string question, string subjectId, string userId)
+    public async Task<ChunkingComparisonResult> CompareAsync(string question, string? subjectId, string userId)
     {
-        if (string.IsNullOrWhiteSpace(subjectId))
-            throw new ArgumentException("Cần chọn môn học để benchmark chunking.", nameof(subjectId));
+        var allSubjects = string.IsNullOrWhiteSpace(subjectId);
+        string subjectName;
+        if (allSubjects)
+        {
+            subjectId = null;
+            subjectName = "Tất cả môn";
+        }
+        else
+        {
+            var subject = await _subjects.GetByIdAsync(subjectId!);
+            subjectName = subject != null ? $"{subject.Code} – {subject.Name}" : subjectId!;
+        }
 
-        var subject = await _subjects.GetByIdAsync(subjectId);
-        var subjectName = subject != null ? $"{subject.Code} – {subject.Name}" : subjectId;
-
-        var docs = (await _docs.GetBySubjectAsync(subjectId))
+        var docs = (allSubjects ? await _docs.GetAllAsync() : await _docs.GetBySubjectAsync(subjectId!))
             .Where(d => !string.IsNullOrWhiteSpace(d.ExtractedText))
             .OrderBy(d => d.FileName)
             .Take(8) // giới hạn để benchmark chạy nhanh
@@ -133,7 +140,7 @@ public class ChunkingComparisonService : IChunkingComparisonService
                         {
                             Id = Guid.NewGuid().ToString(),
                             DocumentId = doc.Id,
-                            SubjectId = subjectId,
+                            SubjectId = doc.SubjectId,
                             DocumentName = doc.FileName,
                             ChunkIndex = i,
                             Content = pieces[i].Text,

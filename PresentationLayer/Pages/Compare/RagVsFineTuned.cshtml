@@ -34,7 +34,7 @@
             <div class="form-group" style="margin-bottom:0">
                 <label class="form-label">Môn học (ngữ cảnh RAG)</label>
                 <select asp-for="SubjectId" class="form-control">
-                    <option value="">– Không giới hạn môn –</option>
+                    <option value="">🌐 Tất cả môn</option>
                     @foreach (var s in Model.Subjects)
                     {
                         <option value="@s.Id">@s.Code – @s.Name</option>

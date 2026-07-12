@@ -57,6 +57,9 @@ public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
             ragLlm = await _llm.GenerateAnswerAsync(question, chunks, Array.Empty<ChatMessage>());
             ragAnswer = ragLlm.Content;
             ragGrounded = true;
+            // Model vẫn từ chối dù có chunk điểm thấp → không hiển thị nguồn "giả".
+            if (ragAnswer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase))
+                sources = [];
         }
 
         // --- Fine-tuned (parametric) path: cùng model, KHÔNG retrieval ---

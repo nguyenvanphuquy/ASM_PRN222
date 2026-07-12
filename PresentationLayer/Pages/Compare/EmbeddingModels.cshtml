@@ -17,7 +17,9 @@
 <div class="card mb-4" style="border-left:4px solid #06b6d4;background:rgba(6,182,212,0.08)">
     <p style="margin:0;font-size:0.9rem;line-height:1.55">
         <strong>In-memory:</strong> Chunk cắt tạm bằng strategy hiện tại trong Settings (không ghi đè index).
-        Cần <code>OpenAI API Key</code> và/hoặc <code>HuggingFace Token</code> trong Settings.
+        <strong>e5 / PhoBERT / bge-m3</strong> chạy offline qua sidecar Python
+        (app <strong>tự khởi động</strong> khi chạy; lần đầu tải model ~vài GB) — không cần API key.
+        Riêng <code>text-embedding-3-small</code> cần OpenAI key (tuỳ chọn) trong Settings.
         Giới hạn ~6 tài liệu · ~40 chunk / model để tránh timeout.
     </p>
 </div>
@@ -33,9 +35,9 @@
                 <span asp-validation-for="Question" class="form-error"></span>
             </div>
             <div class="form-group" style="margin-bottom:0">
-                <label class="form-label">Môn học *</label>
-                <select asp-for="SubjectId" class="form-control" required>
-                    <option value="">– Chọn môn học –</option>
+                <label class="form-label">Môn học</label>
+                <select asp-for="SubjectId" class="form-control">
+                    <option value="">🌐 Tất cả môn</option>
                     @foreach (var s in Model.Subjects)
                     {
                         <option value="@s.Id">@s.Code – @s.Name</option>

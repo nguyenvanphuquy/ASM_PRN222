@@ -31,9 +31,10 @@ public class OpenAIEmbeddingProvider : IEmbeddingProvider
         });
 
         var response = await _http.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
         var json = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"OpenAI {(int)response.StatusCode}: {(json.Length > 200 ? json[..200] : json)}");
+
         var doc = JsonDocument.Parse(json);
         var vector = doc.RootElement.GetProperty("data")[0].GetProperty("embedding").EnumerateArray().Select(e => e.GetSingle()).ToArray();
         return vector;

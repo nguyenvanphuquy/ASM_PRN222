@@ -33,7 +33,8 @@ public class EmbeddingFactory : IEmbeddingFactory
         var providerName = name switch
         {
             "text-embedding-3-small" => "OpenAI",
-            "PhoBERT-base" or "bge-m3" or "multilingual-e5-base" => "HuggingFace",
+            // 3 model mở chạy qua sidecar sentence-transformers local (không cần key).
+            "PhoBERT-base" or "bge-m3" or "multilingual-e5-base" => "LocalST",
             _ when name.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) => "OpenAI",
             _ => null
         };

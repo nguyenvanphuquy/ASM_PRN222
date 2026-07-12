@@ -1,0 +1,7 @@
+# Sidecar embedding cho module RBL — chạy 3 model mở offline (không cần API key).
+# Cài torch bản CPU trước cho nhẹ:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# rồi:
+#   pip install -r tools/requirements.txt
+flask
+sentence-transformers

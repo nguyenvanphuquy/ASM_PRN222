@@ -43,14 +43,10 @@ public class ChunkingStrategiesModel : PageModel
             ModelState.AddModelError(nameof(Question), "Vui lòng nhập câu hỏi để so sánh.");
             return Page();
         }
-        if (string.IsNullOrWhiteSpace(SubjectId))
-        {
-            ModelState.AddModelError(nameof(SubjectId), "Cần chọn môn học (benchmark chạy trên tài liệu của môn).");
-            return Page();
-        }
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
-        Result = await _compare.CompareAsync(Question.Trim(), SubjectId, userId);
+        // SubjectId rỗng = benchmark trên tài liệu của TẤT CẢ môn.
+        Result = await _compare.CompareAsync(Question.Trim(), string.IsNullOrWhiteSpace(SubjectId) ? null : SubjectId, userId);
         return Page();
     }
 }

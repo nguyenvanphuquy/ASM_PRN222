@@ -30,6 +30,7 @@
             <label class="form-label" asp-for="EmbeddingModel">Mô hình Embedding (Nhúng Vector)</label>
             <select asp-for="EmbeddingModel" class="form-control">
                 <option value="Keyword">Không dùng (Tìm kiếm từ khóa LIKE cũ)</option>
+                <option value="Local">Local (offline · không cần API key)</option>
                 <option value="text-embedding-3-small">OpenAI (text-embedding-3-small)</option>
                 <option value="PhoBERT-base">HuggingFace (PhoBERT-base)</option>
                 <option value="bge-m3">HuggingFace (bge-m3)</option>
