@@ -76,6 +76,28 @@ def embed():
         return jsonify(error=str(ex)), 500
 
 
+@app.post("/embed/batch")
+def embed_batch():
+    """Embed nhiều đoạn cùng lúc — nhanh hơn gọi /embed từng chunk."""
+    data = request.get_json(force=True) or {}
+    model_id = data.get("model", "")
+    texts = data.get("texts") or []
+    if not isinstance(texts, list):
+        return jsonify(error="texts phải là mảng chuỗi"), 400
+    try:
+        model = _load(model_id)
+        if len(texts) == 0:
+            return jsonify(vectors=[], dim=0)
+        vecs = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+        dim = int(len(vecs[0])) if len(vecs) > 0 else 0
+        return jsonify(
+            vectors=[[float(x) for x in v] for v in vecs],
+            dim=dim,
+        )
+    except Exception as ex:  # noqa: BLE001
+        return jsonify(error=str(ex)), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("EMBED_PORT", "8600"))
     print(f"[embedding_server] listening http://127.0.0.1:{port}  (models: {', '.join(MODEL_MAP)})", flush=True)

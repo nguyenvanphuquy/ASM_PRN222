@@ -70,6 +70,7 @@ public class Program
         builder.Services.AddScoped<IAllowedEmailService, AllowedEmailService>();
         builder.Services.AddScoped<ISystemSettingService, SystemSettingService>();
         builder.Services.AddScoped<IExperimentService, ExperimentService>();
+        builder.Services.AddScoped<IRblSuiteService, RblSuiteService>();
         
         builder.Services.AddSingleton<ITextExtractor, TextExtractor>();
         

@@ -3,12 +3,47 @@
 @{
     ViewData["Title"] = "Dashboard RBL";
     var d = Model.Data;
+    var rag = d.Ragas;
+    var filter = d.FilterKind;
 }
 
 <div class="page-header">
     <h1>📊 Dashboard kết quả thực nghiệm RBL</h1>
-    <p>Tổng hợp các lần chạy Chunking · Embedding · RAG vs Fine-tuned (tự lưu khi bạn chạy so sánh).</p>
+    <p>Tổng hợp Chunking · Embedding · RAG vs Fine-tuned · RAGAS. Kết quả tự lưu khi chạy benchmark.</p>
 </div>
+
+<div class="flex gap-2 flex-wrap items-center mb-4">
+    @if (d.SidecarOnline)
+    {
+        <span class="badge badge-green">🟢 Sidecar embedding online</span>
+    }
+    else
+    {
+        <span class="badge badge-red">🔴 Sidecar offline — e5/PhoBERT/bge sẽ bỏ qua</span>
+    }
+    <span class="text-sm text-muted">App tự khởi động sidecar; hoặc chạy: python tools/embedding_server.py</span>
+</div>
+
+@if (Model.SuiteResult != null)
+{
+    var sr = Model.SuiteResult;
+    <div class="card mb-4" style="border-left:4px solid @(sr.Success ? "#22c55e" : "#f59e0b")">
+        @if (sr.Success)
+        {
+            <p style="margin:0"><strong>✅ Bộ thực nghiệm chuẩn hoàn tất</strong> — @sr.Completed.Count bước · @sr.TotalMs ms · môn @sr.SubjectCode</p>
+        }
+        else
+        {
+            <p style="margin:0 0 8px"><strong>⚠ Bộ thực nghiệm kết thúc một phần</strong> — @sr.Completed.Count thành công · @sr.Errors.Count lỗi · @sr.TotalMs ms</p>
+            @if (sr.Errors.Count > 0)
+            {
+                <ul style="margin:0;padding-left:18px;font-size:0.9rem;color:var(--text-secondary)">
+                    @foreach (var e in sr.Errors) { <li>@e</li> }
+                </ul>
+            }
+        }
+    </div>
+}
 
 <div class="stats-grid">
     <div class="stat-card purple">
@@ -33,11 +68,29 @@
     </div>
 </div>
 
-<div class="flex gap-2 flex-wrap mb-6">
+<div class="flex gap-2 flex-wrap mb-4">
+    <form method="post" asp-page-handler="RunSuite" id="suiteForm">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-primary btn-sm" id="suiteBtn">
+            <span id="suiteText">⚡ Chạy bộ thực nghiệm chuẩn (PRN222)</span>
+            <span id="suiteSpin" class="hidden animate-spin">⏳ Đang chạy…</span>
+        </button>
+    </form>
     <a href="/Compare/ChunkingStrategies" class="btn btn-secondary btn-sm">✂️ Chunking</a>
     <a href="/Compare/EmbeddingModels" class="btn btn-secondary btn-sm">🧬 Embedding</a>
     <a href="/Compare/RagVsFineTuned" class="btn btn-secondary btn-sm">🔬 RAG vs Fine-tuned</a>
     <a href="/Compare/Models" class="btn btn-secondary btn-sm">🧪 So sánh Model</a>
+</div>
+
+<div class="card mb-6">
+    <div class="card-header"><span class="card-title">📈 RAGAS benchmark (@rag.Subject · @rag.Questions câu)</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:0 4px 4px">
+        <div><div class="text-sm text-muted">faithfulness</div><div style="font-size:1.4rem;font-weight:700">@rag.Faithfulness.ToString("F3")</div></div>
+        <div><div class="text-sm text-muted">answer_relevancy</div><div style="font-size:1.4rem;font-weight:700">@rag.AnswerRelevancy.ToString("F3")</div></div>
+        <div><div class="text-sm text-muted">context_precision</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextPrecision.ToString("F3")</div></div>
+        <div><div class="text-sm text-muted">context_recall</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextRecall.ToString("F3")</div></div>
+    </div>
+    <p class="text-sm text-muted" style="margin:12px 0 0">CLI: <code>py -3 eval/ragas_benchmark.py --limit 6</code> · Chi tiết: eval/RAGAS_Results.md</p>
 </div>
 
 @if (d.TotalRuns == 0)
@@ -46,7 +99,7 @@
         <div class="empty-state" style="padding:48px">
             <div class="empty-state-icon">📭</div>
             <div class="empty-state-title">Chưa có kết quả thực nghiệm</div>
-            <p class="text-muted" style="margin-top:8px">Chạy một benchmark ở menu So sánh — kết quả sẽ xuất hiện ở đây.</p>
+            <p class="text-muted" style="margin-top:8px">Nhấn <strong>Chạy bộ thực nghiệm chuẩn</strong> hoặc chạy từng benchmark ở menu So sánh.</p>
         </div>
     </div>
 }
@@ -56,32 +109,27 @@ else
         <div class="card">
             <div class="card-header"><span class="card-title">✂️ Chunking — avg score</span></div>
             <canvas id="chunkChart" height="200"></canvas>
-            @if (d.ChunkingAgg.Count == 0)
-            {
-                <p class="text-muted text-sm">Chưa có dữ liệu chunking.</p>
-            }
         </div>
         <div class="card">
             <div class="card-header"><span class="card-title">🧬 Embedding — avg cosine</span></div>
             <canvas id="embedChart" height="200"></canvas>
-            @if (d.EmbeddingAgg.Count == 0)
-            {
-                <p class="text-muted text-sm">Chưa có dữ liệu embedding.</p>
-            }
         </div>
         <div class="card">
             <div class="card-header"><span class="card-title">🔬 RAG vs FT — avg latency (ms)</span></div>
             <canvas id="rftChart" height="200"></canvas>
-            @if (d.RagVsFtAgg.Count == 0)
-            {
-                <p class="text-muted text-sm">Chưa có dữ liệu RAG vs FT.</p>
-            }
         </div>
+    </div>
+
+    <div class="flex gap-2 flex-wrap mb-4">
+        <a href="/Dashboard/Experiments" class="btn btn-sm @(filter == null ? "btn-primary" : "btn-secondary")">Tất cả</a>
+        <a href="/Dashboard/Experiments?kind=chunking" class="btn btn-sm @(filter == "chunking" ? "btn-primary" : "btn-secondary")">Chunking</a>
+        <a href="/Dashboard/Experiments?kind=embedding" class="btn btn-sm @(filter == "embedding" ? "btn-primary" : "btn-secondary")">Embedding</a>
+        <a href="/Dashboard/Experiments?kind=rag-vs-ft" class="btn btn-sm @(filter == "rag-vs-ft" ? "btn-primary" : "btn-secondary")">RAG vs FT</a>
     </div>
 
     <div class="card" style="padding:0">
         <div class="card-header" style="padding:20px 24px 16px">
-            <span class="card-title">📋 Lịch sử lần chạy gần đây</span>
+            <span class="card-title">📋 Lịch sử lần chạy gần đây @(filter != null ? $"({filter})" : "")</span>
         </div>
         <div class="table-wrapper" style="border:none">
             <table>
@@ -123,7 +171,7 @@ else
                                 else { <span class="text-muted">–</span> }
                             </td>
                             <td class="text-sm">
-                                @foreach (var v in r.Variants.Take(4))
+                                @foreach (var v in r.Variants.Take(5))
                                 {
                                     <div style="margin-bottom:2px">
                                         @if (v.IsError)
@@ -133,7 +181,7 @@ else
                                         else
                                         {
                                             <strong>@v.VariantLabel</strong>
-                                            <span class="text-muted"> · score @v.Score.ToString("F2") · @v.LatencyMs ms</span>
+                                            <span class="text-muted"> · @v.Score.ToString("F2") · @v.LatencyMs ms</span>
                                         }
                                     </div>
                                 }
@@ -149,6 +197,15 @@ else
 @section Scripts {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+    const suiteForm = document.getElementById('suiteForm');
+    if (suiteForm) {
+        suiteForm.addEventListener('submit', function () {
+            document.getElementById('suiteText').classList.add('hidden');
+            document.getElementById('suiteSpin').classList.remove('hidden');
+            document.getElementById('suiteBtn').disabled = true;
+        });
+    }
+
     const chunkLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.ChunkingAgg.Select(x => x.VariantLabel)));
     const chunkScores = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.ChunkingAgg.Select(x => Math.Round(x.AvgScore, 3))));
     const embedLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.EmbeddingAgg.Select(x => x.VariantLabel)));
@@ -163,13 +220,7 @@ else
             type: 'bar',
             data: {
                 labels,
-                datasets: [{
-                    label: 'Giá trị',
-                    data,
-                    backgroundColor: color,
-                    borderRadius: 6,
-                    maxBarThickness: 48
-                }]
+                datasets: [{ label: 'Giá trị', data, backgroundColor: color, borderRadius: 6, maxBarThickness: 48 }]
             },
             options: {
                 plugins: { legend: { display: false } },

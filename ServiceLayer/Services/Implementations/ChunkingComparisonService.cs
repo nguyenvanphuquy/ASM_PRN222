@@ -150,19 +150,22 @@ public class ChunkingComparisonService : IChunkingComparisonService
                     }
                 }
 
-                // Embed tối đa 120 chunk / strategy để tránh timeout API khi demo
+                // Embed song song (tối đa 4 luồng) thay vì tuần tự.
                 if (embedder != null && queryVector != null)
                 {
                     var toEmbed = chunks.Take(120).ToList();
-                    foreach (var c in toEmbed)
+                    var sem = new SemaphoreSlim(4);
+                    await Task.WhenAll(toEmbed.Select(async c =>
                     {
+                        await sem.WaitAsync();
                         try
                         {
                             var vec = await embedder.GetEmbeddingAsync(c.Content, embeddingModel);
                             c.VectorJson = JsonSerializer.Serialize(vec);
                         }
-                        catch { /* keep null → keyword */ }
-                    }
+                        catch { /* fallback keyword */ }
+                        finally { sem.Release(); }
+                    }));
                 }
 
                 var scored = ScoreChunks(question, chunks, queryVector, limit: 5);

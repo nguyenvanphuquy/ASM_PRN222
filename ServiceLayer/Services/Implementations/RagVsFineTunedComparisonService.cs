@@ -41,29 +41,33 @@ public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
         var chunks = search.Select(x => x.Chunk).ToList();
         var sources = BuildSources(search);
 
+        // --- RAG + Fine-tuned: chạy song song sau retrieval ---
         LlmResult ragLlm;
         string ragAnswer;
         bool ragGrounded;
+        LlmResult ftLlm;
 
         if (search.Count == 0 || search.All(x => x.Score < 0.2f))
         {
             ragAnswer = "Tôi không tìm thấy thông tin này trong tài liệu môn học.";
             ragLlm = new LlmResult(ragAnswer, "", 0, 0, 0, 0);
-            ragGrounded = true; // đúng hành vi: từ chối trả lời ngoài tài liệu
+            ragGrounded = true;
             sources = [];
+            ftLlm = await _llm.GenerateParametricAnswerAsync(question, subjectName);
         }
         else
         {
-            ragLlm = await _llm.GenerateAnswerAsync(question, chunks, Array.Empty<ChatMessage>());
+            var ftTask = _llm.GenerateParametricAnswerAsync(question, subjectName);
+            var ragTask = _llm.GenerateAnswerAsync(question, chunks, Array.Empty<ChatMessage>());
+            await Task.WhenAll(ftTask, ragTask);
+            ftLlm = await ftTask;
+            ragLlm = await ragTask;
             ragAnswer = ragLlm.Content;
             ragGrounded = true;
-            // Model vẫn từ chối dù có chunk điểm thấp → không hiển thị nguồn "giả".
             if (ragAnswer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase))
                 sources = [];
         }
 
-        // --- Fine-tuned (parametric) path: cùng model, KHÔNG retrieval ---
-        var ftLlm = await _llm.GenerateParametricAnswerAsync(question, subjectName);
         var ftAnswer = ftLlm.Content;
 
         var modelId = !string.IsNullOrEmpty(ragLlm.Model) ? ragLlm.Model

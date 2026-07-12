@@ -2,6 +2,7 @@ using System.Text.Json;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories.Interfaces;
 using ServiceLayer.Dtos;
+using ServiceLayer.Services.Embeddings;
 using ServiceLayer.Services.Interfaces;
 
 namespace ServiceLayer.Services.Implementations;
@@ -13,8 +14,18 @@ public class ExperimentService : IExperimentService
     public const string KindRagVsFt = "rag-vs-ft";
 
     private readonly IExperimentRepository _repo;
+    private readonly ISystemSettingService _settings;
+    private readonly LocalStEmbeddingProvider? _localSt;
 
-    public ExperimentService(IExperimentRepository repo) => _repo = repo;
+    public ExperimentService(
+        IExperimentRepository repo,
+        ISystemSettingService settings,
+        IEnumerable<IEmbeddingProvider> embeddingProviders)
+    {
+        _repo = repo;
+        _settings = settings;
+        _localSt = embeddingProviders.OfType<LocalStEmbeddingProvider>().FirstOrDefault();
+    }
 
     public async Task SaveChunkingAsync(ChunkingComparisonResult result, string userId)
     {
@@ -92,18 +103,29 @@ public class ExperimentService : IExperimentService
         await _repo.AddAsync(run);
     }
 
-    public async Task<ExperimentDashboardDto> GetDashboardAsync(int recentTake = 30)
+    public async Task<ExperimentDashboardDto> GetDashboardAsync(int recentTake = 30, string? filterKind = null)
     {
-        var recent = await _repo.GetRecentAsync(recentTake);
+        var counts = await _repo.GetCountsByKindAsync();
+        counts.TryGetValue(KindChunking, out var chunkingRuns);
+        counts.TryGetValue(KindEmbedding, out var embeddingRuns);
+        counts.TryGetValue(KindRagVsFt, out var ragRuns);
+
+        var sidecarUrl = await _settings.GetSettingAsync("Rbl.LocalEmbedUrl", "http://127.0.0.1:8600");
+        var sidecarOnline = _localSt != null
+            && await RblSidecarHealth.IsOnlineAsync(_localSt.Http, sidecarUrl);
+
+        var recent = await _repo.GetRecentAsync(recentTake, filterKind);
         var since = DateTime.UtcNow.AddDays(-90);
         var variants = await _repo.GetVariantsSinceAsync(since);
 
         return new ExperimentDashboardDto
         {
-            TotalRuns = await _repo.CountAsync(),
-            ChunkingRuns = await _repo.CountAsync(KindChunking),
-            EmbeddingRuns = await _repo.CountAsync(KindEmbedding),
-            RagVsFtRuns = await _repo.CountAsync(KindRagVsFt),
+            TotalRuns = counts.Values.Sum(),
+            ChunkingRuns = chunkingRuns,
+            EmbeddingRuns = embeddingRuns,
+            RagVsFtRuns = ragRuns,
+            SidecarOnline = sidecarOnline,
+            FilterKind = filterKind,
             RecentRuns = recent.Select(MapRun).ToList(),
             ChunkingAgg = Aggregate(variants, KindChunking),
             EmbeddingAgg = Aggregate(variants, KindEmbedding),

@@ -58,7 +58,9 @@ public class EmbeddingSidecarLauncher : IHostedService
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
-                psi.ArgumentList.Add(script);
+                psi.ArgumentList.Add(python.Equals("py", StringComparison.OrdinalIgnoreCase) ? "-3" : script);
+                if (python.Equals("py", StringComparison.OrdinalIgnoreCase))
+                    psi.ArgumentList.Add(script);
                 psi.Environment["PYTHONUTF8"] = "1";
                 psi.Environment["PYTHONIOENCODING"] = "utf-8";
                 psi.Environment["EMBED_PORT"] = port.ToString();
@@ -124,9 +126,9 @@ public class EmbeddingSidecarLauncher : IHostedService
 
     private static IEnumerable<string> PythonCandidates()
     {
-        yield return "python";
         yield return "py";
-        foreach (var p in new[] { @"C:\Python313\python.exe", @"C:\Python312\python.exe" })
+        yield return "python";
+        foreach (var p in new[] { @"C:\Python314\python.exe", @"C:\Python313\python.exe", @"C:\Python312\python.exe" })
             if (File.Exists(p)) yield return p;
     }
 }

@@ -37,4 +37,13 @@ public class ExperimentRepository : IExperimentRepository
             q = q.Where(r => r.Kind == kind);
         return await q.CountAsync();
     }
+
+    public async Task<Dictionary<string, int>> GetCountsByKindAsync()
+    {
+        var rows = await _db.ExperimentRuns
+            .GroupBy(r => r.Kind)
+            .Select(g => new { Kind = g.Key, Count = g.Count() })
+            .ToListAsync();
+        return rows.ToDictionary(x => x.Kind, x => x.Count);
+    }
 }

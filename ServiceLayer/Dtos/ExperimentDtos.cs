@@ -6,10 +6,23 @@ public class ExperimentDashboardDto
     public int ChunkingRuns { get; set; }
     public int EmbeddingRuns { get; set; }
     public int RagVsFtRuns { get; set; }
+    public bool SidecarOnline { get; set; }
+    public string? FilterKind { get; set; }
+    public RagasSummaryDto Ragas { get; set; } = new();
     public List<ExperimentRunDto> RecentRuns { get; set; } = new();
     public List<VariantAggDto> ChunkingAgg { get; set; } = new();
     public List<VariantAggDto> EmbeddingAgg { get; set; } = new();
     public List<VariantAggDto> RagVsFtAgg { get; set; } = new();
+}
+
+public class RagasSummaryDto
+{
+    public string Subject { get; set; } = "SWE301";
+    public int Questions { get; set; } = 6;
+    public double Faithfulness { get; set; } = 0.917;
+    public double AnswerRelevancy { get; set; } = 0.953;
+    public double ContextPrecision { get; set; } = 0.917;
+    public double ContextRecall { get; set; } = 1.0;
 }
 
 public class ExperimentRunDto
