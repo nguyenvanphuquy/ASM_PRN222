@@ -131,7 +131,7 @@ else
                 <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">
                     <span class="nav-icon">📚</span> Môn học
                 </a>
-                <a class="nav-item @(IsActive("/chat/session") ? "active" : "")" href="/Chat">
+                <a class="nav-item @(IsActive("/chat/session") ? "active" : "")" href="/Chat?handler=New">
                     <span class="nav-icon">🤖</span> Trợ lý AI
                 </a>
                 <a class="nav-item @(path == "/chat" || path == "/chat/" ? "active" : "")" href="/Chat">
@@ -210,7 +210,7 @@ else
                         </div>
                     </div>
                 </div>
-                <a href="/Chat" class="btn btn-primary btn-sm">
+                <a href="/Chat?handler=New" class="btn btn-primary btn-sm">
                     💬 Chat mới
                 </a>
             </div>

@@ -93,7 +93,17 @@
                             <td style="font-weight:600;color:var(--text-primary)">@h.PackageName</td>
                             <td class="text-right">@(h.AmountVnd == 0 ? "Miễn phí" : $"{h.AmountVnd:N0}₫")</td>
                             <td class="text-right text-muted">@h.TokensUsed.ToString("N0") / @h.TokensGranted.ToString("N0")</td>
-                            <td><span class="badge @(h.Status == "Paid" ? "badge-green" : "badge-gray")">@h.Status</span></td>
+                            <td>
+                                <span class="badge @(h.Status == "Paid" ? "badge-green" : h.Status == "Cancelled" ? "badge-red" : "badge-gray")">@h.Status</span>
+                                @if (h.Status == "Paid" && h.PaymentMethod != "Free")
+                                {
+                                    <form method="post" asp-page-handler="Cancel" style="display:inline-block;margin-left:6px" onsubmit="return confirm('Bạn có chắc muốn huỷ gói này không? Lượng token chưa dùng sẽ bị vô hiệu hoá.')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="purchaseId" value="@h.Id" />
+                                        <button type="submit" class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:0.75rem;line-height:1.2;height:auto;min-height:0">Huỷ</button>
+                                    </form>
+                                }
+                            </td>
                             <td class="text-right text-sm text-muted">@h.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                         </tr>
                     }

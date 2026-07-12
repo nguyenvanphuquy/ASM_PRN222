@@ -95,16 +95,54 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostResetPasswordAsync(string id, string newPassword)
+    public async Task<IActionResult> OnPostEditUserAsync(string id, string fullName, string email, string? newPassword)
     {
-        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
         {
-            TempData["Error"] = "Mật khẩu mới tối thiểu 6 ký tự.";
+            TempData["Error"] = "Họ tên và email là bắt buộc.";
             return RedirectToPage();
         }
 
-        var (ok, err) = await _userService.ResetPasswordAsync(id, newPassword);
-        TempData[ok ? "Success" : "Error"] = ok ? "Đã đặt lại mật khẩu." : err;
+        var (ok, err) = await _userService.UpdateProfileAsync(id, fullName, email, null);
+        if (!ok)
+        {
+            TempData["Error"] = err;
+            return RedirectToPage();
+        }
+
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            if (newPassword.Length < 6)
+            {
+                TempData["Warning"] = "Hồ sơ đã cập nhật nhưng mật khẩu không đổi (tối thiểu 6 ký tự).";
+                return RedirectToPage();
+            }
+
+            var user = await _userService.GetByIdAsync(id);
+            var (pwOk, pwErr) = await _userService.ResetPasswordAsync(id, newPassword);
+            
+            if (pwOk && user != null)
+            {
+                try 
+                {
+                    await _emailService.SendPasswordResetByAdminAsync(email, fullName, user.Username, newPassword);
+                    TempData["Success"] = $"Đã cập nhật hồ sơ & đổi mật khẩu. Đã gửi email tới {email}.";
+                }
+                catch (Exception ex)
+                {
+                    TempData["Warning"] = $"Đã cập nhật hồ sơ & đổi mật khẩu nhưng KHÔNG gửi được email ({ex.Message}).";
+                }
+            }
+            else
+            {
+                TempData["Warning"] = $"Hồ sơ đã cập nhật nhưng lỗi đổi mật khẩu: {pwErr}";
+            }
+        }
+        else
+        {
+            TempData["Success"] = "Đã cập nhật hồ sơ thành công.";
+        }
+
         return RedirectToPage();
     }
 

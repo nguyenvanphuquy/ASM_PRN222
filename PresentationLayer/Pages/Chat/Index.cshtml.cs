@@ -45,6 +45,13 @@ public class IndexModel : PageModel
         TempData["Info"] = "Đã xoá cuộc hội thoại.";
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnGetNewAsync()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        var session = await _chatService.CreateSessionAsync(userId, null);
+        return RedirectToPage("/Chat/Session", new { id = session.Id });
+    }
 }
 
 
