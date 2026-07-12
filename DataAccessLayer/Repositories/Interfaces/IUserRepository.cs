@@ -13,6 +13,7 @@ public interface IUserRepository
     Task DeleteAsync(string id);
     Task<long> CountAsync();
     Task<long> CountByRoleAsync(string role);
+    Task<string?> GetRoleIdByNameAsync(string roleName);
 
     // ── Phân công giảng viên ↔ môn học (nhiều môn / 1 giảng viên; 1 môn / 1 giảng viên) ──
     Task<List<LecturerSubject>> GetAllLecturerSubjectsAsync();

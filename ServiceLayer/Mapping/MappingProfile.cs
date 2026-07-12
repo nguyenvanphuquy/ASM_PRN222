@@ -8,7 +8,11 @@ namespace ServiceLayer.Mapping
     {
         public MappingProfile()
         {
-            CreateMap<User, UserDto>().ReverseMap();
+            CreateMap<User, UserDto>()
+                .ForMember(d => d.Role, o => o.MapFrom(s => s.Role))
+                .ReverseMap()
+                .ForMember(s => s.RoleId, o => o.Ignore())
+                .ForMember(s => s.RoleNavigation, o => o.Ignore());
             CreateMap<Document, DocumentDto>().ReverseMap();
             CreateMap<DocumentChunk, DocumentChunkDto>().ReverseMap();
             CreateMap<Subject, SubjectDto>().ReverseMap();

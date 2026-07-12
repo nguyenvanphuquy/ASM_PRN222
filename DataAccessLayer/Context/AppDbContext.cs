@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<Document> Documents => Set<Document>();
@@ -35,15 +36,30 @@ public class AppDbContext : DbContext
             e.Property(u => u.Username).HasMaxLength(100);
             e.Property(u => u.Email).HasMaxLength(200);
             e.Property(u => u.FullName).HasMaxLength(200);
-            e.Property(u => u.Role).HasMaxLength(50).HasDefaultValue("Student");
+            e.Property(u => u.RoleId).HasMaxLength(36);
             e.Property(u => u.AvatarPath).HasMaxLength(500);
             e.Property(u => u.AssignedSubjectId).HasMaxLength(36);
             e.Property(u => u.EmailVerificationToken).HasMaxLength(64);
+            e.Ignore(u => u.Role);
+
+            e.HasOne(u => u.RoleNavigation)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(u => u.AssignedSubject)
                 .WithMany()
                 .HasForeignKey(u => u.AssignedSubjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Role>(e =>
+        {
+            e.HasKey(r => r.Id);
+            e.Property(r => r.Id).HasMaxLength(36);
+            e.Property(r => r.Name).HasMaxLength(50);
+            e.Property(r => r.Description).HasMaxLength(200);
+            e.HasIndex(r => r.Name).IsUnique();
         });
 
         modelBuilder.Entity<Subject>(e =>

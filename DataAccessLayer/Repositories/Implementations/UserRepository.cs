@@ -10,17 +10,20 @@ public class UserRepository : IUserRepository
     private readonly AppDbContext _context;
     public UserRepository(AppDbContext context) => _context = context;
 
+    private IQueryable<User> UsersWithRole()
+        => _context.Users.Include(u => u.RoleNavigation);
+
     public Task<User?> GetByUsernameAsync(string username)
-        => _context.Users.FirstOrDefaultAsync(u => u.Username == username || u.Email == username);
+        => UsersWithRole().FirstOrDefaultAsync(u => u.Username == username || u.Email == username);
 
     public Task<User?> GetByIdAsync(string id)
-        => _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+        => UsersWithRole().FirstOrDefaultAsync(u => u.Id == id);
 
     public Task<User?> GetByVerificationTokenAsync(string token)
-        => _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
+        => UsersWithRole().FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
 
     public Task<List<User>> GetAllAsync()
-        => _context.Users.OrderByDescending(u => u.CreatedAt).ToListAsync();
+        => UsersWithRole().OrderByDescending(u => u.CreatedAt).ToListAsync();
 
     public async Task CreateAsync(User user)
     {
@@ -47,7 +50,13 @@ public class UserRepository : IUserRepository
     public async Task<long> CountAsync() => await _context.Users.LongCountAsync();
 
     public async Task<long> CountByRoleAsync(string role)
-        => await _context.Users.LongCountAsync(u => u.Role == role);
+        => await _context.Users.LongCountAsync(u => u.RoleNavigation != null && u.RoleNavigation.Name == role);
+
+    public Task<string?> GetRoleIdByNameAsync(string roleName)
+        => _context.Roles
+            .Where(r => r.Name == roleName)
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync();
 
     public Task<List<LecturerSubject>> GetAllLecturerSubjectsAsync()
         => _context.LecturerSubjects.ToListAsync();
@@ -70,5 +79,3 @@ public class UserRepository : IUserRepository
         await _context.SaveChangesAsync();
     }
 }
-
-

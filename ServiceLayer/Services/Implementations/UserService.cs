@@ -46,13 +46,17 @@ public class UserService : IUserService
 
         // Tài khoản tạo ra ở trạng thái chưa kích hoạt; người dùng phải xác thực email mới đăng nhập được.
         var token = Guid.NewGuid().ToString("N");
+        var roleId = await _repo.GetRoleIdByNameAsync(role);
+        if (roleId is null)
+            return (false, "Role không tồn tại trong hệ thống", null);
+
         await _repo.CreateAsync(new User
         {
             Username = username.Trim(),
             Email = email,
             FullName = fullName?.Trim() ?? string.Empty,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Role = role,
+            RoleId = roleId,
             IsEmailVerified = false,
             EmailVerificationToken = token
         });
@@ -80,7 +84,9 @@ public class UserService : IUserService
         if (!Roles.All.Contains(newRole)) return (false, "Role không hợp lệ");
         var user = await _repo.GetByIdAsync(id);
         if (user is null) return (false, "User không tồn tại");
-        user.Role = newRole;
+        var roleId = await _repo.GetRoleIdByNameAsync(newRole);
+        if (roleId is null) return (false, "Role không tồn tại trong hệ thống");
+        user.RoleId = roleId;
         // Upload permission only applies to lecturers — clear all subject assignments for other roles.
         if (newRole != Roles.Lecturer)
         {

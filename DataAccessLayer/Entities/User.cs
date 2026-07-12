@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace DataAccessLayer.Entities;
 
 public class User
@@ -7,7 +9,7 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string Role { get; set; } = "Student";
+    public string? RoleId { get; set; }
     // Lecturers may only upload documents once an admin grants this. Admins can always upload.
     public bool CanUploadDocuments { get; set; }
     // The single subject a granted lecturer is allowed to upload documents to.
@@ -22,5 +24,10 @@ public class User
     public string? EmailVerificationToken { get; set; }
 
     // Navigation Properties
+    public virtual Role? RoleNavigation { get; set; }
     public virtual Subject? AssignedSubject { get; set; }
+
+    /// <summary>Tên role (Admin/Lecturer/Student) — map từ bảng Roles, không phải cột DB.</summary>
+    [NotMapped]
+    public string Role => RoleNavigation?.Name ?? "Student";
 }

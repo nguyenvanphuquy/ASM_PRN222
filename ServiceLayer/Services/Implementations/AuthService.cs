@@ -37,6 +37,10 @@ public class AuthService : IAuthService
 
     public async Task EnsureSeedUsersAsync()
     {
+        var adminRoleId = await _userRepo.GetRoleIdByNameAsync("Admin");
+        var lecturerRoleId = await _userRepo.GetRoleIdByNameAsync("Lecturer");
+        var studentRoleId = await _userRepo.GetRoleIdByNameAsync("Student");
+
         var admin = await _userRepo.GetByUsernameAsync("admin");
         if (admin is null)
         {
@@ -46,7 +50,7 @@ public class AuthService : IAuthService
                 Email = "admin@chatbot.local",
                 FullName = "Administrator",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                Role = "Admin",
+                RoleId = adminRoleId,
                 IsEmailVerified = true
             });
         }
@@ -60,7 +64,7 @@ public class AuthService : IAuthService
                 Email = "lecturer@chatbot.local",
                 FullName = "Giảng viên Demo",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("lecturer123"),
-                Role = "Lecturer",
+                RoleId = lecturerRoleId,
                 IsEmailVerified = true
             });
         }
@@ -74,11 +78,9 @@ public class AuthService : IAuthService
                 Email = "student@chatbot.local",
                 FullName = "Sinh viên Demo",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("student123"),
-                Role = "Student",
+                RoleId = studentRoleId,
                 IsEmailVerified = true
             });
         }
     }
 }
-
-
