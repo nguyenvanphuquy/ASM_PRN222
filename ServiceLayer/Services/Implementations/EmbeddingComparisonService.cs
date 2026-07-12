@@ -30,6 +30,7 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
     private readonly IGroqService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
+    private readonly IExperimentService _experiments;
 
     public EmbeddingComparisonService(
         IDocumentRepository docs,
@@ -38,7 +39,8 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
         ISystemSettingService settings,
         IGroqService llm,
         IBillingService billing,
-        ISubjectService subjects)
+        ISubjectService subjects,
+        IExperimentService experiments)
     {
         _docs = docs;
         _chunkingFactory = chunkingFactory;
@@ -47,6 +49,7 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
         _llm = llm;
         _billing = billing;
         _subjects = subjects;
+        _experiments = experiments;
     }
 
     public async Task<EmbeddingComparisonResult> CompareAsync(string question, string subjectId, string userId)
@@ -233,6 +236,8 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
         }
 
         result.Insights = BuildInsights(result);
+        if (result.Models.Count > 0)
+            await _experiments.SaveEmbeddingAsync(result, userId);
         return result;
     }
 

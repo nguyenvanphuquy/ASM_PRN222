@@ -47,8 +47,11 @@ else
         <nav class="sidebar-nav">
             @if (role == "Lecturer")
             {
-                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                <a class="nav-item @(IsActive("/dashboard") && !IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard">
                     <span class="nav-icon">🏠</span> Bảng điều khiển
+                </a>
+                <a class="nav-item @(IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard/Experiments">
+                    <span class="nav-icon">📊</span> Kết quả RBL
                 </a>
                 <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
                     <span class="nav-icon">📂</span> Quản lý tài liệu
@@ -86,8 +89,11 @@ else
             }
             else if (role == "Admin")
             {
-                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                <a class="nav-item @(IsActive("/dashboard") && !IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard">
                     <span class="nav-icon">🏠</span> Bảng điều khiển
+                </a>
+                <a class="nav-item @(IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard/Experiments">
+                    <span class="nav-icon">📊</span> Kết quả RBL
                 </a>
                 <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
                     <span class="nav-icon">👥</span> Quản lý người dùng

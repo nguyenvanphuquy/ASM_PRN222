@@ -37,6 +37,7 @@ public class ChunkingComparisonService : IChunkingComparisonService
     private readonly IGroqService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
+    private readonly IExperimentService _experiments;
 
     public ChunkingComparisonService(
         IDocumentRepository docs,
@@ -46,7 +47,8 @@ public class ChunkingComparisonService : IChunkingComparisonService
         ISystemSettingService settings,
         IGroqService llm,
         IBillingService billing,
-        ISubjectService subjects)
+        ISubjectService subjects,
+        IExperimentService experiments)
     {
         _docs = docs;
         _chunkingFactory = chunkingFactory;
@@ -56,6 +58,7 @@ public class ChunkingComparisonService : IChunkingComparisonService
         _llm = llm;
         _billing = billing;
         _subjects = subjects;
+        _experiments = experiments;
     }
 
     public async Task<ChunkingComparisonResult> CompareAsync(string question, string subjectId, string userId)
@@ -224,6 +227,8 @@ public class ChunkingComparisonService : IChunkingComparisonService
         }
 
         result.Insights = BuildInsights(result);
+        if (result.Strategies.Count > 0)
+            await _experiments.SaveChunkingAsync(result, userId);
         return result;
     }
 

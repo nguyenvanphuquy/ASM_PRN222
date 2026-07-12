@@ -58,6 +58,7 @@ public class Program
         builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         builder.Services.AddScoped<IFeedbackReplyRepository, FeedbackReplyRepository>();
         builder.Services.AddScoped<IAllowedEmailRepository, AllowedEmailRepository>();
+        builder.Services.AddScoped<IExperimentRepository, ExperimentRepository>();
         builder.Services.AddScoped<IBillingRepository, BillingRepository>();
 
         // === Services ===
@@ -68,6 +69,7 @@ public class Program
         builder.Services.AddScoped<IChapterService, ChapterService>();
         builder.Services.AddScoped<IAllowedEmailService, AllowedEmailService>();
         builder.Services.AddScoped<ISystemSettingService, SystemSettingService>();
+        builder.Services.AddScoped<IExperimentService, ExperimentService>();
         
         builder.Services.AddSingleton<ITextExtractor, TextExtractor>();
         
@@ -353,6 +355,38 @@ public class Program
                         );
                         CREATE INDEX IX_PackagePurchases_UserId ON PackagePurchases (UserId);
                         CREATE INDEX IX_PackagePurchases_CreatedAt ON PackagePurchases (CreatedAt);
+                    END;
+                    IF OBJECT_ID('ExperimentRuns') IS NULL
+                    BEGIN
+                        CREATE TABLE ExperimentRuns (
+                            Id          nvarchar(36)   NOT NULL PRIMARY KEY,
+                            Kind        nvarchar(20)   NOT NULL DEFAULT '',
+                            Question    nvarchar(1000) NOT NULL DEFAULT '',
+                            SubjectId   nvarchar(36)   NULL,
+                            SubjectName nvarchar(300)  NULL,
+                            UserId      nvarchar(36)   NOT NULL DEFAULT '',
+                            WinnerLabel nvarchar(200)  NULL,
+                            NotesJson   nvarchar(max)  NULL,
+                            CreatedAt   datetime2      NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE INDEX IX_ExperimentRuns_CreatedAt ON ExperimentRuns (CreatedAt);
+                        CREATE INDEX IX_ExperimentRuns_Kind ON ExperimentRuns (Kind);
+                    END;
+                    IF OBJECT_ID('ExperimentVariants') IS NULL
+                    BEGIN
+                        CREATE TABLE ExperimentVariants (
+                            Id               nvarchar(36)  NOT NULL PRIMARY KEY,
+                            ExperimentRunId  nvarchar(36)  NOT NULL DEFAULT '',
+                            VariantKey       nvarchar(100) NOT NULL DEFAULT '',
+                            VariantLabel     nvarchar(200) NOT NULL DEFAULT '',
+                            Score            real          NOT NULL DEFAULT 0,
+                            LatencyMs        bigint        NOT NULL DEFAULT 0,
+                            TotalTokens      int           NOT NULL DEFAULT 0,
+                            ExtraInt         int           NOT NULL DEFAULT 0,
+                            IsError          bit           NOT NULL DEFAULT 0,
+                            AnswerPreview    nvarchar(500) NULL
+                        );
+                        CREATE INDEX IX_ExperimentVariants_RunId ON ExperimentVariants (ExperimentRunId);
                     END;");
 
                 var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();

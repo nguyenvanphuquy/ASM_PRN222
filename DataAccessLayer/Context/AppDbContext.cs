@@ -25,6 +25,8 @@ public class AppDbContext : DbContext
     public DbSet<TokenUsageLog> TokenUsageLogs => Set<TokenUsageLog>();
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<PackagePurchase> PackagePurchases => Set<PackagePurchase>();
+    public DbSet<ExperimentRun> ExperimentRuns => Set<ExperimentRun>();
+    public DbSet<ExperimentVariant> ExperimentVariants => Set<ExperimentVariant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -345,6 +347,33 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.CreatedAt);
 
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExperimentRun>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.Kind).HasMaxLength(20);
+            e.Property(x => x.Question).HasMaxLength(1000);
+            e.Property(x => x.SubjectId).HasMaxLength(36);
+            e.Property(x => x.SubjectName).HasMaxLength(300);
+            e.Property(x => x.UserId).HasMaxLength(36);
+            e.Property(x => x.WinnerLabel).HasMaxLength(200);
+            e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => x.Kind);
+            e.HasMany(x => x.Variants).WithOne(v => v.Run).HasForeignKey(v => v.ExperimentRunId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExperimentVariant>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.ExperimentRunId).HasMaxLength(36);
+            e.Property(x => x.VariantKey).HasMaxLength(100);
+            e.Property(x => x.VariantLabel).HasMaxLength(200);
+            e.Property(x => x.AnswerPreview).HasMaxLength(500);
+            e.HasIndex(x => x.ExperimentRunId);
         });
     }
 }

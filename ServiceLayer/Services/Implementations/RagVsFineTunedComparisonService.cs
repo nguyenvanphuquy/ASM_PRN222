@@ -11,17 +11,20 @@ public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
     private readonly IGroqService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
+    private readonly IExperimentService _experiments;
 
     public RagVsFineTunedComparisonService(
         IRetrievalService retrieval,
         IGroqService llm,
         IBillingService billing,
-        ISubjectService subjects)
+        ISubjectService subjects,
+        IExperimentService experiments)
     {
         _retrieval = retrieval;
         _llm = llm;
         _billing = billing;
         _subjects = subjects;
+        _experiments = experiments;
     }
 
     public async Task<RagVsFineTunedResult> CompareAsync(string question, string? subjectId, string userId)
@@ -109,6 +112,7 @@ public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
         foreach (var r in new[] { ragLlm, ftLlm }.Where(r => !r.IsError && r.TotalTokens > 0))
             await _billing.RecordUsageAsync(userId, null, r, "rag-vs-ft", meter: false);
 
+        await _experiments.SaveRagVsFineTunedAsync(result, userId);
         return result;
     }
 
