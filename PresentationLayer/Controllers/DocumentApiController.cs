@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PresentationLayer.Helpers;
 using ServiceLayer.Services.Interfaces;
 using System.Security.Claims;
 
@@ -77,6 +78,8 @@ public class DocumentApiController : ControllerBase
     {
         var doc = await _documentService.GetByIdAsync(id);
         if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
 
         var success = await _documentService.ApproveAsync(id);
         if (!success) return BadRequest(new { error = "Chỉ có thể duyệt tài liệu ở trạng thái Reviewing." });
@@ -93,6 +96,8 @@ public class DocumentApiController : ControllerBase
     {
         var doc = await _documentService.GetByIdAsync(id);
         if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
 
         var success = await _documentService.RejectAsync(id);
         if (!success) return BadRequest(new { error = "Chỉ có thể từ chối tài liệu ở trạng thái Reviewing." });
@@ -109,6 +114,8 @@ public class DocumentApiController : ControllerBase
     {
         var doc = await _documentService.GetByIdAsync(id);
         if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
 
         await _documentService.DeleteAsync(id);
         return NoContent();

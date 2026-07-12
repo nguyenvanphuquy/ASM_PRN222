@@ -17,12 +17,13 @@ public class ExperimentDashboardDto
 
 public class RagasSummaryDto
 {
+    public bool HasData { get; set; }
     public string Subject { get; set; } = "SWE301";
     public int Questions { get; set; } = 6;
-    public double Faithfulness { get; set; } = 0.917;
-    public double AnswerRelevancy { get; set; } = 0.953;
-    public double ContextPrecision { get; set; } = 0.917;
-    public double ContextRecall { get; set; } = 1.0;
+    public double Faithfulness { get; set; }
+    public double AnswerRelevancy { get; set; }
+    public double ContextPrecision { get; set; }
+    public double ContextRecall { get; set; }
 }
 
 public class ExperimentRunDto

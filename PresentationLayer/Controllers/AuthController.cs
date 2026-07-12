@@ -40,18 +40,20 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = result.ErrorMessage ?? "Đăng nhập thất bại." });
         }
 
+        var assignedApi = result.AssignedSubjectIds ?? Array.Empty<string>();
+        var canUploadApi = result.Role == "Lecturer" && assignedApi.Count > 0;
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, result.UserId!),
             new(ClaimTypes.Name,           result.Username!),
             new("FullName",                result.FullName ?? result.Username!),
             new(ClaimTypes.Role,           result.Role ?? "Student"),
-            new("CanUpload",               (result.Role == "Admin" || result.Role == "Lecturer" || result.CanUploadDocuments) ? "true" : "false")
+            new("CanUpload",               canUploadApi ? "true" : "false")
         };
 
         if (!string.IsNullOrEmpty(result.AvatarPath))
             claims.Add(new("AvatarPath", result.AvatarPath));
-        var assignedApi = result.AssignedSubjectIds ?? Array.Empty<string>();
         if (assignedApi.Count > 0)
         {
             claims.Add(new("AssignedSubjects", string.Join(",", assignedApi)));

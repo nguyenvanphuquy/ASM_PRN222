@@ -83,14 +83,21 @@
 </div>
 
 <div class="card mb-6">
-    <div class="card-header"><span class="card-title">📈 RAGAS benchmark (@rag.Subject · @rag.Questions câu)</span></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:0 4px 4px">
-        <div><div class="text-sm text-muted">faithfulness</div><div style="font-size:1.4rem;font-weight:700">@rag.Faithfulness.ToString("F3")</div></div>
-        <div><div class="text-sm text-muted">answer_relevancy</div><div style="font-size:1.4rem;font-weight:700">@rag.AnswerRelevancy.ToString("F3")</div></div>
-        <div><div class="text-sm text-muted">context_precision</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextPrecision.ToString("F3")</div></div>
-        <div><div class="text-sm text-muted">context_recall</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextRecall.ToString("F3")</div></div>
-    </div>
-    <p class="text-sm text-muted" style="margin:12px 0 0">CLI: <code>py -3 eval/ragas_benchmark.py --limit 6</code> · Chi tiết: eval/RAGAS_Results.md</p>
+    <div class="card-header"><span class="card-title">📈 RAGAS benchmark @(rag.HasData ? $"({rag.Subject} · {rag.Questions} câu)" : "")</span></div>
+    @if (rag.HasData)
+    {
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:0 4px 4px">
+            <div><div class="text-sm text-muted">faithfulness</div><div style="font-size:1.4rem;font-weight:700">@rag.Faithfulness.ToString("F3")</div></div>
+            <div><div class="text-sm text-muted">answer_relevancy</div><div style="font-size:1.4rem;font-weight:700">@rag.AnswerRelevancy.ToString("F3")</div></div>
+            <div><div class="text-sm text-muted">context_precision</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextPrecision.ToString("F3")</div></div>
+            <div><div class="text-sm text-muted">context_recall</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextRecall.ToString("F3")</div></div>
+        </div>
+        <p class="text-sm text-muted" style="margin:12px 0 0">Nguồn: eval/RAGAS_Results.md · Tái lập: <code>py -3 eval/ragas_benchmark.py --limit 6</code></p>
+    }
+    else
+    {
+        <p class="text-muted" style="margin:0">Chưa có kết quả RAGAS. Chạy: <code>py -3 eval/ragas_benchmark.py --limit 6</code></p>
+    }
 </div>
 
 @if (d.TotalRuns == 0)

@@ -2,6 +2,7 @@ using DataAccessLayer.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.Helpers;
 using ServiceLayer.Services.Interfaces;
 
 namespace PresentationLayer.Pages.Documents;
@@ -67,16 +68,16 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
-        if (role == "Admin")
+        var doc = await _docService.GetByIdAsync(id);
+        if (doc == null)
         {
-            TempData["Error"] = "Admin không được phép xoá tài liệu.";
+            TempData["Error"] = "Không tìm thấy tài liệu.";
             return RedirectToPage();
         }
-        var canManage = role == "Lecturer" || User.HasClaim("CanUpload", "true");
-        if (!canManage)
+
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
         {
-            TempData["Error"] = "Bạn không có quyền thực hiện hành động này.";
+            TempData["Error"] = "Bạn chỉ được quản lý tài liệu của môn được giao.";
             return RedirectToPage();
         }
 

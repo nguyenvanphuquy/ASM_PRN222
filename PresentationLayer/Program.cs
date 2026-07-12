@@ -201,14 +201,17 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
 
-        // === Swagger UI ===
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
+        // === Swagger UI (chỉ Development) ===
+        if (app.Environment.IsDevelopment())
         {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatBot PRN222 API v1");
-            c.RoutePrefix = "swagger";
-            c.DocumentTitle = "ChatBot PRN222 – API Docs";
-        });
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatBot PRN222 API v1");
+                c.RoutePrefix = "swagger";
+                c.DocumentTitle = "ChatBot PRN222 – API Docs";
+            });
+        }
 
         app.MapRazorPages();
         app.MapControllers();

@@ -76,6 +76,13 @@ public class EmbeddingSidecarLauncher : IHostedService
                 _proc = p;
                 _logger.LogInformation("Đã khởi động embedding sidecar (python='{Py}', pid={Pid}) tại {Url}. " +
                     "Lần đầu sẽ tự tải model (~vài GB).", python, p.Id, baseUrl);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    await Task.Delay(1000, cancellationToken);
+                    if (await IsUpAsync(baseUrl)) return;
+                }
+                _logger.LogWarning("Sidecar đã start nhưng chưa phản hồi /health sau 30s — benchmark có thể cần đợi thêm.");
                 return;
             }
             catch (Exception ex)

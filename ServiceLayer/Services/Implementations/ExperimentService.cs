@@ -126,6 +126,7 @@ public class ExperimentService : IExperimentService
             RagVsFtRuns = ragRuns,
             SidecarOnline = sidecarOnline,
             FilterKind = filterKind,
+            Ragas = RagasResultsLoader.TryLoad() ?? new RagasSummaryDto(),
             RecentRuns = recent.Select(MapRun).ToList(),
             ChunkingAgg = Aggregate(variants, KindChunking),
             EmbeddingAgg = Aggregate(variants, KindEmbedding),

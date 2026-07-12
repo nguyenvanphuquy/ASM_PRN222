@@ -55,9 +55,13 @@ public class ChatService : IChatService
         var session = await _chatRepo.GetSessionAsync(sessionId)
             ?? throw new InvalidOperationException("Session không tồn tại");
 
-        // Chỉ tính phí token cho sinh viên; Admin/Giảng viên dùng không giới hạn (nhưng vẫn ghi log).
-        var user = await _userRepo.GetByIdAsync(userId);
-        bool meter = user?.Role == "Student";
+        if (!string.Equals(session.UserId, userId, StringComparison.Ordinal))
+            throw new UnauthorizedAccessException("Session không thuộc về người dùng này.");
+
+        var user = await _userRepo.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Người dùng không tồn tại.");
+
+        bool meter = user.Role == "Student";
         if (meter) await _billing.EnsureFreeGrantAsync(userId);
 
         var history = await _chatRepo.GetMessagesAsync(sessionId);

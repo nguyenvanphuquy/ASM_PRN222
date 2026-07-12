@@ -44,18 +44,20 @@ public class LoginModel : PageModel
             return Page();
         }
 
+        var assigned = result.AssignedSubjectIds ?? Array.Empty<string>();
+        var canUpload = result.Role == "Lecturer" && assigned.Count > 0;
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, result.UserId!),
             new(ClaimTypes.Name,           result.Username!),
             new("FullName",                result.FullName ?? result.Username!),
             new(ClaimTypes.Role,           result.Role ?? "Student"),
-            new("CanUpload",               (result.Role == "Admin" || result.Role == "Lecturer" || result.CanUploadDocuments) ? "true" : "false")
+            new("CanUpload",               canUpload ? "true" : "false")
         };
 
         if (!string.IsNullOrEmpty(result.AvatarPath))
             claims.Add(new("AvatarPath", result.AvatarPath));
-        var assigned = result.AssignedSubjectIds ?? Array.Empty<string>();
         if (assigned.Count > 0)
         {
             claims.Add(new("AssignedSubjects", string.Join(",", assigned)));

@@ -134,12 +134,8 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
             return true;
         }).ToList();
 
-        if (!sidecarUp && EmbeddingModels.Any(m => m.Provider == "Local ST"))
-            result.Insights.Notes.Add("Sidecar embedding chưa chạy — bỏ qua e5/PhoBERT/bge. App tự khởi động sidecar khi chạy; hoặc: python tools/embedding_server.py");
-
-        var modelResults = await Task.WhenAll(modelsToRun.Select(meta =>
-            RunModelAsync(meta, question, userId, baseChunks)));
-        result.Models.AddRange(modelResults);
+        foreach (var meta in modelsToRun)
+            result.Models.Add(await RunModelAsync(meta, question, userId, baseChunks));
 
         // Báo model bị bỏ qua (OpenAI / sidecar)
         foreach (var skipped in EmbeddingModels.Except(modelsToRun))
@@ -160,6 +156,9 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
         }
 
         result.Insights = BuildInsights(result);
+        if (!sidecarUp && EmbeddingModels.Any(m => m.Provider == "Local ST"))
+            result.Insights.Notes.Insert(0,
+                "Sidecar embedding chưa chạy — bỏ qua e5/PhoBERT/bge. App tự khởi động sidecar khi chạy; hoặc: python tools/embedding_server.py");
         if (result.Models.Any(m => !m.IsError))
             await _experiments.SaveEmbeddingAsync(result, userId);
         return result;

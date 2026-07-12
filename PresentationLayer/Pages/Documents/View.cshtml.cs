@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.Helpers;
 using ServiceLayer.Services.Interfaces;
 
 namespace PresentationLayer.Pages.Documents;
 
+[Authorize]
 public class ViewModel : PageModel
 {
     private readonly IDocumentService _documentService;
@@ -52,7 +55,11 @@ public class ViewModel : PageModel
     public async Task<IActionResult> OnPostApproveAsync(string id)
     {
         if (string.IsNullOrEmpty(id)) return NotFound();
-        if (User.IsInRole("Admin")) return Forbid();
+        var doc = await _documentService.GetByIdAsync(id);
+        if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
+
         await _documentService.ApproveAsync(id);
         return RedirectToPage(new { id });
     }
@@ -60,7 +67,11 @@ public class ViewModel : PageModel
     public async Task<IActionResult> OnPostRejectAsync(string id)
     {
         if (string.IsNullOrEmpty(id)) return NotFound();
-        if (User.IsInRole("Admin")) return Forbid();
+        var doc = await _documentService.GetByIdAsync(id);
+        if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
+
         await _documentService.RejectAsync(id);
         return RedirectToPage(new { id });
     }
@@ -68,7 +79,10 @@ public class ViewModel : PageModel
     public async Task<IActionResult> OnPostReChunkAsync(string id)
     {
         if (string.IsNullOrEmpty(id)) return NotFound();
-        if (User.IsInRole("Admin")) return Forbid();
+        var doc = await _documentService.GetByIdAsync(id);
+        if (doc == null) return NotFound();
+        if (!SubjectDocumentAuth.CanManageSubject(User, doc.SubjectId))
+            return Forbid();
 
         try
         {

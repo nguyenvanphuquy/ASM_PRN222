@@ -143,16 +143,6 @@ public class DocumentChunkRepository : IDocumentChunkRepository
                 .ToList();
         }
 
-        if (!string.IsNullOrEmpty(subjectId))
-        {
-            var fallback = await baseQuery
-                .OrderBy(c => c.DocumentName)
-                .ThenBy(c => c.ChunkIndex)
-                .Take(limit)
-                .ToListAsync();
-            return fallback.Select(c => (c, 0.1f)).ToList();
-        }
-
         return new List<(DocumentChunk, float)>();
     }
 
