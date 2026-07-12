@@ -24,12 +24,18 @@ public class DocumentRepository : IDocumentRepository
     public Task<List<Document>> GetAllAsync()
         => _context.Documents.OrderByDescending(d => d.UploadedAt).ToListAsync();
 
-    public Task<List<Document>> SearchAsync(string? subjectId, string? query)
+    public Task<List<Document>> SearchAsync(string? subjectId, string? query, string? status = null, string? chapterId = null)
     {
         var docs = _context.Documents.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(subjectId))
             docs = docs.Where(d => d.SubjectId == subjectId);
+
+        if (!string.IsNullOrWhiteSpace(chapterId))
+            docs = docs.Where(d => d.ChapterId == chapterId);
+
+        if (!string.IsNullOrWhiteSpace(status))
+            docs = docs.Where(d => d.Status == status);
 
         if (!string.IsNullOrWhiteSpace(query))
         {

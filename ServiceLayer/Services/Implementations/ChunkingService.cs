@@ -25,59 +25,71 @@ public class ChunkingService : IChunkingService
         _settingService = settingService;
     }
 
-    public async Task<int> ChunkAndSaveAsync(string documentId, string subjectId, string fileName, string extractedText)
+    public Task<int> ChunkAndSaveAsync(string documentId, string subjectId, string fileName, string extractedText)
     {
-        if (string.IsNullOrWhiteSpace(extractedText)) return 0;
+        if (string.IsNullOrWhiteSpace(extractedText))
+            return Task.FromResult(0);
 
-        // Xóa chunk cũ (nếu có)
-        await _chunkRepo.DeleteByDocumentAsync(documentId);
-
-        // Chúng ta giả định trang là 1 cho toàn bộ extracted text nếu nó không được chia trang.
-        // Tuy nhiên TextExtractor có trả về danh sách trang. Để tái sử dụng ChunkingFactory,
-        // chúng ta có thể truyền vào 1 list gồm 1 trang.
         var pages = new List<(int Page, string Text)> { (1, extractedText) };
+        return ChunkAndSaveAsync(documentId, subjectId, fileName, pages);
+    }
+
+    public async Task<int> ChunkAndSaveAsync(
+        string documentId,
+        string subjectId,
+        string fileName,
+        IReadOnlyList<(int Page, string Text)> pages)
+    {
+        var nonEmpty = pages
+            .Where(p => !string.IsNullOrWhiteSpace(p.Text))
+            .Select(p => (p.Page, p.Text.Trim()))
+            .ToList();
+
+        if (nonEmpty.Count == 0) return 0;
+
+        await _chunkRepo.DeleteByDocumentAsync(documentId);
 
         var chunkingModel = await _settingService.GetSettingAsync("Rbl.ChunkingStrategy", "SemanticKernel");
         var chunker = _chunkingFactory.GetStrategy(chunkingModel);
-        var chunked = chunker.Chunk(pages);
+        var chunked = chunker.Chunk(nonEmpty);
 
-        if (chunked.Count > 0)
+        if (chunked.Count == 0) return 0;
+
+        var embeddingModel = await _settingService.GetSettingAsync("Rbl.EmbeddingModel", "Keyword");
+        var embedder = _embeddingFactory.GetProvider(embeddingModel);
+
+        var chunks = new List<DocumentChunk>();
+        for (int i = 0; i < chunked.Count; i++)
         {
-            var embeddingModel = await _settingService.GetSettingAsync("Rbl.EmbeddingModel", "Keyword");
-            var embedder = _embeddingFactory.GetProvider(embeddingModel);
-
-            var chunks = new List<DocumentChunk>();
-            for (int i = 0; i < chunked.Count; i++)
+            var c = chunked[i];
+            string? vectorJson = null;
+            if (embedder != null)
             {
-                var c = chunked[i];
-                string? vectorJson = null;
-                if (embedder != null)
+                try
                 {
-                    try
-                    {
-                        var vector = await embedder.GetEmbeddingAsync(c.Text, embeddingModel);
-                        vectorJson = JsonSerializer.Serialize(vector);
-                    }
-                    catch { /* Fallback to null if API fails */ }
+                    var vector = await embedder.GetEmbeddingAsync(c.Text, embeddingModel);
+                    vectorJson = JsonSerializer.Serialize(vector);
                 }
-
-                chunks.Add(new DocumentChunk
+                catch
                 {
-                    DocumentId = documentId,
-                    SubjectId = subjectId,
-                    DocumentName = fileName,
-                    ChunkIndex = i,
-                    Content = c.Text,
-                    Page = c.Page,
-                    VectorJson = vectorJson,
-                    EmbeddingModel = embedder != null ? embeddingModel : null
-                });
+                    // Keep chunk without vector; keyword search still works.
+                }
             }
-            await _chunkRepo.InsertManyAsync(chunks);
+
+            chunks.Add(new DocumentChunk
+            {
+                DocumentId = documentId,
+                SubjectId = subjectId,
+                DocumentName = fileName,
+                ChunkIndex = i,
+                Content = c.Text,
+                Page = c.Page,
+                VectorJson = vectorJson,
+                EmbeddingModel = vectorJson != null ? embeddingModel : null
+            });
         }
 
+        await _chunkRepo.InsertManyAsync(chunks);
         return chunked.Count;
     }
 }
-
-

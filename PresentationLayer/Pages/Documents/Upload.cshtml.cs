@@ -99,8 +99,8 @@ public class UploadModel : PageModel
 
             TempData["Success"] = result.Outcome switch
             {
-                UploadOutcome.Created => $"✅ Đã upload '{result.Document.Title}' thành công.",
-                UploadOutcome.Replaced => $"🔄 Đã thay thế phiên bản cũ của '{result.Document.Title}'.",
+                UploadOutcome.Created => $"✅ Đã upload & index '{result.Document.Title}' ({result.Document.ChunkCount} chunks).",
+                UploadOutcome.Replaced => $"🔄 Đã thay thế & index lại '{result.Document.Title}' ({result.Document.ChunkCount} chunks).",
                 UploadOutcome.Duplicate => "⚠️ File này đã được upload trước đó (nội dung giống hệt).",
                 _ => "Upload thành công."
             };

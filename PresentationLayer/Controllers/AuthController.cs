@@ -53,7 +53,10 @@ public class AuthController : ControllerBase
             claims.Add(new("AvatarPath", result.AvatarPath));
         var assignedApi = result.AssignedSubjectIds ?? Array.Empty<string>();
         if (assignedApi.Count > 0)
+        {
             claims.Add(new("AssignedSubjects", string.Join(",", assignedApi)));
+            claims.Add(new("AssignedSubjectId", assignedApi[0])); // legacy UI
+        }
 
         var principal = new ClaimsPrincipal(
             new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));

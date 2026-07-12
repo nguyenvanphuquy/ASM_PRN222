@@ -8,7 +8,7 @@ public interface IDocumentRepository
     Task<List<Document>> GetByChapterAsync(string chapterId);
     Task<int> CountByChapterAsync(string chapterId);
     Task<List<Document>> GetAllAsync();
-    Task<List<Document>> SearchAsync(string? subjectId, string? query);
+    Task<List<Document>> SearchAsync(string? subjectId, string? query, string? status = null, string? chapterId = null);
     Task<Document?> GetByIdAsync(string id);
     Task<Document?> GetBySubjectAndHashAsync(string subjectId, string contentHash);
     Task<Document?> GetBySubjectAndFileNameAsync(string subjectId, string fileName);

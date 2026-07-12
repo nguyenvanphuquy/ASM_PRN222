@@ -92,14 +92,20 @@ public class DocumentService : IDocumentService
             doc.QualitySummary = qualityResult.Summary;
             doc.QualityWarnings = qualityResult.Warnings;
 
-            doc.Status = "Reviewing";
+            // Tự động chunk & embed ngay sau khi trích xuất (không cần duyệt thủ công).
+            doc.Status = "Indexing";
             await _docRepo.UpdateAsync(doc);
             await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
-            // 🔔 Thông báo cho giảng viên: tài liệu đã qua kiểm tra AI, chờ duyệt
-            await _notifier.SendAsync(uploadedByUserId, "info",
-                "📎 Tài liệu đã sẵn sàng",
-                $"\"{doc.Title}\" đã được AI đánh giá ({doc.QualityScore}/100). Vui lòng vào trang chi tiết để xem xet và duyệt.");
+            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, pages);
+            doc.ChunkCount = chunkCount;
+            doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
+            await _docRepo.UpdateAsync(doc);
+            await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
+
+            await _notifier.SendAsync(uploadedByUserId, "success",
+                "✅ Tài liệu đã được index",
+                $"\"{doc.Title}\" đã chunk & embed thành {chunkCount} đoạn (điểm AI: {doc.QualityScore}/100).");
         }
         catch
         {
@@ -119,7 +125,11 @@ public class DocumentService : IDocumentService
     public async Task<List<DTOs.DocumentDto>> GetBySubjectAsync(string subjectId) { var entities = await _docRepo.GetBySubjectAsync(subjectId); return _mapper.Map<List<DTOs.DocumentDto>>(entities); }
     public async Task<List<DTOs.DocumentDto>> GetByChapterAsync(string chapterId) { var entities = await _docRepo.GetByChapterAsync(chapterId); return _mapper.Map<List<DTOs.DocumentDto>>(entities); }
     public async Task<List<DTOs.DocumentDto>> GetAllAsync() { var entities = await _docRepo.GetAllAsync(); return _mapper.Map<List<DTOs.DocumentDto>>(entities); }
-    public async Task<List<DTOs.DocumentDto>> SearchAsync(string? subjectId, string? query) { var entities = await _docRepo.SearchAsync(subjectId, query); return _mapper.Map<List<DTOs.DocumentDto>>(entities); }
+    public async Task<List<DTOs.DocumentDto>> SearchAsync(string? subjectId, string? query, string? status = null, string? chapterId = null)
+    {
+        var entities = await _docRepo.SearchAsync(subjectId, query, status, chapterId);
+        return _mapper.Map<List<DTOs.DocumentDto>>(entities);
+    }
     public async Task<DTOs.DocumentDto?> GetByIdAsync(string documentId) { var entity = await _docRepo.GetByIdAsync(documentId); return _mapper.Map<DTOs.DocumentDto>(entity); }
 
     public async Task<List<DTOs.DocumentChunkDto>> GetChunksAsync(string documentId) { var entities = await _chunkRepo.GetByDocumentAsync(documentId); return _mapper.Map<List<DTOs.DocumentChunkDto>>(entities); }
@@ -129,24 +139,31 @@ public class DocumentService : IDocumentService
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc == null) return null;
 
-        if (string.IsNullOrWhiteSpace(doc.ExtractedText))
+        List<(int Page, string Text)>? pages = null;
+        var stream = _fileStore.Open(doc.Id, doc.FileName);
+        if (stream != null)
         {
-            // Cố gắng trích xuất lại
-            var stream = _fileStore.Open(doc.Id, doc.FileName);
-            if (stream != null)
+            using (stream)
             {
-                using (stream)
-                {
-                    var pages = _extractor.Extract(stream, doc.FileName, doc.ContentType);
-                    doc.ExtractedText = string.Join("\n\n", pages.Select(p => p.Text));
-                }
+                pages = _extractor.Extract(stream, doc.FileName, doc.ContentType);
+                doc.ExtractedText = string.Join("\n\n", pages.Select(p => p.Text));
             }
         }
+        else if (!string.IsNullOrWhiteSpace(doc.ExtractedText))
+        {
+            pages = [(1, doc.ExtractedText)];
+        }
+
+        if (pages == null || pages.Count == 0) return null;
+
+        doc.Status = "Indexing";
+        await _docRepo.UpdateAsync(doc);
+        await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
         try
         {
-            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, doc.ExtractedText ?? "");
-            
+            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, pages);
+
             doc.ChunkCount = chunkCount;
             doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
@@ -248,13 +265,29 @@ public class DocumentService : IDocumentService
 
         try
         {
-            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, doc.ExtractedText ?? "");
+            List<(int Page, string Text)> pages;
+            var stream = _fileStore.Open(doc.Id, doc.FileName);
+            if (stream != null)
+            {
+                using (stream)
+                {
+                    pages = _extractor.Extract(stream, doc.FileName, doc.ContentType);
+                    doc.ExtractedText = string.Join("\n\n", pages.Select(p => p.Text));
+                }
+            }
+            else
+            {
+                pages = string.IsNullOrWhiteSpace(doc.ExtractedText)
+                    ? []
+                    : [(1, doc.ExtractedText)];
+            }
+
+            int chunkCount = await _chunkingService.ChunkAndSaveAsync(doc.Id, doc.SubjectId, doc.FileName, pages);
             doc.ChunkCount = chunkCount;
             doc.Status = chunkCount > 0 ? DocumentStatuses.Indexed : DocumentStatuses.Empty;
             await _docRepo.UpdateAsync(doc);
             await _notifier.DocumentStatusChangedAsync(doc.Id, doc.Status);
 
-            // 🔔 Thông báo Indexed thành công
             await _notifier.SendAsync(doc.UploadedBy, "success",
                 "✅ Tài liệu đã được duyệt",
                 $"\"{doc.Title}\" đã được index {chunkCount} chunks và sẵn sàng cho chatbot.");

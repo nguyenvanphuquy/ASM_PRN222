@@ -8,8 +8,14 @@
     <p>Cấu hình các chiến lược cắt chunk và nhúng vector cho thực nghiệm</p>
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mb-4">@TempData["Success"]</div>
+}
+
 <div class="card" style="max-width: 600px;">
     <form method="post">
+        @Html.AntiForgeryToken()
         <div class="form-group">
             <label class="form-label" asp-for="ChunkingStrategy">Chiến lược cắt Chunk</label>
             <select asp-for="ChunkingStrategy" class="form-control">
@@ -17,7 +23,7 @@
                 <option value="FixedSize">Cắt đoạn cố định (500 ký tự)</option>
                 <option value="Sentence">Cắt theo câu</option>
             </select>
-            <small class="text-muted">Áp dụng cho các tài liệu upload mới hoặc khi bấm Re-Chunk.</small>
+            <small class="text-muted">Áp dụng cho tài liệu upload mới hoặc khi bấm Re-Chunk trên trang chi tiết.</small>
         </div>
 
         <div class="form-group mt-4">
@@ -29,10 +35,22 @@
                 <option value="bge-m3">HuggingFace (bge-m3)</option>
                 <option value="multilingual-e5-base">HuggingFace (multilingual-e5-base)</option>
             </select>
-            <small class="text-muted">Tính khoảng cách Cosine trong bộ nhớ. Lựa chọn này cũng áp dụng cho lúc ChatBot truy vấn ngữ cảnh.</small>
+            <small class="text-muted">Dùng Cosine similarity khi có vector. Cũng áp dụng lúc chatbot truy vấn ngữ cảnh.</small>
         </div>
 
+        <div class="form-group mt-4">
+            <label class="form-label" asp-for="OpenAIApiKey">OpenAI API Key</label>
+            <input asp-for="OpenAIApiKey" type="password" class="form-control" autocomplete="off"
+                   placeholder="@(Model.HasOpenAIKey ? "•••••••• (đã lưu — nhập mới để thay)" : "sk-...")" />
+            <small class="text-muted">Cần khi chọn text-embedding-3-small.</small>
+        </div>
 
+        <div class="form-group mt-4">
+            <label class="form-label" asp-for="HuggingFaceApiToken">HuggingFace API Token</label>
+            <input asp-for="HuggingFaceApiToken" type="password" class="form-control" autocomplete="off"
+                   placeholder="@(Model.HasHuggingFaceToken ? "•••••••• (đã lưu — nhập mới để thay)" : "hf_...")" />
+            <small class="text-muted">Cần khi chọn PhoBERT / bge-m3 / multilingual-e5-base.</small>
+        </div>
 
         <div style="margin-top: 24px;">
             <button type="submit" class="btn btn-primary">Lưu Cấu Hình</button>

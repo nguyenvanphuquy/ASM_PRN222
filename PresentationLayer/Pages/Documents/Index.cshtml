@@ -5,17 +5,18 @@
     ViewData["Title"] = "Tài liệu";
     ViewData["TopbarTitle"] = "📄 Quản lý tài liệu";
     var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
-    var assignedSubjectId = User.FindFirst("AssignedSubjectId")?.Value;
-    // Chỉ giảng viên được admin giao môn (có AssignedSubjectId) mới được upload — admin KHÔNG.
-    var canUpload = role != "Admin" && !string.IsNullOrEmpty(assignedSubjectId);
+    // Upload chỉ khi Admin đã phân công ít nhất 1 môn (claim AssignedSubjects lúc login).
+    var assignedSubjects = User.FindFirst("AssignedSubjects")?.Value ?? "";
+    var canUpload = role != "Admin" && !string.IsNullOrWhiteSpace(assignedSubjects);
     // Admin KHÔNG được quản lý tài liệu (xoá/duyệt) — chỉ giám sát. Quản lý dành cho giảng viên.
     var canManage = role != "Admin" && (role == "Lecturer" || User.HasClaim("CanUpload", "true"));
+    var indexedCount = Model.Documents.Count(d => d.Status == "Indexed");
 }
 
 <div class="page-header flex items-center justify-between">
     <div>
         <h1>Tài liệu</h1>
-        <p>Quản lý và tìm kiếm tài liệu học tập</p>
+        <p>Upload PDF/DOCX/PPTX · tự động chunk &amp; embed · quản lý theo môn / chương</p>
     </div>
     <div class="flex gap-2">
         <a href="/Documents/Compare" class="btn btn-secondary" style="border-color:var(--accent-purple);color:var(--accent-purple)">
@@ -28,23 +29,54 @@
     </div>
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mb-4">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger mb-4">@TempData["Error"]</div>
+}
+
 <!-- Search & Filter -->
 <div class="card mb-6">
-    <form method="get" class="flex gap-3 flex-wrap items-center">
+    <form method="get" class="flex gap-3 flex-wrap items-center" id="filterForm">
         <input type="text" name="Query" value="@Model.Query"
                class="form-control" placeholder="🔍 Tìm kiếm tài liệu..."
-               style="max-width:300px" />
+               style="max-width:260px" />
 
-        <select name="SubjectId" class="form-control" style="max-width:200px">
+        <select name="SubjectId" id="filterSubject" class="form-control" style="max-width:200px"
+                onchange="onSubjectFilterChange(this.value)">
             <option value="">Tất cả môn học</option>
             @foreach (var s in Model.Subjects)
             {
-                <option value="@s.Id" selected="@(Model.SubjectId == s.Id)">@s.Name</option>
+                <option value="@s.Id" selected="@(Model.SubjectId == s.Id)">@s.Code – @s.Name</option>
             }
         </select>
 
+        <select name="ChapterId" id="filterChapter" class="form-control" style="max-width:200px"
+                @(string.IsNullOrEmpty(Model.SubjectId) ? "disabled" : null)>
+            <option value="">Tất cả chương</option>
+            @foreach (var c in Model.Chapters.OrderBy(c => c.OrderIndex))
+            {
+                <option value="@c.Id" selected="@(Model.ChapterId == c.Id)">@c.OrderIndex. @c.Title</option>
+            }
+        </select>
+
+        <select name="Status" class="form-control" style="max-width:160px">
+            <option value="">Mọi trạng thái</option>
+            <option value="Indexed" selected="@(Model.Status == "Indexed")">Indexed</option>
+            <option value="Indexing" selected="@(Model.Status == "Indexing")">Indexing</option>
+            <option value="Processing" selected="@(Model.Status == "Processing")">Processing</option>
+            <option value="Reviewing" selected="@(Model.Status == "Reviewing")">Reviewing</option>
+            <option value="Failed" selected="@(Model.Status == "Failed")">Failed</option>
+            <option value="Empty" selected="@(Model.Status == "Empty")">Empty</option>
+            <option value="Rejected" selected="@(Model.Status == "Rejected")">Rejected</option>
+        </select>
+
         <button type="submit" class="btn btn-primary btn-sm">Lọc</button>
-        @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.SubjectId))
+        @if (!string.IsNullOrEmpty(Model.Query) || !string.IsNullOrEmpty(Model.SubjectId)
+             || !string.IsNullOrEmpty(Model.ChapterId) || !string.IsNullOrEmpty(Model.Status))
         {
             <a href="/Documents" class="btn btn-secondary btn-sm">✕ Xoá lọc</a>
         }
@@ -59,10 +91,17 @@
     <div class="empty-state">
         <div class="empty-state-icon">📂</div>
         <div class="empty-state-title">Chưa có tài liệu nào</div>
-        <p class="empty-state-text">Upload tài liệu đầu tiên để AI có thể học và trả lời câu hỏi.</p>
+        <p class="empty-state-text">Upload tài liệu đầu tiên để hệ thống tự động chunk, embed và sẵn sàng trả lời câu hỏi.</p>
         @if (canUpload)
         {
             <a href="/Documents/Upload" class="btn btn-primary mt-4">⬆️ Upload tài liệu</a>
+        }
+        else if (role == "Lecturer")
+        {
+            <p class="empty-state-text mt-4" style="color:var(--accent-orange,#c2410c)">
+                Bạn chưa được Admin phân công môn học nên chưa thể upload.
+                Đăng xuất rồi đăng nhập lại sau khi Admin gán môn (trang Users).
+            </p>
         }
     </div>
 </div>
@@ -75,7 +114,9 @@
                 <tr>
                     <th>Tài liệu</th>
                     <th>Môn học</th>
+                    <th>Chương</th>
                     <th>Trạng thái</th>
+                    <th>Chunks</th>
                     <th>Kích thước</th>
                     <th>Ngày tải</th>
                     <th>Người đăng</th>
@@ -85,12 +126,14 @@
             <tbody id="docsTbody">
                 @foreach (var doc in Model.Documents)
                 {
-                    var icon = doc.FileName.EndsWith(".pdf") ? "📕" :
-                               doc.FileName.EndsWith(".docx") ? "📘" :
-                               doc.FileName.EndsWith(".pptx") ? "📙" : "📄";
+                    var icon = doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ? "📕" :
+                               doc.FileName.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) ? "📘" :
+                               doc.FileName.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase) ? "📙" : "📄";
                     var statusClass = doc.Status == "Indexed" ? "badge-green" :
                                       (doc.Status == "Processing" || doc.Status == "Reviewing" || doc.Status == "Indexing") ? "badge-orange" :
                                       (doc.Status == "Failed" || doc.Status == "Rejected") ? "badge-red" : "badge-gray";
+                    var chapterTitle = !string.IsNullOrEmpty(doc.ChapterId) && Model.ChapterTitles.TryGetValue(doc.ChapterId, out var ct)
+                        ? ct : "–";
                     <tr data-doc-id="@doc.Id">
                         <td>
                             <div class="flex items-center gap-2">
@@ -108,7 +151,9 @@
                             }
                             <span class="badge badge-blue" title="@displaySubj">@(subj?.Code ?? doc.SubjectId ?? "–")</span>
                         </td>
+                        <td class="text-sm">@chapterTitle</td>
                         <td><span class="badge @statusClass doc-status-badge">@doc.Status</span></td>
+                        <td class="text-sm doc-chunk-count">@(doc.Status == "Indexed" || doc.ChunkCount > 0 ? doc.ChunkCount.ToString() : "–")</td>
                         <td class="text-sm text-muted">@(doc.FileSize / 1024) KB</td>
                         <td class="text-sm text-muted">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
                         <td class="text-sm text-muted">@(Model.UserNames.GetValueOrDefault(doc.UploadedBy) ?? "Ẩn danh")</td>
@@ -131,15 +176,21 @@
         </table>
     </div>
 </div>
-<p id="docsTotal" class="text-sm text-muted mt-4" style="@(Model.Documents.Count == 0 ? "display:none" : "")">Tổng: <span id="docsCount">@Model.Documents.Count</span> tài liệu</p>
+<p id="docsTotal" class="text-sm text-muted mt-4" style="@(Model.Documents.Count == 0 ? "display:none" : "")">
+    Tổng: <span id="docsCount">@Model.Documents.Count</span> tài liệu
+    · Đã index: <span id="docsIndexedCount">@indexedCount</span>
+</p>
 
 @section Scripts {
 <script>
 (function () {
     const CAN_MANAGE     = @(canManage ? "true" : "false");
     const FILTER_SUBJECT = @Json.Serialize(Model.SubjectId ?? "");
+    const FILTER_CHAPTER = @Json.Serialize(Model.ChapterId ?? "");
+    const FILTER_STATUS  = @Json.Serialize(Model.Status ?? "");
     const FILTER_QUERY   = @Json.Serialize(Model.Query ?? "");
     const SUBJECTS       = @Json.Serialize(Model.Subjects.ToDictionary(s => s.Id, s => new { code = s.Code, name = s.Name }));
+    const CHAPTERS       = @Json.Serialize(Model.ChapterTitles);
     const USERNAMES      = @Json.Serialize(Model.UserNames);
 
     const tbody    = document.getElementById('docsTbody');
@@ -147,6 +198,27 @@
     const tableEl  = document.getElementById('docsTableCard');
     const totalEl  = document.getElementById('docsTotal');
     const countEl  = document.getElementById('docsCount');
+    const indexedEl = document.getElementById('docsIndexedCount');
+
+    window.onSubjectFilterChange = async function (subjectId) {
+        const chapterSelect = document.getElementById('filterChapter');
+        chapterSelect.innerHTML = '<option value=\"\">Tất cả chương</option>';
+        if (!subjectId) {
+            chapterSelect.disabled = true;
+            return;
+        }
+        chapterSelect.disabled = false;
+        try {
+            const res = await fetch('/api/chapters/' + encodeURIComponent(subjectId));
+            const chapters = await res.json();
+            chapters.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.orderIndex + '. ' + c.title;
+                chapterSelect.appendChild(opt);
+            });
+        } catch (_) { /* ignore */ }
+    };
 
     function esc(s) {
         return String(s ?? '')
@@ -187,16 +259,26 @@
     }
 
     function syncEmpty() {
-        const has = !!tbody.querySelector('tr[data-doc-id]');
+        const rows = tbody.querySelectorAll('tr[data-doc-id]');
+        const has = rows.length > 0;
         emptyEl.style.display = has ? 'none' : '';
         tableEl.style.display = has ? '' : 'none';
         totalEl.style.display = has ? '' : 'none';
-        if (countEl) countEl.textContent = tbody.querySelectorAll('tr[data-doc-id]').length;
+        if (countEl) countEl.textContent = rows.length;
+        if (indexedEl) {
+            let n = 0;
+            rows.forEach(r => {
+                const b = r.querySelector('.doc-status-badge');
+                if (b && b.textContent === 'Indexed') n++;
+            });
+            indexedEl.textContent = n;
+        }
     }
 
-    // Khớp filter hiện tại để chỉ thêm tài liệu phù hợp với màn hình đang xem.
     function matchesFilter(d) {
         if (FILTER_SUBJECT && d.subjectId !== FILTER_SUBJECT) return false;
+        if (FILTER_CHAPTER && d.chapterId !== FILTER_CHAPTER) return false;
+        if (FILTER_STATUS && d.status !== FILTER_STATUS) return false;
         if (FILTER_QUERY) {
             const q = FILTER_QUERY.toLowerCase();
             if (!((d.title || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q))) return false;
@@ -209,6 +291,8 @@
         const subjCode  = subj ? subj.code : (d.subjectId || '–');
         const subjTitle = subj ? (subj.code + ' - ' + subj.name) : (d.subjectId || '–');
         const sizeKb    = Math.floor((d.fileSize || 0) / 1024);
+        const chapter   = (d.chapterId && CHAPTERS[d.chapterId]) ? CHAPTERS[d.chapterId] : '–';
+        const chunks    = (d.status === 'Indexed' || (d.chunkCount || 0) > 0) ? (d.chunkCount || 0) : '–';
 
         let actions = '<a href="/Documents/View?id=' + encodeURIComponent(d.id) + '" class="btn btn-secondary btn-sm">👁️</a>';
         if (CAN_MANAGE) {
@@ -230,7 +314,9 @@
                     '<div class="text-sm text-muted">' + esc(d.fileName) + '</div>' +
                 '</div></div></td>' +
             '<td><span class="badge badge-blue" title="' + esc(subjTitle) + '">' + esc(subjCode) + '</span></td>' +
+            '<td class="text-sm">' + esc(chapter) + '</td>' +
             '<td><span class="badge ' + statusClass(d.status) + ' doc-status-badge">' + esc(d.status) + '</span></td>' +
+            '<td class="text-sm doc-chunk-count">' + chunks + '</td>' +
             '<td class="text-sm text-muted">' + sizeKb + ' KB</td>' +
             '<td class="text-sm text-muted">' + fmtDate(d.uploadedAt) + '</td>' +
             '<td class="text-sm text-muted">' + esc(USERNAMES[d.uploadedBy] || 'Ẩn danh') + '</td>' +
@@ -240,12 +326,13 @@
 
     function applyStatus(documentId, status) {
         const row = tbody.querySelector(`tr[data-doc-id="${documentId}"]`);
-        if (!row) return; // tài liệu không nằm trong bảng hiện tại (đã lọc) → bỏ qua
+        if (!row) return;
         const badge = row.querySelector('.doc-status-badge');
         if (!badge) return;
         badge.textContent = status;
         badge.className = 'badge ' + statusClass(status) + ' doc-status-badge';
         flash(row);
+        syncEmpty();
     }
 
     function onDocChange(p) {
@@ -257,7 +344,7 @@
         }
         if (p.action === 'created' && p.document) {
             const d = p.document;
-            if (tbody.querySelector(`tr[data-doc-id="${d.id}"]`)) return; // đã có → bỏ qua (idempotent)
+            if (tbody.querySelector(`tr[data-doc-id="${d.id}"]`)) return;
             if (!matchesFilter(d)) return;
             const tr = buildRow(d);
             tbody.prepend(tr);
@@ -271,7 +358,6 @@
             window.appNotifHub.on('DocumentStatusChanged', d => applyStatus(d.documentId, d.status));
             window.appNotifHub.on('DocumentChanged', onDocChange);
         } else {
-            // _Layout chưa kịp tạo connection → thử lại sau giây lát
             setTimeout(subscribe, 300);
         }
     }
@@ -279,4 +365,3 @@
 })();
 </script>
 }
-

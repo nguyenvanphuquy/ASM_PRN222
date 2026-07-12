@@ -358,6 +358,27 @@ public class Program
                 await auth.EnsureSeedUsersAsync();
                 await subjects.EnsureSeedAsync();
                 await billing.EnsureSeedPackagesAsync();
+
+                // Demo: gán môn PRN222 cho giảng viên nếu chưa có môn nào → hiện nút Upload.
+                var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+                var subjectRepo = scope.ServiceProvider.GetRequiredService<ISubjectRepository>();
+                var demoLecturer = await userRepo.GetByUsernameAsync("lecturer");
+                if (demoLecturer != null)
+                {
+                    var assigned = await userRepo.GetAssignedSubjectIdsAsync(demoLecturer.Id);
+                    if (assigned.Count == 0)
+                    {
+                        var allSubjects = await subjectRepo.GetAllAsync();
+                        var prn = allSubjects.FirstOrDefault(s => s.Code == "PRN222") ?? allSubjects.FirstOrDefault();
+                        if (prn != null)
+                        {
+                            await userRepo.ReplaceAssignedSubjectsAsync(demoLecturer.Id, new[] { prn.Id });
+                            demoLecturer.CanUploadDocuments = true;
+                            demoLecturer.AssignedSubjectId = prn.Id;
+                            await userRepo.UpdateAsync(demoLecturer);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {

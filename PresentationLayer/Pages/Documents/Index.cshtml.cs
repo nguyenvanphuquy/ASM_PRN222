@@ -11,20 +11,30 @@ public class IndexModel : PageModel
 {
     private readonly IDocumentService _docService;
     private readonly ISubjectService _subjectService;
+    private readonly IChapterService _chapterService;
     private readonly IUserService _userService;
 
-    public IndexModel(IDocumentService docService, ISubjectService subjectService, IUserService userService)
+    public IndexModel(
+        IDocumentService docService,
+        ISubjectService subjectService,
+        IChapterService chapterService,
+        IUserService userService)
     {
         _docService = docService;
         _subjectService = subjectService;
+        _chapterService = chapterService;
         _userService = userService;
     }
 
     public List<ServiceLayer.DTOs.DocumentDto> Documents { get; private set; } = [];
     public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
+    public List<ServiceLayer.DTOs.ChapterDto> Chapters { get; private set; } = [];
     public Dictionary<string, string> UserNames { get; private set; } = [];
+    public Dictionary<string, string> ChapterTitles { get; private set; } = [];
 
     [BindProperty(SupportsGet = true)] public string? SubjectId { get; set; }
+    [BindProperty(SupportsGet = true)] public string? ChapterId { get; set; }
+    [BindProperty(SupportsGet = true)] public string? Status { get; set; }
     [BindProperty(SupportsGet = true)] public string? Query { get; set; }
 
     public async Task OnGetAsync()
@@ -33,7 +43,19 @@ public class IndexModel : PageModel
         ViewData["TopbarTitle"] = "📄 Tài liệu";
 
         Subjects = await _subjectService.GetAllAsync();
-        Documents = await _docService.SearchAsync(SubjectId, Query);
+        Documents = await _docService.SearchAsync(SubjectId, Query, Status, ChapterId);
+
+        if (!string.IsNullOrEmpty(SubjectId))
+            Chapters = await _chapterService.GetBySubjectAsync(SubjectId);
+
+        ChapterTitles = [];
+        foreach (var sid in Documents.Select(d => d.SubjectId).Distinct())
+        {
+            var chapters = await _chapterService.GetBySubjectAsync(sid);
+            foreach (var c in chapters)
+                ChapterTitles[c.Id] = c.Title;
+        }
+
         var users = await _userService.GetAllAsync();
         UserNames = users.ToDictionary(u => u.Id, u => string.IsNullOrEmpty(u.FullName) ? u.Username : u.FullName);
     }
@@ -41,7 +63,6 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
         var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
-        // Admin KHÔNG được quản lý tài liệu (kể cả xoá) — chỉ giảng viên.
         if (role == "Admin")
         {
             TempData["Error"] = "Admin không được phép xoá tài liệu.";
@@ -59,7 +80,3 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 }
-
-
-
-

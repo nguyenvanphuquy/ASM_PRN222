@@ -7,6 +7,10 @@
     var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
     // Admin chỉ giám sát — không được duyệt/từ chối tài liệu.
     var canManageDoc = role != "Admin" && (role == "Lecturer" || User.HasClaim("CanUpload", "true"));
+    var canReChunk = canManageDoc && (Model.Document.Status == "Indexed"
+        || Model.Document.Status == "Empty"
+        || Model.Document.Status == "Failed"
+        || Model.Document.Status == "Reviewing");
 }
 
 <div class="page-header flex items-center justify-between">
@@ -17,24 +21,53 @@
             </a>
             <h1>@Model.Document.Title</h1>
         </div>
-        <p class="mt-2 text-muted">@Model.Document.FileName • @(Model.Document.FileSize / 1024) KB • Ngày tải: @Model.Document.UploadedAt.ToString("dd/MM/yyyy")</p>
+        <p class="mt-2 text-muted">
+            @Model.Document.FileName • @(Model.Document.FileSize / 1024) KB • Ngày tải: @Model.Document.UploadedAt.ToString("dd/MM/yyyy")
+            @if (!string.IsNullOrEmpty(Model.ChapterTitle))
+            {
+                <text> • Chương: @Model.ChapterTitle</text>
+            }
+            @if (!string.IsNullOrEmpty(Model.SubjectName))
+            {
+                <text> • Môn: @Model.SubjectName</text>
+            }
+        </p>
     </div>
-    <div>
-        <span class="badge @(Model.Document.Status == "Indexed" ? "badge-green" : Model.Document.Status == "Processing" ? "badge-orange" : Model.Document.Status == "Failed" ? "badge-red" : Model.Document.Status == "Reviewing" ? "badge-blue" : "badge-gray")" style="font-size: 1rem; padding: 0.5rem 1rem;">
+    <div class="flex gap-2 items-center flex-wrap" style="justify-content:flex-end">
+        <span class="badge @(Model.Document.Status == "Indexed" ? "badge-green" : Model.Document.Status == "Processing" || Model.Document.Status == "Indexing" ? "badge-orange" : Model.Document.Status == "Failed" ? "badge-red" : Model.Document.Status == "Reviewing" ? "badge-blue" : "badge-gray")" style="font-size: 1rem; padding: 0.5rem 1rem;">
             @Model.Document.Status
         </span>
         @if (Model.Document.Status == "Reviewing" && canManageDoc)
         {
-            <form method="post" class="flex gap-2" style="display: inline-flex; margin-left: 10px;">
-                <button type="submit" asp-page-handler="Approve" asp-route-id="@Model.Document.Id" class="btn btn-primary">Duyệt & Chunk</button>
+            <form method="post" class="flex gap-2" style="display: inline-flex;">
+                <button type="submit" asp-page-handler="Approve" asp-route-id="@Model.Document.Id" class="btn btn-primary">Duyệt &amp; Chunk</button>
                 <button type="submit" asp-page-handler="Reject" asp-route-id="@Model.Document.Id" class="btn btn-danger">Từ chối</button>
+            </form>
+        }
+        @if (canReChunk)
+        {
+            <form method="post" style="display:inline"
+                  onsubmit="return confirm('Re-Chunk lại tài liệu theo cấu hình RBL hiện tại (chunking + embedding)?')">
+                @Html.AntiForgeryToken()
+                <button type="submit" asp-page-handler="ReChunk" asp-route-id="@Model.Document.Id" class="btn btn-secondary">
+                    🔄 Re-Chunk
+                </button>
             </form>
         }
     </div>
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mb-4">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger mb-4">@TempData["Error"]</div>
+}
+
 <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
-    @if (Model.Document.Status == "Reviewing" || Model.Document.Status == "Indexed")
+    @if (Model.Document.QualityScore > 0 || !string.IsNullOrEmpty(Model.Document.QualitySummary))
     {
         <div class="card" style="padding: 1.5rem; margin-bottom: 1rem; background: var(--surface-hover);">
             <div class="flex justify-between items-center mb-2">
@@ -68,7 +101,7 @@
             <h3 style="margin: 0;">Các đoạn dữ liệu (Chunks)</h3>
             <span class="badge badge-blue">@Model.Chunks.Count chunks</span>
         </div>
-        
+
         @if (Model.Chunks.Count == 0)
         {
             <div class="empty-state">
@@ -83,9 +116,15 @@
                 @foreach (var chunk in Model.Chunks.OrderBy(c => c.ChunkIndex))
                 {
                     <div class="card" style="background: var(--surface-hover); border: 1px solid var(--border-color); padding: 1.25rem;">
-                        <div class="flex justify-between items-center mb-3">
+                        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                             <span class="badge" style="background: var(--accent-blue); color: white;">Chunk #@chunk.ChunkIndex</span>
-                            <span class="text-sm text-muted">Trang @chunk.Page</span>
+                            <div class="flex gap-2 items-center">
+                                @if (!string.IsNullOrEmpty(chunk.EmbeddingModel))
+                                {
+                                    <span class="badge badge-gray text-sm" title="Embedding model">@chunk.EmbeddingModel</span>
+                                }
+                                <span class="text-sm text-muted">Trang @chunk.Page</span>
+                            </div>
                         </div>
                         <div class="text-sm" style="white-space: pre-wrap; line-height: 1.6; color: var(--text-primary); font-family: var(--font-mono, monospace);">@chunk.Content</div>
                     </div>
@@ -94,4 +133,3 @@
         }
     </div>
 </div>
-

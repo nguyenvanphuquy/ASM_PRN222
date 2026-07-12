@@ -52,7 +52,10 @@ public class LoginModel : PageModel
             claims.Add(new("AvatarPath", result.AvatarPath));
         var assigned = result.AssignedSubjectIds ?? Array.Empty<string>();
         if (assigned.Count > 0)
+        {
             claims.Add(new("AssignedSubjects", string.Join(",", assigned)));
+            claims.Add(new("AssignedSubjectId", assigned[0])); // legacy UI
+        }
 
         var principal = new ClaimsPrincipal(
             new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));

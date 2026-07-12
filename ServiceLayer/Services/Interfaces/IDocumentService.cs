@@ -23,7 +23,7 @@ public interface IDocumentService
     Task<List<DTOs.DocumentDto>> GetBySubjectAsync(string subjectId);
     Task<List<DTOs.DocumentDto>> GetByChapterAsync(string chapterId);
     Task<List<DTOs.DocumentDto>> GetAllAsync();
-    Task<List<DTOs.DocumentDto>> SearchAsync(string? subjectId, string? query);
+    Task<List<DTOs.DocumentDto>> SearchAsync(string? subjectId, string? query, string? status = null, string? chapterId = null);
     Task<DTOs.DocumentDto?> GetByIdAsync(string documentId);
     Task<bool> HasFileAsync(string documentId);
     // The indexed chunks of a document — shown in the web viewer so users see how the file was split for the AI.

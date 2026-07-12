@@ -22,7 +22,25 @@ public class EmbeddingFactory : IEmbeddingFactory
 
     public IEmbeddingProvider? GetProvider(string name)
     {
-        if (string.IsNullOrEmpty(name) || name == "Keyword") return null;
-        return _providers.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(name) || name.Equals("Keyword", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // Match by provider name ("OpenAI", "HuggingFace") or by model id from Settings.
+        var direct = _providers.FirstOrDefault(p =>
+            string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (direct != null) return direct;
+
+        var providerName = name switch
+        {
+            "text-embedding-3-small" => "OpenAI",
+            "PhoBERT-base" or "bge-m3" or "multilingual-e5-base" => "HuggingFace",
+            _ when name.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) => "OpenAI",
+            _ => null
+        };
+
+        return providerName == null
+            ? null
+            : _providers.FirstOrDefault(p =>
+                string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
     }
 }
