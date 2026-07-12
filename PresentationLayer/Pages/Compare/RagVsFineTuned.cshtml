@@ -1,0 +1,227 @@
+@page
+@model PresentationLayer.Pages.Compare.RagVsFineTunedModel
+@{
+    ViewData["Title"] = "RAG vs Fine-tuned";
+    var res = Model.Result;
+}
+
+<div class="page-header">
+    <h1>🔬 So sánh RAG vs Fine-tuned</h1>
+    <p>
+        Cùng một câu hỏi · cùng base LLM · hai hướng tiếp cận RBL:
+        <strong>RAG</strong> (retrieve + citation) và <strong>Fine-tuned / parametric</strong> (không retrieval).
+    </p>
+</div>
+
+<div class="card mb-4" style="border-left:4px solid #f59e0b;background:rgba(245,158,11,0.08)">
+    <p style="margin:0;font-size:0.9rem;line-height:1.55">
+        <strong>Lưu ý demo:</strong> Nhánh Fine-tuned dùng cùng model Groq với system prompt chuyên gia,
+        <em>không</em> gọi checkpoint fine-tune thật. Mục tiêu là so sánh hành vi
+        <em>grounded-on-documents</em> (RAG) vs <em>parametric knowledge</em> (FT) theo đề RBL.
+    </p>
+</div>
+
+<div class="card mb-6">
+    <form method="post" id="rftForm">
+        @Html.AntiForgeryToken()
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:end">
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Câu hỏi *</label>
+                <input asp-for="Question" class="form-control"
+                       placeholder="VD: Middleware trong ASP.NET Core hoạt động như thế nào?" required />
+                <span asp-validation-for="Question" class="form-error"></span>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Môn học (ngữ cảnh RAG)</label>
+                <select asp-for="SubjectId" class="form-control">
+                    <option value="">– Không giới hạn môn –</option>
+                    @foreach (var s in Model.Subjects)
+                    {
+                        <option value="@s.Id">@s.Code – @s.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mt-4 flex gap-2 flex-wrap">
+            <button type="submit" id="rftBtn" class="btn btn-primary">
+                <span id="rftText">⚡ Chạy so sánh RAG vs Fine-tuned</span>
+                <span id="rftSpin" class="hidden animate-spin">⏳</span>
+            </button>
+            <a href="/Compare/Models" class="btn btn-secondary">🧪 So sánh nhiều LLM</a>
+        </div>
+    </form>
+</div>
+
+@if (res != null)
+{
+    <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:8px">
+        <h3>Kết quả: <span style="color:var(--accent-purple)">"@res.Question"</span></h3>
+        <div class="flex gap-2 flex-wrap">
+            @if (!string.IsNullOrEmpty(res.SubjectName))
+            {
+                <span class="badge badge-blue">📖 @res.SubjectName</span>
+            }
+            <span class="badge badge-gray">Model: @res.Model</span>
+            <span class="badge badge-blue">📎 @res.ContextChunks chunk RAG</span>
+        </div>
+    </div>
+
+    <!-- Metrics table -->
+    <div class="card mb-6" style="padding:0">
+        <div class="card-header" style="padding:20px 24px 16px"><span class="card-title">📊 Chỉ số so sánh</span></div>
+        <div class="table-wrapper" style="border:none">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tiêu chí</th>
+                        <th>RAG</th>
+                        <th>Fine-tuned (mô phỏng)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rag = res.Rag;
+                        var ft = res.FineTuned;
+                        var fasterRag = !rag.IsError && !ft.IsError && rag.LatencyMs <= ft.LatencyMs;
+                        var fewerRag = !rag.IsError && !ft.IsError && rag.TotalTokens <= ft.TotalTokens;
+                    }
+                    <tr>
+                        <td style="font-weight:600">Token vào / ra</td>
+                        <td>@rag.PromptTokens / @rag.CompletionTokens
+                            @if (rag.IsError) { <span class="badge badge-red">Lỗi</span> }
+                        </td>
+                        <td>@ft.PromptTokens / @ft.CompletionTokens
+                            @if (ft.IsError) { <span class="badge badge-red">Lỗi</span> }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600">Tổng token</td>
+                        <td style="font-weight:600">
+                            @rag.TotalTokens.ToString("N0")
+                            @if (fewerRag) { <span class="badge badge-green" style="margin-left:4px">ít hơn</span> }
+                        </td>
+                        <td style="font-weight:600">
+                            @ft.TotalTokens.ToString("N0")
+                            @if (!fewerRag && !rag.IsError && !ft.IsError) { <span class="badge badge-green" style="margin-left:4px">ít hơn</span> }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600">Độ trễ</td>
+                        <td>
+                            @rag.LatencyMs ms
+                            @if (fasterRag) { <span class="badge badge-purple" style="margin-left:4px">nhanh hơn</span> }
+                        </td>
+                        <td>
+                            @ft.LatencyMs ms
+                            @if (!fasterRag && !rag.IsError && !ft.IsError) { <span class="badge badge-purple" style="margin-left:4px">nhanh hơn</span> }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600">Chi phí ước tính</td>
+                        <td class="text-muted">$@rag.CostUsd.ToString("N5")</td>
+                        <td class="text-muted">$@ft.CostUsd.ToString("N5")</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600">Trích dẫn nguồn</td>
+                        <td>
+                            @if (rag.HasCitations)
+                            { <span class="badge badge-green">Có (@rag.Sources.Count)</span> }
+                            else
+                            { <span class="badge badge-gray">Không</span> }
+                        </td>
+                        <td><span class="badge badge-gray">Không (parametric)</span></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600">Bám tài liệu (grounded)</td>
+                        <td>
+                            @if (rag.GroundedInDocuments)
+                            { <span class="badge badge-green">Có</span> }
+                            else
+                            { <span class="badge badge-orange">Hạn chế</span> }
+                        </td>
+                        <td><span class="badge badge-orange">Không đảm bảo</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Side-by-side answers -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="rft-grid">
+        <div class="card" style="display:flex;flex-direction:column;border-top:3px solid #22c55e">
+            <div class="mb-3" style="padding-bottom:12px;border-bottom:1px solid var(--border-subtle)">
+                <div style="font-weight:700;font-size:1.05rem">📚 @rag.Label</div>
+                <div class="text-sm text-muted mt-1">@rag.Description</div>
+                <div class="mt-2">
+                    @if (rag.IsError)
+                    { <span class="badge badge-red">Lỗi</span> }
+                    else
+                    { <span class="badge badge-blue">@rag.TotalTokens tok · @rag.LatencyMs ms</span> }
+                </div>
+            </div>
+            <div style="white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary);flex:1">@rag.Answer</div>
+            @if (rag.Sources.Count > 0)
+            {
+                <div class="mt-4" style="padding-top:12px;border-top:1px solid var(--border-subtle)">
+                    <div style="font-weight:600;margin-bottom:8px">📚 Nguồn tham khảo</div>
+                    @foreach (var s in rag.Sources.Take(5))
+                    {
+                        <div class="mb-2" style="padding:10px;background:var(--surface-hover);border-radius:6px;font-size:0.85rem">
+                            <div style="font-weight:600">@s.DocumentName · Trang @s.Page
+                                <span class="badge badge-blue" style="margin-left:6px">@((s.ConfidenceScore * 100).ToString("0"))%</span>
+                            </div>
+                            <div class="text-muted" style="margin-top:4px">@s.Snippet</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;border-top:3px solid #a855f7">
+            <div class="mb-3" style="padding-bottom:12px;border-bottom:1px solid var(--border-subtle)">
+                <div style="font-weight:700;font-size:1.05rem">🧠 @ft.Label</div>
+                <div class="text-sm text-muted mt-1">@ft.Description</div>
+                <div class="mt-2">
+                    @if (ft.IsError)
+                    { <span class="badge badge-red">Lỗi</span> }
+                    else
+                    { <span class="badge badge-blue">@ft.TotalTokens tok · @ft.LatencyMs ms</span> }
+                </div>
+            </div>
+            <div style="white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary);flex:1">@ft.Answer</div>
+            <div class="mt-4" style="padding:10px;background:rgba(168,85,247,0.08);border-radius:6px;font-size:0.85rem;color:var(--text-muted)">
+                Không có citation — câu trả lời dựa trên kiến thức nội tại (mô phỏng fine-tune).
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="card mt-6">
+        <h3 style="margin-top:0">💡 Nhận xét thực nghiệm (RBL)</h3>
+        <ul style="margin:0;padding-left:1.25rem;line-height:1.7">
+            <li>Nhanh hơn (latency): <strong>@res.Insights.WinnerLatency</strong></li>
+            <li>Ít token hơn: <strong>@res.Insights.WinnerTokens</strong></li>
+            <li>Groundedness / citation: <strong>@res.Insights.WinnerGroundedness</strong></li>
+            @foreach (var note in res.Insights.Notes)
+            {
+                <li>@note</li>
+            }
+        </ul>
+    </div>
+}
+
+<style>
+@@media (max-width: 900px) {
+    .rft-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+
+@section Scripts {
+<script>
+    document.getElementById('rftForm').addEventListener('submit', function () {
+        document.getElementById('rftText').classList.add('hidden');
+        document.getElementById('rftSpin').classList.remove('hidden');
+        document.getElementById('rftBtn').disabled = true;
+    });
+</script>
+}

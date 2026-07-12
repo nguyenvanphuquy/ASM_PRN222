@@ -68,6 +68,43 @@ public class GroqService : IGroqService
         return result.IsError ? "Lỗi khi gọi API phân tích." : result.Content;
     }
 
+    public async Task<LlmResult> GenerateParametricAnswerAsync(
+        string question,
+        string? subjectName = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+            return new LlmResult(
+                "Chưa cấu hình Groq API Key — không thể gọi nhánh Fine-tuned.",
+                _groq.Model, 0, 0, 0, 0, IsError: true);
+
+        var systemPrompt = BuildParametricSystemPrompt(subjectName);
+        var messages = new List<object>
+        {
+            new { role = "system", content = systemPrompt },
+            new { role = "user", content = question }
+        };
+
+        return await CallAsync(_groq.Model, messages, 1024, ct);
+    }
+
+    /// <summary>
+    /// Prompt mô phỏng model đã fine-tune: trả lời từ parametric knowledge, không có chunk tài liệu.
+    /// </summary>
+    private static string BuildParametricSystemPrompt(string? subjectName)
+    {
+        var subject = string.IsNullOrWhiteSpace(subjectName) ? "học phần đại học" : subjectName;
+        var sb = new StringBuilder();
+        sb.AppendLine($"Bạn là chuyên gia môn «{subject}», đã được fine-tune trên kiến thức chuyên ngành.");
+        sb.AppendLine("Bạn trả lời hoàn toàn từ kiến thức nội tại (parametric knowledge) — KHÔNG có tài liệu đính kèm trong prompt.");
+        sb.AppendLine("Quy tắc:");
+        sb.AppendLine("1. Trả lời bằng tiếng Việt, rõ ràng, có cấu trúc.");
+        sb.AppendLine("2. Nếu không chắc chắn, nói rõ đây là suy luận từ kiến thức đã học (training), không phải trích dẫn tài liệu cụ thể.");
+        sb.AppendLine("3. KHÔNG bịa số liệu/page/file name cụ thể như thể đang trích dẫn corpus.");
+        sb.AppendLine("4. Không nhắc rằng bạn đang «mô phỏng» trừ khi người dùng hỏi về cơ chế.");
+        return sb.ToString();
+    }
+
     /// <summary>
     /// Gọi Groq chat/completions, trả về nội dung + số token (usage) + độ trễ.
     /// Tự động retry khi bị 429 (rate limit).

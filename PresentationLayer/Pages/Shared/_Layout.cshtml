@@ -59,8 +59,11 @@ else
                 <a class="nav-item @(IsActive("/chat") ? "active" : "")" href="/Chat">
                     <span class="nav-icon">🤖</span> Kiểm thử Chatbot
                 </a>
-                <a class="nav-item @(IsActive("/compare") ? "active" : "")" href="/Compare/Models">
+                <a class="nav-item @(IsActive("/compare/models") || path == "/compare" || path == "/compare/" ? "active" : "")" href="/Compare/Models">
                     <span class="nav-icon">🧪</span> So sánh Model
+                </a>
+                <a class="nav-item @(IsActive("/compare/rag") ? "active" : "")" href="/Compare/RagVsFineTuned">
+                    <span class="nav-icon">🔬</span> RAG vs Fine-tuned
                 </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
                     <span class="nav-icon">⚙️</span> Cài đặt
@@ -98,8 +101,11 @@ else
                 <a class="nav-item @(IsActive("/packages") ? "active" : "")" href="/Packages">
                     <span class="nav-icon">🏷️</span> Quản lý gói
                 </a>
-                <a class="nav-item @(IsActive("/compare") ? "active" : "")" href="/Compare/Models">
+                <a class="nav-item @(IsActive("/compare/models") || path == "/compare" || path == "/compare/" ? "active" : "")" href="/Compare/Models">
                     <span class="nav-icon">🧪</span> So sánh Model
+                </a>
+                <a class="nav-item @(IsActive("/compare/rag") ? "active" : "")" href="/Compare/RagVsFineTuned">
+                    <span class="nav-icon">🔬</span> RAG vs Fine-tuned
                 </a>
                 <a class="nav-item @(IsActive("/settings") ? "active" : "")" href="/Settings">
                     <span class="nav-icon">⚙️</span> Giám sát hệ thống

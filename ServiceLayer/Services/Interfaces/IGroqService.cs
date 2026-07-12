@@ -22,4 +22,13 @@ public interface IGroqService
 
     /// <summary>Sinh văn bản tự do (dùng cho kiểm tra chất lượng tài liệu).</summary>
     Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default);
+
+    /// <summary>
+    /// Trả lời kiểu parametric / fine-tuned (không đưa chunk tài liệu vào prompt).
+    /// Dùng cho so sánh RBL: RAG vs Fine-tuned.
+    /// </summary>
+    Task<LlmResult> GenerateParametricAnswerAsync(
+        string question,
+        string? subjectName = null,
+        CancellationToken ct = default);
 }
