@@ -1,0 +1,8 @@
+# RAGAS benchmark (tự cài đặt metrics, dùng Groq + embedding local — không cần OpenAI/thư viện ragas)
+requests
+numpy
+openpyxl
+pyodbc
+sentence-transformers
+# Cần cài torch CPU trước (nếu chưa):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu

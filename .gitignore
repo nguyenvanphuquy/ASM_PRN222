@@ -38,3 +38,7 @@ appsettings.Development.json
 # Local tooling / logs
 .claude/
 run.log
+
+# Python (eval / tools)
+__pycache__/
+*.pyc
