@@ -76,8 +76,45 @@ public class EmailService : IEmailService
         await SendAsync(message);
     }
 
+    public async Task SendPasswordResetByAdminAsync(string toEmail, string toName, string username, string newPassword)
+    {
+        if (!_settings.IsConfigured)
+            throw new InvalidOperationException("Chưa cấu hình email gửi tài khoản (Email:FromEmail / Email:AppPassword trong appsettings.json).");
+
+        var subject = "Mật khẩu của bạn đã được thay đổi";
+        var body = $@"
+<div style='font-family:Arial,sans-serif;max-width:480px;margin:auto'>
+  <h2 style='color:#4f46e5'>ChatBot PRN222</h2>
+  <p>Xin chào <strong>{WebUtility.HtmlEncode(toName)}</strong>,</p>
+  <p>Quản trị viên vừa đặt lại mật khẩu cho tài khoản của bạn. Thông tin đăng nhập mới của bạn là:</p>
+  <div style='background:#f3f6fb;padding:16px;border-radius:8px;font-size:15px'>
+    <div>Tên đăng nhập: <strong>{WebUtility.HtmlEncode(username)}</strong></div>
+    <div>Mật khẩu mới: <strong>{WebUtility.HtmlEncode(newPassword)}</strong></div>
+  </div>
+  <p style='color:#6b7280;font-size:13px;margin-top:16px'>Hãy đăng nhập bằng mật khẩu mới này và chúng tôi khuyến nghị bạn nên đổi lại mật khẩu của riêng mình tại trang Hồ sơ cá nhân.</p>
+</div>";
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(_settings.FromEmail, _settings.FromName),
+            Subject = subject,
+            Body = body,
+            IsBodyHtml = true
+        };
+        message.To.Add(new MailAddress(toEmail));
+
+        await SendAsync(message);
+    }
+
     private async Task SendAsync(MailMessage message)
     {
+        var toAddress = message.To.FirstOrDefault()?.Address;
+        if (!string.IsNullOrEmpty(toAddress) && (toAddress.EndsWith(".local") || toAddress.EndsWith(".test")))
+        {
+            // Bỏ qua gửi email cho các domain ảo để tránh gây lỗi bounce từ Gmail
+            return;
+        }
+
         using var client = new SmtpClient(_settings.SmtpHost, _settings.SmtpPort)
         {
             EnableSsl = true, // STARTTLS on port 587

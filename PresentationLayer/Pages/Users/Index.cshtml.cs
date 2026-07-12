@@ -103,8 +103,26 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        var user = await _userService.GetByIdAsync(id);
         var (ok, err) = await _userService.ResetPasswordAsync(id, newPassword);
-        TempData[ok ? "Success" : "Error"] = ok ? "Đã đặt lại mật khẩu." : err;
+        
+        if (ok && user != null)
+        {
+            try 
+            {
+                await _emailService.SendPasswordResetByAdminAsync(user.Email, user.FullName, user.Username, newPassword);
+                TempData["Success"] = $"Đã đặt lại mật khẩu và gửi email thông báo tới {user.Email}.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Warning"] = $"Đã đặt lại mật khẩu nhưng KHÔNG gửi được email ({ex.Message}).";
+            }
+        }
+        else
+        {
+            TempData["Error"] = err;
+        }
+
         return RedirectToPage();
     }
 
