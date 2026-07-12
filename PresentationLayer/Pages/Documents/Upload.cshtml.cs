@@ -13,13 +13,17 @@ public class UploadModel : PageModel
     private readonly IDocumentService _docService;
     private readonly ISubjectService _subjectService;
     private readonly IChapterService _chapterService;
+    private readonly INotificationService _notifier;
 
-    public UploadModel(IDocumentService docService, ISubjectService subjectService, IChapterService chapterService)
+    public UploadModel(IDocumentService docService, ISubjectService subjectService, IChapterService chapterService, INotificationService notifier)
     {
         _docService = docService;
         _subjectService = subjectService;
         _chapterService = chapterService;
+        _notifier = notifier;
     }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Người dùng";
 
     public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
     public List<Chapter> Chapters { get; private set; } = [];
@@ -105,6 +109,7 @@ public class UploadModel : PageModel
                 _ => "Upload thành công."
             };
 
+            await _notifier.ActivityAsync("📄", "Tài liệu", Actor, $"Tải lên tài liệu \"{result.Document.Title}\" ({result.Document.Status})");
             return RedirectToPage("/Documents/Index");
         }
         catch (Exception ex)

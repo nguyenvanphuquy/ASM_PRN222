@@ -40,6 +40,20 @@ public interface INotificationService
     /// của admin cập nhật doanh thu/token mà không cần reload.
     /// </summary>
     Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens);
+
+    /// <summary>
+    /// Phát sự kiện realtime khi danh mục GÓI thay đổi (admin tạo/sửa/xoá gói) —
+    /// trang Cửa hàng gói của sinh viên tự nạp lại danh sách gói mà không cần reload.
+    /// action: created | updated | deleted.
+    /// </summary>
+    Task PackagesChangedAsync(string action);
+
+    /// <summary>
+    /// Ghi nhận một HÀNH ĐỘNG trên hệ thống và phát realtime tới trang "Nhật ký hệ thống"
+    /// (giám sát) để admin thấy ngay mọi hoạt động: đăng nhập, tải tài liệu, mua/hủy gói,
+    /// tạo/sửa/xoá tài khoản-gói, đổi cấu hình...
+    /// </summary>
+    Task ActivityAsync(string icon, string category, string actor, string description);
 }
 
 

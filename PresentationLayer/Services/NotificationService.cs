@@ -85,4 +85,16 @@ public class NotificationService : INotificationService
         await _hub.Clients.All
             .SendAsync("PackagePurchased", new { packageName, amountVnd, tokens, time = DateTime.Now.ToString("HH:mm") });
     }
+
+    public async Task PackagesChangedAsync(string action)
+    {
+        await _hub.Clients.All
+            .SendAsync("PackagesChanged", new { action, time = DateTime.Now.ToString("HH:mm") });
+    }
+
+    public async Task ActivityAsync(string icon, string category, string actor, string description)
+    {
+        await _hub.Clients.All
+            .SendAsync("ActivityLogged", new { icon, category, actor, description, time = DateTime.Now.ToString("HH:mm:ss") });
+    }
 }

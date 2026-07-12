@@ -12,13 +12,17 @@ public class IndexModel : PageModel
     private readonly IUserService _userService;
     private readonly ISubjectService _subjectService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notifier;
 
-    public IndexModel(IUserService userService, ISubjectService subjectService, IEmailService emailService)
+    public IndexModel(IUserService userService, ISubjectService subjectService, IEmailService emailService, INotificationService notifier)
     {
         _userService = userService;
         _subjectService = subjectService;
         _emailService = emailService;
+        _notifier = notifier;
     }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Quản trị viên";
 
     public List<ServiceLayer.DTOs.UserDto> Users { get; private set; } = [];
     public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
@@ -73,6 +77,7 @@ public class IndexModel : PageModel
         var verifyUrl = Url.Page("/Auth/VerifyEmail", pageHandler: null,
             values: new { token }, protocol: Request.Scheme) ?? $"/Auth/VerifyEmail?token={token}";
 
+        await _notifier.ActivityAsync("👤", "Tài khoản", Actor, $"Tạo tài khoản {role} \"{username.Trim()}\"");
         try
         {
             await _emailService.SendAccountCreatedAsync(email.Trim(), fullName.Trim(), username.Trim(), password, verifyUrl);
@@ -92,6 +97,7 @@ public class IndexModel : PageModel
     {
         var (ok, err) = await _userService.UpdateRoleAsync(id, role);
         TempData[ok ? "Success" : "Error"] = ok ? "Đã cập nhật vai trò." : err;
+        if (ok) await _notifier.ActivityAsync("👤", "Tài khoản", Actor, $"Đổi vai trò một tài khoản → {role}");
         return RedirectToPage();
     }
 
@@ -150,6 +156,7 @@ public class IndexModel : PageModel
     {
         var (ok, err) = await _userService.DeleteAsync(id);
         TempData[ok ? "Success" : "Error"] = ok ? "Đã xoá người dùng." : err;
+        if (ok) await _notifier.ActivityAsync("👤", "Tài khoản", Actor, "Xoá một tài khoản");
         return RedirectToPage();
     }
 

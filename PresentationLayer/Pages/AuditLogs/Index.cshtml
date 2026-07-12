@@ -7,58 +7,56 @@
 
 <div class="page-header">
     <h1>📜 Nhật ký hệ thống</h1>
-    <p>Theo dõi các hoạt động gần đây trên toàn hệ thống</p>
+    <p>Giám sát realtime mọi hành động trên hệ thống — <span style="color:var(--accent-green)">● trực tiếp</span></p>
 </div>
 
 <div class="card mb-6">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <span class="card-title">🕒 Hoạt động gần đây</span>
+        <span class="card-title">🕒 Hoạt động gần đây <span id="liveDot" style="color:var(--accent-green);font-size:.8rem">●</span></span>
         <div style="display:flex;gap:8px;align-items:center">
             <input type="text" id="auditSearch" class="form-control" placeholder="🔎 Tìm theo người dùng / nội dung..."
                    style="max-width:280px" oninput="filterAudit()" />
-            <select id="auditCat" class="form-control" style="max-width:160px" onchange="filterAudit()">
+            <select id="auditCat" class="form-control" style="max-width:170px" onchange="filterAudit()">
                 <option value="">Tất cả loại</option>
+                <option value="Đăng nhập">Đăng nhập</option>
                 <option value="Tài khoản">Tài khoản</option>
                 <option value="Tài liệu">Tài liệu</option>
+                <option value="Giao dịch">Giao dịch</option>
+                <option value="Gói">Gói</option>
+                <option value="Cài đặt">Cài đặt</option>
                 <option value="Phản hồi">Phản hồi</option>
             </select>
         </div>
     </div>
 
-    @if (Model.Entries.Count == 0)
-    {
-        <div class="empty-state">
-            <div class="empty-state-icon">📜</div>
-            <div class="empty-state-title">Chưa có hoạt động nào</div>
-        </div>
-    }
-    else
-    {
-        <div style="overflow-x:auto">
-            <table class="table" id="auditTable" style="width:100%">
-                <thead>
-                    <tr>
-                        <th style="width:160px">Thời gian</th>
-                        <th style="width:130px">Loại</th>
-                        <th style="width:180px">Người thực hiện</th>
-                        <th>Mô tả</th>
+    <div style="overflow-x:auto">
+        <table class="table" id="auditTable" style="width:100%">
+            <thead>
+                <tr>
+                    <th style="width:160px">Thời gian</th>
+                    <th style="width:130px">Loại</th>
+                    <th style="width:180px">Người thực hiện</th>
+                    <th>Mô tả</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model.Entries)
+                {
+                    <tr class="audit-row" data-cat="@e.Category" data-text="@($"{e.Actor} {e.Description}".ToLower())">
+                        <td class="text-sm text-muted">@e.Time.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><span class="badge">@e.Icon @e.Category</span></td>
+                        <td class="text-sm" style="font-weight:600">@e.Actor</td>
+                        <td class="text-sm">@e.Description</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var e in Model.Entries)
-                    {
-                        <tr class="audit-row" data-cat="@e.Category" data-text="@($"{e.Actor} {e.Description}".ToLower())">
-                            <td class="text-sm text-muted">@e.Time.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                            <td><span class="badge">@e.Icon @e.Category</span></td>
-                            <td class="text-sm" style="font-weight:600">@e.Actor</td>
-                            <td class="text-sm">@e.Description</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <p class="text-sm text-muted" style="margin-top:12px">Tổng: <span id="auditCount">@Model.Entries.Count</span> hoạt động</p>
-    }
+                }
+                @if (Model.Entries.Count == 0)
+                {
+                    <tr class="audit-empty"><td colspan="4" style="text-align:center;padding:28px;color:var(--text-muted)">Chưa có hoạt động nào — thao tác trên app sẽ hiện ở đây ngay.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-sm text-muted" style="margin-top:12px">Tổng: <span id="auditCount">@Model.Entries.Count</span> hoạt động</p>
 </div>
 
 @section Scripts {
@@ -78,5 +76,37 @@ function filterAudit() {
     var c = document.getElementById('auditCount');
     if (c) c.textContent = shown;
 }
+
+function escH(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Realtime: thêm dòng hoạt động mới ngay khi có người thao tác trên app.
+function prependActivity(a) {
+    var tbody = document.querySelector('#auditTable tbody');
+    if (!tbody) return;
+    var empty = tbody.querySelector('.audit-empty'); if (empty) empty.remove();
+    var now = new Date().toLocaleDateString('vi-VN') + ' ' + (a.time || new Date().toLocaleTimeString('vi-VN'));
+    var tr = document.createElement('tr');
+    tr.className = 'audit-row';
+    tr.setAttribute('data-cat', a.category || '');
+    tr.setAttribute('data-text', ((a.actor || '') + ' ' + (a.description || '')).toLowerCase());
+    tr.style.background = 'rgba(63,164,106,0.14)';
+    tr.innerHTML =
+        '<td class="text-sm text-muted">' + escH(now) + '</td>' +
+        '<td><span class="badge">' + escH((a.icon || '') + ' ' + (a.category || '')) + '</span></td>' +
+        '<td class="text-sm" style="font-weight:600">' + escH(a.actor) + '</td>' +
+        '<td class="text-sm">' + escH(a.description) + '</td>';
+    tbody.insertBefore(tr, tbody.firstChild);
+    var c = document.getElementById('auditCount');
+    if (c) c.textContent = (parseInt(c.textContent || '0', 10) + 1);
+    setTimeout(function () { tr.style.transition = 'background 1.2s'; tr.style.background = ''; }, 60);
+}
+
+(function subscribe() {
+    if (window.appNotifHub) {
+        window.appNotifHub.on('ActivityLogged', prependActivity);
+    } else {
+        setTimeout(subscribe, 300);
+    }
+})();
 </script>
 }

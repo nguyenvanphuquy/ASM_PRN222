@@ -10,8 +10,13 @@ namespace PresentationLayer.Pages.Auth;
 public class LoginModel : PageModel
 {
     private readonly IAuthService _auth;
+    private readonly INotificationService _notifier;
 
-    public LoginModel(IAuthService auth) => _auth = auth;
+    public LoginModel(IAuthService auth, INotificationService notifier)
+    {
+        _auth = auth;
+        _notifier = notifier;
+    }
 
     [BindProperty] public string Username { get; set; } = "";
     [BindProperty] public string Password { get; set; } = "";
@@ -62,6 +67,9 @@ public class LoginModel : PageModel
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = true });
+
+        await _notifier.ActivityAsync("🔑", "Đăng nhập", result.FullName ?? result.Username!,
+            $"{result.Role ?? "Student"} đăng nhập hệ thống");
 
         return LocalRedirect(returnUrl ?? "/Dashboard");
     }

@@ -13,18 +13,23 @@ public class IndexModel : PageModel
     private readonly ISubjectService _subjectService;
     private readonly IChapterService _chapterService;
     private readonly IUserService _userService;
+    private readonly INotificationService _notifier;
 
     public IndexModel(
         IDocumentService docService,
         ISubjectService subjectService,
         IChapterService chapterService,
-        IUserService userService)
+        IUserService userService,
+        INotificationService notifier)
     {
         _docService = docService;
         _subjectService = subjectService;
         _chapterService = chapterService;
         _userService = userService;
+        _notifier = notifier;
     }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Người dùng";
 
     public List<ServiceLayer.DTOs.DocumentDto> Documents { get; private set; } = [];
     public List<ServiceLayer.DTOs.SubjectDto> Subjects { get; private set; } = [];
@@ -77,6 +82,7 @@ public class IndexModel : PageModel
 
         await _docService.DeleteAsync(id);
         TempData["Success"] = "Đã xoá tài liệu.";
+        await _notifier.ActivityAsync("📄", "Tài liệu", Actor, "Xoá một tài liệu");
         return RedirectToPage();
     }
 }

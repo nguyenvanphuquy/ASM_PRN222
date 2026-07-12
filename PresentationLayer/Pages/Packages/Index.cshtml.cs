@@ -10,7 +10,14 @@ namespace PresentationLayer.Pages.Packages;
 public class IndexModel : PageModel
 {
     private readonly IBillingService _billing;
-    public IndexModel(IBillingService billing) => _billing = billing;
+    private readonly INotificationService _notifier;
+    public IndexModel(IBillingService billing, INotificationService notifier)
+    {
+        _billing = billing;
+        _notifier = notifier;
+    }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Quản trị viên";
 
     public List<Package> Packages { get; private set; } = new();
 
@@ -34,6 +41,7 @@ public class IndexModel : PageModel
             IsActive = true
         });
         TempData[ok ? "Success" : "Error"] = ok ? "Đã tạo gói mới." : err;
+        if (ok) await _notifier.ActivityAsync("📦", "Gói", Actor, $"Tạo gói \"{name}\" ({priceVnd:N0}đ · {tokenQuota:N0} token)");
         return RedirectToPage();
     }
 
@@ -51,13 +59,16 @@ public class IndexModel : PageModel
             IsActive = isActive
         });
         TempData[ok ? "Success" : "Error"] = ok ? "Đã cập nhật gói." : err;
+        if (ok) await _notifier.ActivityAsync("📦", "Gói", Actor, $"Cập nhật gói \"{name}\" ({priceVnd:N0}đ · {tokenQuota:N0} token · {(isActive ? "đang bán" : "ngừng bán")})");
         return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
+        var name = (await _billing.GetPackageAsync(id))?.Name ?? id;
         var (ok, err) = await _billing.DeletePackageAsync(id);
         TempData[ok ? "Success" : "Error"] = ok ? "Đã xoá gói." : err;
+        if (ok) await _notifier.ActivityAsync("📦", "Gói", Actor, $"Xoá gói \"{name}\"");
         return RedirectToPage();
     }
 }

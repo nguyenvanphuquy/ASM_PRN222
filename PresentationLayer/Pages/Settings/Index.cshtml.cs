@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ServiceLayer.Services.Implementations;
+using ServiceLayer.Services.Interfaces;
 
 namespace PresentationLayer.Pages.Settings;
 
@@ -9,11 +10,15 @@ namespace PresentationLayer.Pages.Settings;
 public class IndexModel : PageModel
 {
     private readonly ISystemSettingService _settingService;
+    private readonly INotificationService _notifier;
 
-    public IndexModel(ISystemSettingService settingService)
+    public IndexModel(ISystemSettingService settingService, INotificationService notifier)
     {
         _settingService = settingService;
+        _notifier = notifier;
     }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Quản trị viên";
 
     [BindProperty]
     public string ChunkingStrategy { get; set; } = "SemanticKernel";
@@ -52,6 +57,8 @@ public class IndexModel : PageModel
         if (!string.IsNullOrWhiteSpace(HuggingFaceApiToken))
             await _settingService.SetSettingAsync("Rbl.HuggingFaceApiToken", HuggingFaceApiToken.Trim(), "HuggingFace API Token");
 
+        await _notifier.ActivityAsync("⚙️", "Cài đặt", Actor,
+            $"Đổi cấu hình RBL (chunk: {ChunkingStrategy} · embedding: {EmbeddingModel})");
         TempData["Success"] = "✅ Đã lưu cấu hình thực nghiệm thành công.";
         return RedirectToPage();
     }

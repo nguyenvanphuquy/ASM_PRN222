@@ -27,6 +27,7 @@ public class BillingService : IBillingService
         if (p.TokenQuota <= 0) return (false, "Số token phải lớn hơn 0");
         if (p.PriceVnd < 0) return (false, "Giá không hợp lệ");
         await _repo.AddPackageAsync(p);
+        await _notifier.PackagesChangedAsync("created");
         return (true, null);
     }
 
@@ -42,6 +43,7 @@ public class BillingService : IBillingService
         existing.IsActive = p.IsActive;
         existing.IsPopular = p.IsPopular;
         await _repo.UpdatePackageAsync(existing);
+        await _notifier.PackagesChangedAsync("updated");
         return (true, null);
     }
 
@@ -50,6 +52,7 @@ public class BillingService : IBillingService
         var existing = await _repo.GetPackageAsync(id);
         if (existing is null) return (false, "Gói không tồn tại");
         await _repo.DeletePackageAsync(id);
+        await _notifier.PackagesChangedAsync("deleted");
         return (true, null);
     }
 

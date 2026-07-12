@@ -12,7 +12,14 @@ namespace PresentationLayer.Pages.Store;
 public class IndexModel : PageModel
 {
     private readonly IBillingService _billing;
-    public IndexModel(IBillingService billing) => _billing = billing;
+    private readonly INotificationService _notifier;
+    public IndexModel(IBillingService billing, INotificationService notifier)
+    {
+        _billing = billing;
+        _notifier = notifier;
+    }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Sinh viên";
 
     public List<Package> Packages { get; private set; } = new();
     public TokenBalance Balance { get; private set; } = new(0, 0, 0, null);
@@ -46,6 +53,7 @@ public class IndexModel : PageModel
         TempData[ok ? "Success" : "Error"] = ok
             ? $"Mua {purchase!.PackageName} thành công! Đã cộng {purchase.TokensGranted:N0} token vào tài khoản."
             : err;
+        if (ok) await _notifier.ActivityAsync("🛒", "Giao dịch", Actor, $"Mua gói \"{purchase!.PackageName}\" (+{purchase.TokensGranted:N0} token)");
         return RedirectToPage();
     }
 
@@ -53,6 +61,7 @@ public class IndexModel : PageModel
     {
         var (ok, err) = await _billing.CancelPurchaseAsync(UserId, purchaseId);
         TempData[ok ? "Success" : "Error"] = ok ? "Đã hủy gói thành công." : err;
+        if (ok) await _notifier.ActivityAsync("🚫", "Giao dịch", Actor, "Hủy một gói token");
         return RedirectToPage();
     }
 }

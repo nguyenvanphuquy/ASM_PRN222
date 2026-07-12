@@ -112,3 +112,28 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    // Realtime: khi admin tạo/sửa/xoá gói, sinh viên tự thấy danh sách gói mới cập nhật.
+    (function subscribe() {
+        if (window.appNotifHub) {
+            window.appNotifHub.on('PackagesChanged', function () {
+                var bar = document.getElementById('pkgUpdateBar');
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.id = 'pkgUpdateBar';
+                    bar.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;' +
+                        'background:var(--accent-green,#3fa46a);color:#fff;padding:10px 18px;border-radius:999px;' +
+                        'box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.9rem';
+                    bar.textContent = '🔄 Danh sách gói vừa được cập nhật — đang làm mới…';
+                    document.body.appendChild(bar);
+                }
+                setTimeout(function () { window.location.reload(); }, 900);
+            });
+        } else {
+            setTimeout(subscribe, 300);
+        }
+    })();
+</script>
+}
