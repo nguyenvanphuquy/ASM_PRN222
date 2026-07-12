@@ -97,6 +97,7 @@ public class Program
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IModelComparisonService, ModelComparisonService>();
         builder.Services.AddScoped<IRagVsFineTunedComparisonService, RagVsFineTunedComparisonService>();
+        builder.Services.AddScoped<IChunkingComparisonService, ChunkingComparisonService>();
         builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
         builder.Services.AddScoped<IChunkingService, ChunkingService>();
         builder.Services.AddScoped<IRetrievalService, RetrievalService>();

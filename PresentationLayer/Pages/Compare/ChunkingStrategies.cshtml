@@ -1,0 +1,202 @@
+@page
+@model PresentationLayer.Pages.Compare.ChunkingStrategiesModel
+@{
+    ViewData["Title"] = "So sánh Chunking";
+    var res = Model.Result;
+}
+
+<div class="page-header">
+    <h1>✂️ Benchmark Chunking Strategy</h1>
+    <p>
+        Cùng một câu hỏi · cùng bộ tài liệu môn học · chạy song song
+        <strong>Semantic / Fixed Size / Sentence</strong>, đo retrieval score · số chunk · độ trễ · câu trả lời RAG.
+    </p>
+</div>
+
+<div class="card mb-4" style="border-left:4px solid #6366f1;background:rgba(99,102,241,0.08)">
+    <p style="margin:0;font-size:0.9rem;line-height:1.55">
+        <strong>In-memory:</strong> Không ghi đè index chatbot. Chunk được cắt tạm trong RAM từ
+        <code>ExtractedText</code> (tối đa 8 tài liệu / môn). Embedding theo Settings hiện tại
+        (<code>Rbl.EmbeddingModel</code>) — nếu là Keyword thì chỉ so keyword score.
+    </p>
+</div>
+
+<div class="card mb-6">
+    <form method="post" id="chkForm">
+        @Html.AntiForgeryToken()
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:end">
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Câu hỏi *</label>
+                <input asp-for="Question" class="form-control"
+                       placeholder="VD: Middleware trong ASP.NET Core hoạt động như thế nào?" required />
+                <span asp-validation-for="Question" class="form-error"></span>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Môn học *</label>
+                <select asp-for="SubjectId" class="form-control" required>
+                    <option value="">– Chọn môn học –</option>
+                    @foreach (var s in Model.Subjects)
+                    {
+                        <option value="@s.Id">@s.Code – @s.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="SubjectId" class="form-error"></span>
+            </div>
+        </div>
+        <div class="mt-4 flex gap-2 flex-wrap">
+            <button type="submit" id="chkBtn" class="btn btn-primary">
+                <span id="chkText">⚡ Chạy so sánh 3 strategy</span>
+                <span id="chkSpin" class="hidden animate-spin">⏳</span>
+            </button>
+            <a href="/Compare/Models" class="btn btn-secondary">🧪 So sánh Model</a>
+            <a href="/Compare/RagVsFineTuned" class="btn btn-secondary">🔬 RAG vs Fine-tuned</a>
+        </div>
+    </form>
+</div>
+
+@if (res != null)
+{
+    <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:8px">
+        <h3>Kết quả cho: <span style="color:var(--accent-purple)">"@res.Question"</span></h3>
+        <div class="flex gap-2 flex-wrap">
+            <span class="badge badge-blue">📚 @res.DocumentsUsed tài liệu</span>
+            <span class="badge badge-purple">🧬 @res.EmbeddingMode</span>
+            @if (!string.IsNullOrEmpty(res.SubjectName))
+            {
+                <span class="badge badge-green">@res.SubjectName</span>
+            }
+        </div>
+    </div>
+
+    @if (res.Insights.Notes.Count > 0)
+    {
+        <div class="card mb-6">
+            <div class="card-header" style="padding:0 0 12px;border-bottom:1px solid var(--border-subtle);margin-bottom:12px">
+                <span class="card-title">📌 Insights</span>
+            </div>
+            <div class="flex gap-2 flex-wrap mb-3">
+                @if (!string.IsNullOrEmpty(res.Insights.WinnerRetrieval))
+                {
+                    <span class="badge badge-green">Retrieval: @res.Insights.WinnerRetrieval</span>
+                }
+                @if (!string.IsNullOrEmpty(res.Insights.WinnerLatency))
+                {
+                    <span class="badge badge-purple">Nhanh nhất: @res.Insights.WinnerLatency</span>
+                }
+                @if (!string.IsNullOrEmpty(res.Insights.WinnerChunkDensity))
+                {
+                    <span class="badge badge-blue">Chunk ngắn nhất: @res.Insights.WinnerChunkDensity</span>
+                }
+            </div>
+            <ul style="margin:0;padding-left:18px;line-height:1.6;font-size:0.9rem;color:var(--text-secondary)">
+                @foreach (var n in res.Insights.Notes)
+                {
+                    <li>@n</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="card mb-6" style="padding:0">
+        <div class="card-header" style="padding:20px 24px 16px"><span class="card-title">📊 Chỉ số so sánh</span></div>
+        <div class="table-wrapper" style="border:none">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th class="text-right"># Chunk</th>
+                        <th class="text-right">Độ dài TB</th>
+                        <th class="text-right">Top score</th>
+                        <th class="text-right">Avg top-5</th>
+                        <th class="text-right">Token</th>
+                        <th class="text-right">Độ trễ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var ok = res.Strategies.Where(s => !s.IsError).ToList();
+                        var bestScore = ok.Count > 0 ? ok.Max(s => s.AvgTopScore) : 0;
+                        var bestLatency = ok.Count > 0 ? ok.Min(s => s.LatencyMs) : 0;
+                    }
+                    @foreach (var s in res.Strategies)
+                    {
+                        <tr>
+                            <td style="font-weight:600">
+                                @s.DisplayName
+                                @if (s.IsError) { <span class="badge badge-red" style="margin-left:4px">Lỗi</span> }
+                            </td>
+                            <td class="text-right">@s.TotalChunks.ToString("N0")</td>
+                            <td class="text-right">@s.AvgChunkLength.ToString("N0")</td>
+                            <td class="text-right">@s.TopScore.ToString("F3")</td>
+                            <td class="text-right" style="font-weight:600">
+                                @s.AvgTopScore.ToString("F3")
+                                @if (!s.IsError && ok.Count > 1 && Math.Abs(s.AvgTopScore - bestScore) < 0.0001f)
+                                {
+                                    <span class="badge badge-green" style="margin-left:4px">cao nhất</span>
+                                }
+                            </td>
+                            <td class="text-right">@s.TotalTokens.ToString("N0")</td>
+                            <td class="text-right">
+                                @s.LatencyMs ms
+                                @if (!s.IsError && ok.Count > 1 && s.LatencyMs == bestLatency)
+                                {
+                                    <span class="badge badge-purple" style="margin-left:4px">nhanh nhất</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+        @foreach (var s in res.Strategies)
+        {
+            <div class="card" style="display:flex;flex-direction:column">
+                <div class="flex items-center justify-between mb-3" style="padding-bottom:12px;border-bottom:1px solid var(--border-subtle)">
+                    <div>
+                        <div style="font-weight:700">@s.DisplayName</div>
+                        <div class="text-sm text-muted">@s.Description</div>
+                    </div>
+                    @if (s.IsError)
+                    {
+                        <span class="badge badge-red">Lỗi</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-blue">@s.TotalChunks chunk · @s.LatencyMs ms</span>
+                    }
+                </div>
+
+                @if (s.Hits.Count > 0)
+                {
+                    <div class="mb-3" style="font-size:0.8rem">
+                        <div class="text-muted mb-1" style="font-weight:600">Top retrieval</div>
+                        @foreach (var h in s.Hits.Take(3))
+                        {
+                            <div style="padding:6px 0;border-bottom:1px dashed var(--border-subtle)">
+                                <span class="badge badge-green" style="margin-right:4px">@h.Score.ToString("F2")</span>
+                                <span style="font-weight:600">@h.DocumentName</span>
+                                <span class="text-muted"> · p.@h.Page</span>
+                                <div class="text-muted" style="margin-top:2px">@h.Snippet</div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div style="white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary);flex:1">@s.Answer</div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+    document.getElementById('chkForm').addEventListener('submit', function () {
+        document.getElementById('chkText').classList.add('hidden');
+        document.getElementById('chkSpin').classList.remove('hidden');
+        document.getElementById('chkBtn').disabled = true;
+    });
+</script>
+}
