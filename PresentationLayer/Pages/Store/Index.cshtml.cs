@@ -48,4 +48,11 @@ public class IndexModel : PageModel
             : err;
         return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostCancelAsync(string purchaseId)
+    {
+        var (ok, err) = await _billing.CancelPurchaseAsync(UserId, purchaseId);
+        TempData[ok ? "Success" : "Error"] = ok ? "Đã hủy gói thành công." : err;
+        return RedirectToPage();
+    }
 }

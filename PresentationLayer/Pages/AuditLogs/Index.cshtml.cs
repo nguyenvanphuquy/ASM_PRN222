@@ -14,12 +14,14 @@ public class IndexModel : PageModel
     private readonly IUserService _users;
     private readonly IDocumentService _docs;
     private readonly IFeedbackService _feedback;
+    private readonly IBillingService _billing;
 
-    public IndexModel(IUserService users, IDocumentService docs, IFeedbackService feedback)
+    public IndexModel(IUserService users, IDocumentService docs, IFeedbackService feedback, IBillingService billing)
     {
         _users = users;
         _docs = docs;
         _feedback = feedback;
+        _billing = billing;
     }
 
     public record AuditEntry(DateTime Time, string Icon, string Category, string Actor, string Description);
@@ -57,6 +59,21 @@ public class IndexModel : PageModel
             entries.Add(new AuditEntry(
                 f.CreatedAt, "💡", "Phản hồi", f.UserName,
                 $"Gửi phản hồi ({f.Rating}★): {Truncate(f.Content, 60)}"));
+        }
+
+        var purchases = await _billing.GetAllPurchasesAsync();
+        foreach (var p in purchases)
+        {
+            var actor = userMap.TryGetValue(p.UserId, out var name) ? name : p.UserId;
+            
+            // Nếu package đã bị hủy, ta ghi nhận như một hành động Mua rổi Hủy
+            // Nếu trạng thái là Paid/Expired thì ta ghi nhận là Mua gói
+            var actionText = p.Status == "Cancelled" ? "Mua & hủy gói" : "Mua gói";
+            var icon = p.Status == "Cancelled" ? "🚫" : "🛒";
+
+            entries.Add(new AuditEntry(
+                p.CreatedAt, icon, "Giao dịch", actor,
+                $"{actionText} \"{p.PackageName}\" ({p.TokensGranted:N0} token)"));
         }
 
         Entries = entries.OrderByDescending(e => e.Time).ToList();

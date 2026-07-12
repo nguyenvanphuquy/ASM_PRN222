@@ -108,6 +108,22 @@ public class BillingService : IBillingService
         return (true, null, purchase);
     }
 
+    public async Task<(bool, string?)> CancelPurchaseAsync(string userId, string purchaseId)
+    {
+        var purchases = await _repo.GetUserPurchasesAsync(userId);
+        var p = purchases.FirstOrDefault(x => x.Id == purchaseId);
+        if (p is null) return (false, "Giao dịch không tồn tại hoặc không thuộc về bạn");
+        if (p.Status != "Paid") return (false, "Gói này không ở trạng thái đang kích hoạt");
+
+        p.Status = "Cancelled";
+        await _repo.UpdatePurchaseAsync(p);
+
+        await _notifier.SendAsync(userId, "warning", "Đã hủy gói", $"Gói {p.PackageName} của bạn đã bị hủy.");
+        return (true, null);
+    }
+
+    public Task<List<PackagePurchase>> GetAllPurchasesAsync() => _repo.GetAllPurchasesAsync();
+
     public async Task EnsureFreeGrantAsync(string userId)
     {
         var purchases = await _repo.GetUserPurchasesAsync(userId);

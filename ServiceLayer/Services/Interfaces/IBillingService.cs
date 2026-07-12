@@ -21,8 +21,11 @@ public interface IBillingService
     Task<List<PackagePurchase>> GetUserPurchasesAsync(string userId);
     /// <summary>Mua gói (thanh toán giả lập → cấp token ngay).</summary>
     Task<(bool Success, string? Error, PackagePurchase? Purchase)> BuyAsync(string userId, string packageId);
+    /// <summary>Hủy một gói đã mua (trạng thái Paid).</summary>
+    Task<(bool Success, string? Error)> CancelPurchaseAsync(string userId, string purchaseId);
     /// <summary>Cấp gói dùng thử miễn phí một lần cho người dùng chưa từng có giao dịch.</summary>
     Task EnsureFreeGrantAsync(string userId);
+    Task<List<PackagePurchase>> GetAllPurchasesAsync();
 
     // ── Tiêu thụ token (ChatService gọi) ──
     Task<bool> HasQuotaAsync(string userId);
