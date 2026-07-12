@@ -150,8 +150,8 @@
                                         📚 Giao môn <span class="badge badge-purple" style="margin-left:4px">@myCount</span>
                                     </button>
                                 }
-                                <button type="button" class="btn btn-secondary btn-sm" title="Đặt lại mật khẩu"
-                                        onclick="resetPwd('@u.Id', '@u.Username')">🔑</button>
+                                <button type="button" class="btn btn-secondary btn-sm" title="Chỉnh sửa hồ sơ & Đổi mật khẩu"
+                                        onclick="openEditUser('@u.Id', '@u.Username', '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(u.FullName))', '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(u.Email))')">✏️</button>
                                 <form method="post" asp-page-handler="Delete" asp-route-id="@u.Id"
                                       onsubmit="return confirm('Xoá người dùng @u.Username?')">
                                     @Html.AntiForgeryToken()
@@ -172,12 +172,42 @@
 </div>
 <p class="text-sm text-muted mt-4">Tổng: <strong id="userTotalFooter">@Model.TotalCount</strong> người dùng</p>
 
-<!-- Hidden form for password reset -->
-<form method="post" asp-page-handler="ResetPassword" id="resetPwdForm" style="display:none">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="id" id="resetPwdId" />
-    <input type="hidden" name="newPassword" id="resetPwdValue" />
-</form>
+<!-- ── Edit user modal ── -->
+<div id="editUserModal" style="display:none;position:fixed;inset:0;background:rgba(43,37,33,0.35);z-index:9998;align-items:center;justify-content:center;padding:20px">
+    <div class="card animate-fade-in" style="width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)">
+        <div class="card-header">
+            <span class="card-title">✏️ Chỉnh sửa người dùng — <span id="editUserNameDisplay"></span></span>
+            <button type="button" class="btn btn-secondary btn-icon btn-sm" onclick="closeEditUser()">✖️</button>
+        </div>
+        <form method="post" asp-page-handler="EditUser" id="editUserForm" style="padding-top:16px">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="editUserId" />
+            
+            <div class="form-group">
+                <label class="form-label">Họ và tên *</label>
+                <input name="fullName" id="editUserFullName" class="form-control" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input name="email" id="editUserEmail" type="email" class="form-control" required />
+            </div>
+            
+            <div style="margin:24px -24px 16px -24px;border-top:1px solid var(--border-subtle)"></div>
+            <div style="font-weight:600;margin-bottom:12px;color:var(--accent-red)">🔑 Đặt lại mật khẩu (Không bắt buộc)</div>
+            <p class="text-sm text-muted mb-3">Nếu để trống, mật khẩu cũ của người dùng vẫn được giữ nguyên. Nhập nếu bạn muốn ép đổi mật khẩu.</p>
+            
+            <div class="form-group">
+                <label class="form-label">Mật khẩu mới</label>
+                <input name="newPassword" id="editUserPassword" type="password" class="form-control" placeholder="Để trống nếu không đổi, hoặc nhập ít nhất 6 ký tự..." />
+            </div>
+
+            <div class="flex gap-2 mt-4" style="justify-content:flex-end">
+                <button type="button" class="btn btn-secondary" onclick="closeEditUser()">Huỷ</button>
+                <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- ── Assign subjects modal (multi-select checkbox) ── -->
 <div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(43,37,33,0.35);z-index:9998;align-items:center;justify-content:center;padding:20px">
@@ -250,14 +280,16 @@
         document.getElementById('noResults').style.display = visible === 0 ? 'flex' : 'none';
     }
 
-    function resetPwd(id, username) {
-        const pw = prompt('Đặt lại mật khẩu cho "' + username + '" (tối thiểu 6 ký tự):');
-        if (!pw) return;
-        if (pw.length < 6) { alert('Mật khẩu phải có ít nhất 6 ký tự.'); return; }
-        document.getElementById('resetPwdId').value = id;
-        document.getElementById('resetPwdValue').value = pw;
-        document.getElementById('resetPwdForm').submit();
+    function openEditUser(id, username, fullName, email) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUserNameDisplay').textContent = '@@' + username;
+        document.getElementById('editUserFullName').value = fullName;
+        document.getElementById('editUserEmail').value = email;
+        document.getElementById('editUserPassword').value = '';
+        document.getElementById('editUserModal').style.display = 'flex';
     }
+    function closeEditUser() { document.getElementById('editUserModal').style.display = 'none'; }
+    document.getElementById('editUserModal').addEventListener('click', e => { if (e.target.id === 'editUserModal') closeEditUser(); });
 
     // ── Realtime: tự động cập nhật trạng thái tài khoản qua SignalR ──
     (function () {
