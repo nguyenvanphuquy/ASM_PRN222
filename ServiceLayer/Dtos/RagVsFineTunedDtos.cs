@@ -1,4 +1,5 @@
 using DataAccessLayer.Entities;
+using ServiceLayer.Settings;
 
 namespace ServiceLayer.Dtos;
 
@@ -27,6 +28,7 @@ public class ApproachAnswer
     public int TotalTokens { get; set; }
     public long LatencyMs { get; set; }
     public decimal CostUsd { get; set; }
+    public long CostVnd => ModelCatalog.ToVnd(CostUsd);
     public bool IsError { get; set; }
     public bool HasCitations => Sources.Count > 0;
     public bool GroundedInDocuments { get; set; }

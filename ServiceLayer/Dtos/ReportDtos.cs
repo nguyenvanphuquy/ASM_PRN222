@@ -1,3 +1,5 @@
+using ServiceLayer.Settings;
+
 namespace ServiceLayer.Dtos;
 
 // ─────────────────────────── Token usage report ───────────────────────────
@@ -10,6 +12,8 @@ public class TokenReport
     public long TotalCompletion { get; set; }
     public int TotalRequests { get; set; }
     public decimal TotalCostUsd { get; set; }
+    /// <summary>Chi phí token quy đổi sang VND (để hiển thị).</summary>
+    public long TotalCostVnd => ModelCatalog.ToVnd(TotalCostUsd);
     public int ActiveUsers { get; set; }
 
     public List<UserTokenStat> ByUser { get; set; } = new();
@@ -25,6 +29,7 @@ public class UserTokenStat
     public long Tokens { get; set; }
     public int Requests { get; set; }
     public decimal CostUsd { get; set; }
+    public long CostVnd => ModelCatalog.ToVnd(CostUsd);
 }
 
 public class ModelTokenStat
@@ -97,5 +102,6 @@ public class ModelAnswer
     public int TotalTokens { get; set; }
     public long LatencyMs { get; set; }
     public decimal CostUsd { get; set; }
+    public long CostVnd => ModelCatalog.ToVnd(CostUsd);
     public bool IsError { get; set; }
 }

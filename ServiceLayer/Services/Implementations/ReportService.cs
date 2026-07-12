@@ -7,8 +7,8 @@ namespace ServiceLayer.Services.Implementations;
 
 public class ReportService : IReportService
 {
-    // Tỷ giá quy đổi để ước tính chi phí LLM ra VND (dùng cho tính lợi nhuận gói).
-    private const decimal UsdToVnd = 25_000m;
+    // Tỷ giá quy đổi dùng chung ở ModelCatalog.UsdToVnd (khớp mọi chỗ hiển thị chi phí).
+    private const decimal UsdToVnd = ModelCatalog.UsdToVnd;
 
     private readonly IBillingRepository _billing;
     private readonly IUserRepository _users;

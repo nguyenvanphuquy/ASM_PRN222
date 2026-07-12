@@ -78,7 +78,7 @@
                                 @a.LatencyMs ms
                                 @if (!a.IsError && a.LatencyMs == fastest && okAnswers.Count > 1) { <span class="badge badge-purple" style="margin-left:4px">nhanh nhất</span> }
                             </td>
-                            <td class="text-right text-muted">$@a.CostUsd.ToString("N5")</td>
+                            <td class="text-right text-muted">@a.CostVnd.ToString("N0")₫</td>
                         </tr>
                     }
                 </tbody>

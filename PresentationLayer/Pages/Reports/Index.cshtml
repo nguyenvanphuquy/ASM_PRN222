@@ -39,7 +39,7 @@
     </div>
     <div class="stat-card orange">
         <div class="stat-icon orange">💵</div>
-        <div class="stat-value">$@t.TotalCostUsd.ToString("N4")</div>
+        <div class="stat-value">@t.TotalCostVnd.ToString("N0")₫</div>
         <div class="stat-label">Chi phí token ước tính</div>
     </div>
 </div>
@@ -100,7 +100,7 @@
                             <td><span class="badge @roleClass">@u.Role</span></td>
                             <td class="text-right">@u.Requests.ToString("N0")</td>
                             <td class="text-right" style="font-weight:700;color:var(--accent-purple)">@u.Tokens.ToString("N0")</td>
-                            <td class="text-right text-muted">$@u.CostUsd.ToString("N4")</td>
+                            <td class="text-right text-muted">@u.CostVnd.ToString("N0")₫</td>
                         </tr>
                     }
                 }

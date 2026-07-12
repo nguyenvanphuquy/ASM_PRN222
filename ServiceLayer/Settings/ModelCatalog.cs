@@ -16,6 +16,12 @@ public static class ModelCatalog
         new ModelInfo("openai/gpt-oss-20b",     "GPT-OSS 20B",             "OpenAI · Groq", 0.10, 0.50),
     };
 
+    /// <summary>Tỷ giá quy đổi USD→VND để hiển thị chi phí token (khớp với tính doanh thu/lợi nhuận gói).</summary>
+    public const decimal UsdToVnd = 25_000m;
+
+    /// <summary>Quy đổi chi phí USD sang VND, làm tròn tới đồng.</summary>
+    public static long ToVnd(decimal usd) => (long)Math.Round(usd * UsdToVnd);
+
     public static ModelInfo Get(string id)
         => All.FirstOrDefault(m => m.Id == id) ?? new ModelInfo(id, id, "Groq", 0.50, 0.50);
 
