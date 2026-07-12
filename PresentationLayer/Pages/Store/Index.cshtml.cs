@@ -49,6 +49,14 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostBuyAsync(string packageId)
     {
+        // Admin & Giảng viên dùng token KHÔNG giới hạn → không mua gói (tránh giao dịch rác).
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Student";
+        if (role is "Admin" or "Lecturer")
+        {
+            TempData["Error"] = "Admin/Giảng viên dùng token không giới hạn — không cần mua gói.";
+            return RedirectToPage();
+        }
+
         var (ok, err, purchase) = await _billing.BuyAsync(UserId, packageId);
         TempData[ok ? "Success" : "Error"] = ok
             ? $"Mua {purchase!.PackageName} thành công! Đã cộng {purchase.TokensGranted:N0} token vào tài khoản."
@@ -59,9 +67,9 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCancelAsync(string purchaseId)
     {
-        var (ok, err) = await _billing.CancelPurchaseAsync(UserId, purchaseId);
-        TempData[ok ? "Success" : "Error"] = ok ? "Đã hủy gói thành công." : err;
-        if (ok) await _notifier.ActivityAsync("🚫", "Giao dịch", Actor, "Hủy một gói token");
+        var (ok, msg) = await _billing.CancelPurchaseAsync(UserId, purchaseId);
+        TempData[ok ? "Success" : "Error"] = msg ?? (ok ? "Đã hủy gói." : "Không hủy được gói.");
+        if (ok) await _notifier.ActivityAsync("🚫", "Giao dịch", Actor, "Hủy gia hạn một gói (giữ quyền dùng tới hết hạn)");
         return RedirectToPage();
     }
 }

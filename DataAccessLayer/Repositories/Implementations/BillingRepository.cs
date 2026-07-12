@@ -66,9 +66,11 @@ public class BillingRepository : IBillingRepository
     public Task<List<PackagePurchase>> GetActivePaidPurchasesAsync(string userId)
     {
         var now = DateTime.UtcNow;
+        // Gói còn dùng được = đã thanh toán VÀ chưa hết hạn. Gói đã HỦY vẫn được dùng
+        // cho tới khi hết hạn (giống cơ chế subscription: hủy nhưng giữ quyền tới cuối kỳ).
         return _context.PackagePurchases
             .Where(p => p.UserId == userId
-                        && p.Status == "Paid"
+                        && (p.Status == "Paid" || p.Status == "Cancelled")
                         && (p.ExpiresAt == null || p.ExpiresAt > now))
             .OrderBy(p => p.CreatedAt)
             .ToListAsync();

@@ -118,11 +118,18 @@ public class BillingService : IBillingService
         if (p is null) return (false, "Giao dịch không tồn tại hoặc không thuộc về bạn");
         if (p.Status != "Paid") return (false, "Gói này không ở trạng thái đang kích hoạt");
 
+        // Hủy = ngừng gia hạn nhưng GIỮ QUYỀN DÙNG tới hết hạn (không thu hồi token ngay).
+        // Gói vĩnh viễn (không có hạn) thì hủy = kết thúc ngay (đặt hạn = hiện tại).
         p.Status = "Cancelled";
+        if (p.ExpiresAt == null) p.ExpiresAt = DateTime.UtcNow;
         await _repo.UpdatePurchaseAsync(p);
 
-        await _notifier.SendAsync(userId, "warning", "Đã hủy gói", $"Gói {p.PackageName} của bạn đã bị hủy.");
-        return (true, null);
+        var stillValid = p.ExpiresAt.HasValue && p.ExpiresAt.Value > DateTime.UtcNow;
+        var msg = stillValid
+            ? $"Đã hủy gói {p.PackageName}. Bạn vẫn dùng được số token còn lại tới hết hạn ({p.ExpiresAt!.Value.ToLocalTime():dd/MM/yyyy})."
+            : $"Đã hủy gói {p.PackageName}.";
+        await _notifier.SendAsync(userId, "warning", "Đã hủy gói", msg);
+        return (true, msg);
     }
 
     public Task<List<PackagePurchase>> GetAllPurchasesAsync() => _repo.GetAllPurchasesAsync();

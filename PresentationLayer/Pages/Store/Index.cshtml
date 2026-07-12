@@ -59,14 +59,23 @@
                 <div>🔢 <strong>@p.TokenQuota.ToString("N0")</strong> token</div>
                 <div>⏳ Hiệu lực @(p.DurationDays > 0 ? $"{p.DurationDays} ngày" : "vĩnh viễn")</div>
             </div>
-            <form method="post" asp-page-handler="Buy" style="margin-top:auto">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="packageId" value="@p.Id" />
-                <button type="submit" class="btn @(p.IsPopular ? "btn-primary" : "btn-secondary") w-full"
-                        onclick="return confirm('Xác nhận mua @p.Name với giá @(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")? (thanh toán giả lập)')">
-                    🛒 Mua gói
-                </button>
-            </form>
+            @if (unlimited)
+            {
+                <div class="text-sm text-muted" style="margin-top:auto;text-align:center;padding:10px 0;border-top:1px dashed var(--border-subtle)">
+                    Bạn dùng token <strong>không giới hạn</strong> — không cần mua gói.
+                </div>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="Buy" style="margin-top:auto">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="packageId" value="@p.Id" />
+                    <button type="submit" class="btn @(p.IsPopular ? "btn-primary" : "btn-secondary") w-full"
+                            onclick="return confirm('Xác nhận mua @p.Name với giá @(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")? (thanh toán giả lập)')">
+                        🛒 Mua gói
+                    </button>
+                </form>
+            }
         </div>
     }
 </div>
@@ -94,13 +103,33 @@
                             <td class="text-right">@(h.AmountVnd == 0 ? "Miễn phí" : $"{h.AmountVnd:N0}₫")</td>
                             <td class="text-right text-muted">@h.TokensUsed.ToString("N0") / @h.TokensGranted.ToString("N0")</td>
                             <td>
-                                <span class="badge @(h.Status == "Paid" ? "badge-green" : h.Status == "Cancelled" ? "badge-red" : "badge-gray")">@h.Status</span>
+                                @{
+                                    var stillValid = h.ExpiresAt.HasValue && h.ExpiresAt.Value > DateTime.UtcNow;
+                                }
+                                @if (h.Status == "Paid")
+                                {
+                                    <span class="badge badge-green">Đang dùng</span>
+                                }
+                                else if (h.Status == "Cancelled" && stillValid)
+                                {
+                                    <span class="badge" style="background:#f59e0b;color:#fff" title="Đã hủy nhưng vẫn dùng được token tới hết hạn">
+                                        Đã hủy · còn đến @h.ExpiresAt!.Value.ToLocalTime().ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                                else if (h.Status == "Cancelled")
+                                {
+                                    <span class="badge badge-gray">Đã hủy (đã hết hạn)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-gray">@h.Status</span>
+                                }
                                 @if (h.Status == "Paid" && h.PaymentMethod != "Free")
                                 {
-                                    <form method="post" asp-page-handler="Cancel" style="display:inline-block;margin-left:6px" onsubmit="return confirm('Bạn có chắc muốn huỷ gói này không? Lượng token chưa dùng sẽ bị vô hiệu hoá.')">
+                                    <form method="post" asp-page-handler="Cancel" style="display:inline-block;margin-left:6px" onsubmit="return confirm('Huỷ gói này? Bạn VẪN được dùng số token còn lại tới hết hạn — chỉ ngừng gia hạn thôi.')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="purchaseId" value="@h.Id" />
-                                        <button type="submit" class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:0.75rem;line-height:1.2;height:auto;min-height:0">Huỷ</button>
+                                        <button type="submit" class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:0.75rem;line-height:1.2;height:auto;min-height:0">Huỷ gia hạn</button>
                                     </form>
                                 }
                             </td>
