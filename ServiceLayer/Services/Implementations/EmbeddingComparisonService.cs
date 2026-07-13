@@ -13,11 +13,13 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
 {
     private static readonly (string Id, string Display, string Provider, string Description)[] EmbeddingModels =
     {
-        ("Local", "Local (hashing)", "Local", "Feature-hashing từ vựng · không cần gì · baseline luôn chạy"),
-        ("multilingual-e5-base", "multilingual-e5-base", "Local ST", "intfloat · đa ngữ · chạy offline qua sentence-transformers"),
-        ("PhoBERT-base", "PhoBERT-base", "Local ST", "vinai · tối ưu tiếng Việt (MLM + mean-pooling) · offline"),
-        ("bge-m3", "bge-m3", "Local ST", "BAAI · đa ngữ retrieval mạnh (~2GB, chậm trên CPU) · offline"),
-        ("text-embedding-3-small", "text-embedding-3-small", "OpenAI", "OpenAI (cần API key trả phí — tuỳ chọn)"),
+        // 4 model theo đề RBL
+        ("multilingual-e5-base", "multilingual-e5-base", "Local ST", "intfloat · đa ngữ · miễn phí · offline (theo đề)"),
+        ("text-embedding-3-small", "text-embedding-3-small", "OpenAI", "OpenAI · cần API key (theo đề)"),
+        ("PhoBERT-base", "PhoBERT-base", "Local ST", "vinai · tiếng Việt · offline (theo đề)"),
+        ("bge-m3", "bge-m3", "Local ST", "BAAI · đa ngữ retrieval · offline (theo đề)"),
+        // Baseline offline thêm
+        ("Local", "Local (hashing)", "Local", "Feature-hashing từ vựng · baseline offline"),
     };
 
     private const int MaxDocs = 6;

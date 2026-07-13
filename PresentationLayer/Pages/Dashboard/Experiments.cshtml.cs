@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using ServiceLayer.Dtos;
 using ServiceLayer.Services.Interfaces;
 using System.Security.Claims;
+using System.Text;
 
 namespace PresentationLayer.Pages.Dashboard;
 
@@ -40,6 +41,14 @@ public class ExperimentsModel : PageModel
         ViewData["Title"] = "Dashboard RBL";
         ViewData["TopbarTitle"] = "📊 Kết quả thực nghiệm RBL";
         return Page();
+    }
+
+    public async Task<IActionResult> OnGetExportAsync()
+    {
+        var csv = await _experiments.ExportCsvAsync(200, NormalizeKind(Kind));
+        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray();
+        var name = $"RBL_Experiments_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+        return File(bytes, "text/csv; charset=utf-8", name);
     }
 
     private static string? NormalizeKind(string? kind)

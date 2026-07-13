@@ -8,9 +8,12 @@
 <div class="page-header">
     <h1>🧬 Benchmark Embedding Model</h1>
     <p>
-        Cùng một câu hỏi · cùng bộ chunk · so sánh
-        <strong>e5-base / text-embedding-3-small / PhoBERT / bge-m3</strong>
-        theo cosine retrieval + câu trả lời RAG.
+        Cùng một câu hỏi · cùng bộ chunk · so sánh đúng 4 model theo đề:
+        <strong>multilingual-e5-base</strong> (miễn phí) ·
+        <strong>text-embedding-3-small</strong> (OpenAI) ·
+        <strong>PhoBERT-base</strong> ·
+        <strong>bge-m3</strong>
+        (+ baseline Local hashing).
     </p>
 </div>
 
@@ -48,7 +51,7 @@
         </div>
         <div class="mt-4 flex gap-2 flex-wrap">
             <button type="submit" id="embBtn" class="btn btn-primary">
-                <span id="embText">⚡ Chạy so sánh 4 embedding model</span>
+                <span id="embText">⚡ Chạy so sánh 4 model theo đề (e5 · OpenAI · PhoBERT · bge)</span>
                 <span id="embSpin" class="hidden animate-spin">⏳</span>
             </button>
             <a href="/Compare/ChunkingStrategies" class="btn btn-secondary">✂️ So sánh Chunking</a>

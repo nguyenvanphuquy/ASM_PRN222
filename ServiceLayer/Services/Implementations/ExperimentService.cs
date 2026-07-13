@@ -134,6 +134,52 @@ public class ExperimentService : IExperimentService
         };
     }
 
+    public async Task<string> ExportCsvAsync(int take = 100, string? filterKind = null)
+    {
+        var runs = await _repo.GetRecentAsync(take, filterKind);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("CreatedAtUtc,Kind,Question,Subject,Winner,Variant,Score,LatencyMs,Tokens,IsError,AnswerPreview");
+        foreach (var r in runs.OrderByDescending(x => x.CreatedAt))
+        {
+            if (r.Variants.Count == 0)
+            {
+                sb.AppendLine(string.Join(",",
+                    Csv(r.CreatedAt.ToString("o")),
+                    Csv(r.Kind),
+                    Csv(r.Question),
+                    Csv(r.SubjectName),
+                    Csv(r.WinnerLabel),
+                    "", "", "", "", "", ""));
+                continue;
+            }
+
+            foreach (var v in r.Variants)
+            {
+                sb.AppendLine(string.Join(",",
+                    Csv(r.CreatedAt.ToString("o")),
+                    Csv(r.Kind),
+                    Csv(r.Question),
+                    Csv(r.SubjectName),
+                    Csv(r.WinnerLabel),
+                    Csv(v.VariantLabel),
+                    v.Score.ToString("F4", System.Globalization.CultureInfo.InvariantCulture),
+                    v.LatencyMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    v.TotalTokens.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    v.IsError ? "1" : "0",
+                    Csv(v.AnswerPreview)));
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static string Csv(string? value)
+    {
+        var s = value ?? "";
+        if (s.Contains('"') || s.Contains(',') || s.Contains('\n') || s.Contains('\r'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
     private static ExperimentVariant ToVariant(string key, string label, ApproachAnswer a)
         => new()
         {

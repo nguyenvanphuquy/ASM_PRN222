@@ -5,13 +5,24 @@
 
 <div class="page-header">
     <h1>Cài đặt RBL (Research Based Learning)</h1>
-    <p>Cấu hình các chiến lược cắt chunk và nhúng vector cho thực nghiệm</p>
+    <p>Cấu hình chiến lược chunk &amp; embedding dùng cho chatbot và benchmark thực nghiệm</p>
 </div>
 
 @if (TempData["Success"] != null)
 {
     <div class="alert alert-success mb-4">@TempData["Success"]</div>
 }
+
+<div class="card mb-4" style="border-left:4px solid #06b6d4;background:rgba(6,182,212,0.08);max-width:640px">
+    <p style="margin:0;font-size:0.9rem;line-height:1.55">
+        <strong>Theo đề:</strong> so sánh embedding
+        <code>multilingual-e5-base</code> (miễn phí) ·
+        <code>text-embedding-3-small</code> (OpenAI) ·
+        <code>PhoBERT-base</code> ·
+        <code>bge-m3</code>.
+        Ba model mở chạy offline qua sidecar Python — <strong>không cần HuggingFace token</strong>.
+    </p>
+</div>
 
 <div class="card" style="max-width: 600px;">
     <form method="post">
@@ -27,34 +38,35 @@
         </div>
 
         <div class="form-group mt-4">
-            <label class="form-label" asp-for="EmbeddingModel">Mô hình Embedding (Nhúng Vector)</label>
+            <label class="form-label" asp-for="EmbeddingModel">Mô hình Embedding (index chatbot)</label>
             <select asp-for="EmbeddingModel" class="form-control">
-                <option value="Keyword">Không dùng (Tìm kiếm từ khóa LIKE cũ)</option>
-                <option value="Local">Local (offline · không cần API key)</option>
-                <option value="text-embedding-3-small">OpenAI (text-embedding-3-small)</option>
-                <option value="PhoBERT-base">HuggingFace (PhoBERT-base)</option>
-                <option value="bge-m3">HuggingFace (bge-m3)</option>
-                <option value="multilingual-e5-base">HuggingFace (multilingual-e5-base)</option>
+                <option value="Keyword">Không dùng (Keyword LIKE)</option>
+                <option value="Local">Local hashing (offline · baseline)</option>
+                <option value="multilingual-e5-base">multilingual-e5-base (miễn phí · Local ST)</option>
+                <option value="PhoBERT-base">PhoBERT-base (tiếng Việt · Local ST)</option>
+                <option value="bge-m3">bge-m3 (BAAI · Local ST)</option>
+                <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
             </select>
-            <small class="text-muted">Dùng Cosine similarity khi có vector. Cũng áp dụng lúc chatbot truy vấn ngữ cảnh.</small>
+            <small class="text-muted">Dùng Cosine khi có vector. Benchmark Embedding luôn so cả 4 model theo đề (không phụ thuộc lựa chọn này).</small>
         </div>
 
         <div class="form-group mt-4">
             <label class="form-label" asp-for="OpenAIApiKey">OpenAI API Key</label>
             <input asp-for="OpenAIApiKey" type="password" class="form-control" autocomplete="off"
                    placeholder="@(Model.HasOpenAIKey ? "•••••••• (đã lưu — nhập mới để thay)" : "sk-...")" />
-            <small class="text-muted">Cần khi chọn text-embedding-3-small.</small>
+            <small class="text-muted">Chỉ cần khi dùng / so sánh <code>text-embedding-3-small</code>.</small>
         </div>
 
         <div class="form-group mt-4">
-            <label class="form-label" asp-for="HuggingFaceApiToken">HuggingFace API Token</label>
+            <label class="form-label" asp-for="HuggingFaceApiToken">HuggingFace API Token (tuỳ chọn)</label>
             <input asp-for="HuggingFaceApiToken" type="password" class="form-control" autocomplete="off"
                    placeholder="@(Model.HasHuggingFaceToken ? "•••••••• (đã lưu — nhập mới để thay)" : "hf_...")" />
-            <small class="text-muted">Cần khi chọn PhoBERT / bge-m3 / multilingual-e5-base.</small>
+            <small class="text-muted">Không bắt buộc cho e5 / PhoBERT / bge — các model này chạy local qua sidecar.</small>
         </div>
 
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px;" class="flex gap-2 flex-wrap">
             <button type="submit" class="btn btn-primary">Lưu Cấu Hình</button>
+            <a href="/Dashboard/Experiments" class="btn btn-secondary">← Dashboard RBL</a>
         </div>
     </form>
 </div>

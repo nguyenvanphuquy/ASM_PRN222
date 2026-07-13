@@ -9,7 +9,7 @@
 
 <div class="page-header">
     <h1>📊 Dashboard kết quả thực nghiệm RBL</h1>
-    <p>Tổng hợp Chunking · Embedding · RAG vs Fine-tuned · RAGAS. Kết quả tự lưu khi chạy benchmark.</p>
+    <p>Module nghiên cứu: so sánh RAG vs Fine-tuned · benchmark chunking · benchmark embedding · tổng hợp kết quả.</p>
 </div>
 
 <div class="flex gap-2 flex-wrap items-center mb-4">
@@ -45,6 +45,58 @@
     </div>
 }
 
+@* === 4 mục theo đề RBL === *@
+<div class="card mb-6">
+    <div class="card-header"><span class="card-title">🧪 Module nghiên cứu (RBL) — checklist theo đề</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+        <div style="padding:14px;border:1px solid var(--border-subtle);border-radius:10px">
+            <div class="flex items-center justify-between mb-2">
+                <strong>🔬 RAG vs Fine-tuned</strong>
+                @if (d.RagVsFtRuns > 0) { <span class="badge badge-green">Đã chạy @d.RagVsFtRuns</span> }
+                else { <span class="badge badge-red">Chưa chạy</span> }
+            </div>
+            <p class="text-sm text-muted" style="margin:0 0 10px;line-height:1.45">So sánh trả lời có retrieval + citation với model parametric (không retrieval).</p>
+            <a href="/Compare/RagVsFineTuned" class="btn btn-secondary btn-sm">Chạy so sánh</a>
+        </div>
+        <div style="padding:14px;border:1px solid var(--border-subtle);border-radius:10px">
+            <div class="flex items-center justify-between mb-2">
+                <strong>✂️ Chunking strategy</strong>
+                @if (d.ChunkingRuns > 0) { <span class="badge badge-green">Đã chạy @d.ChunkingRuns</span> }
+                else { <span class="badge badge-red">Chưa chạy</span> }
+            </div>
+            <p class="text-sm text-muted" style="margin:0 0 10px;line-height:1.45">Benchmark Semantic / Fixed Size / Sentence trên cùng câu hỏi &amp; tài liệu.</p>
+            <a href="/Compare/ChunkingStrategies" class="btn btn-secondary btn-sm">Chạy so sánh</a>
+        </div>
+        <div style="padding:14px;border:1px solid var(--border-subtle);border-radius:10px">
+            <div class="flex items-center justify-between mb-2">
+                <strong>🧬 Embedding model</strong>
+                @if (d.EmbeddingRuns > 0) { <span class="badge badge-green">Đã chạy @d.EmbeddingRuns</span> }
+                else { <span class="badge badge-red">Chưa chạy</span> }
+            </div>
+            <p class="text-sm text-muted" style="margin:0 0 10px;line-height:1.45">So sánh e5-base · OpenAI 3-small · PhoBERT · bge-m3 (theo đề).</p>
+            <a href="/Compare/EmbeddingModels" class="btn btn-secondary btn-sm">Chạy so sánh</a>
+        </div>
+        <div style="padding:14px;border:1px solid var(--border-subtle);border-radius:10px">
+            <div class="flex items-center justify-between mb-2">
+                <strong>📊 Dashboard kết quả</strong>
+                @if (d.TotalRuns > 0) { <span class="badge badge-green">@d.TotalRuns lần chạy</span> }
+                else { <span class="badge badge-red">Trống</span> }
+            </div>
+            <p class="text-sm text-muted" style="margin:0 0 10px;line-height:1.45">Biểu đồ + lịch sử tự lưu khi chạy benchmark. Xuất CSV để gắn báo cáo.</p>
+            <a href="/Dashboard/Experiments?handler=Export@(filter != null ? $"&kind={filter}" : "")" class="btn btn-secondary btn-sm">⬇️ Xuất CSV</a>
+        </div>
+    </div>
+    <div class="mt-4" style="padding-top:12px;border-top:1px solid var(--border-subtle)">
+        <div class="text-sm text-muted mb-2" style="font-weight:600">Embedding models theo đề (tham khảo)</div>
+        <div class="flex gap-2 flex-wrap">
+            <span class="badge badge-green">multilingual-e5-base · miễn phí</span>
+            <span class="badge badge-blue">text-embedding-3-small · OpenAI</span>
+            <span class="badge badge-purple">PhoBERT-base · tiếng Việt</span>
+            <span class="badge badge-orange">bge-m3 · BAAI</span>
+        </div>
+    </div>
+</div>
+
 <div class="stats-grid">
     <div class="stat-card purple">
         <div class="stat-icon purple">🧪</div>
@@ -79,11 +131,13 @@
     <a href="/Compare/ChunkingStrategies" class="btn btn-secondary btn-sm">✂️ Chunking</a>
     <a href="/Compare/EmbeddingModels" class="btn btn-secondary btn-sm">🧬 Embedding</a>
     <a href="/Compare/RagVsFineTuned" class="btn btn-secondary btn-sm">🔬 RAG vs Fine-tuned</a>
-    <a href="/Compare/Models" class="btn btn-secondary btn-sm">🧪 So sánh Model</a>
+    <a href="/Compare/Models" class="btn btn-secondary btn-sm">🧪 So sánh LLM</a>
+    <a href="/Dashboard/Experiments?handler=Export@(filter != null ? $"&kind={filter}" : "")" class="btn btn-secondary btn-sm">⬇️ Xuất CSV</a>
+    <a href="/Settings" class="btn btn-secondary btn-sm">⚙️ Cài đặt RBL</a>
 </div>
 
 <div class="card mb-6">
-    <div class="card-header"><span class="card-title">📈 RAGAS benchmark @(rag.HasData ? $"({rag.Subject} · {rag.Questions} câu)" : "")</span></div>
+    <div class="card-header"><span class="card-title">📈 RAGAS chất lượng RAG @(rag.HasData ? $"({rag.Subject} · {rag.Questions} câu)" : "")</span></div>
     @if (rag.HasData)
     {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:0 4px 4px">
@@ -106,7 +160,7 @@
         <div class="empty-state" style="padding:48px">
             <div class="empty-state-icon">📭</div>
             <div class="empty-state-title">Chưa có kết quả thực nghiệm</div>
-            <p class="text-muted" style="margin-top:8px">Nhấn <strong>Chạy bộ thực nghiệm chuẩn</strong> hoặc chạy từng benchmark ở menu So sánh.</p>
+            <p class="text-muted" style="margin-top:8px">Nhấn <strong>Chạy bộ thực nghiệm chuẩn</strong> hoặc chạy từng mục trong checklist phía trên.</p>
         </div>
     </div>
 }
