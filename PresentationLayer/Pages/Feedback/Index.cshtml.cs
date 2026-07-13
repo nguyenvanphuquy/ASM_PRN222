@@ -10,10 +10,15 @@ namespace PresentationLayer.Pages.Feedback;
 public class IndexModel : PageModel
 {
     private readonly IFeedbackService _feedbackService;
-    public IndexModel(IFeedbackService feedbackService) => _feedbackService = feedbackService;
+    private readonly INotificationService _notifier;
+
+    public IndexModel(IFeedbackService feedbackService, INotificationService notifier)
+    {
+        _feedbackService = feedbackService;
+        _notifier = notifier;
+    }
 
     public List<DataAccessLayer.Entities.Feedback> Items { get; private set; } = [];
-    // Phản hồi (reply) của admin, gom theo FeedbackId.
     public Dictionary<string, List<DataAccessLayer.Entities.FeedbackReply>> Replies { get; private set; } = new();
     public bool IsAdmin { get; private set; }
     public int TotalCount { get; private set; }
@@ -21,10 +26,10 @@ public class IndexModel : PageModel
 
     [BindProperty] public string? Comment { get; set; }
     [BindProperty] public int Rating { get; set; } = 5;
-
-    // Dùng cho admin trả lời.
     [BindProperty] public string? ReplyContent { get; set; }
     [BindProperty] public string? FeedbackId { get; set; }
+
+    private string Actor => User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "User";
 
     public async Task OnGetAsync()
     {
@@ -34,7 +39,6 @@ public class IndexModel : PageModel
         IsAdmin = User.IsInRole("Admin");
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        // Chỉ Admin thấy toàn bộ feedback; người dùng khác chỉ thấy feedback của chính mình.
         Items = IsAdmin
             ? await _feedbackService.GetAllAsync()
             : await _feedbackService.GetByUserAsync(userId);
@@ -55,7 +59,6 @@ public class IndexModel : PageModel
         }
     }
 
-    // Gửi phản hồi mới — chỉ người dùng (Student/Lecturer), Admin không gửi.
     public async Task<IActionResult> OnPostAsync()
     {
         if (User.IsInRole("Admin"))
@@ -69,13 +72,19 @@ public class IndexModel : PageModel
         {
             var fullName = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "";
             var avatar = User.FindFirst("AvatarPath")?.Value;
-            await _feedbackService.CreateAsync(userId, fullName, avatar, Rating, Comment);
+            var fb = await _feedbackService.CreateAsync(userId, fullName, avatar, Rating, Comment);
+            var preview = Comment.Length > 80 ? Comment[..80] + "…" : Comment;
+
+            await _notifier.FeedbackChangedAsync("created", fb.Id, userId, preview);
+            await _notifier.NotifyRoleAsync("Admin", "info", "Phản hồi mới",
+                $"{fullName} vừa gửi phản hồi ({Rating}★).");
+            await _notifier.ActivityAsync("💡", "Phản hồi", Actor, $"Gửi phản hồi mới ({Rating}★)");
+
             TempData["Success"] = "Đã gửi phản hồi!";
         }
         return RedirectToPage();
     }
 
-    // Admin trả lời một phản hồi.
     public async Task<IActionResult> OnPostReplyAsync()
     {
         if (!User.IsInRole("Admin")) return Forbid();
@@ -85,19 +94,33 @@ public class IndexModel : PageModel
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
             var fullName = User.FindFirst("FullName")?.Value ?? "Quản trị viên";
             var avatar = User.FindFirst("AvatarPath")?.Value;
+
+            var all = await _feedbackService.GetAllAsync();
+            var fb = all.FirstOrDefault(f => f.Id == FeedbackId);
+
             await _feedbackService.AddReplyAsync(FeedbackId, userId, fullName, avatar, ReplyContent, true);
+
+            if (fb != null)
+            {
+                await _notifier.SendAsync(fb.UserId, "info", "Admin đã trả lời phản hồi",
+                    ReplyContent.Length > 100 ? ReplyContent[..100] + "…" : ReplyContent);
+                await _notifier.FeedbackChangedAsync("reply", fb.Id, fb.UserId, ReplyContent);
+            }
+
+            await _notifier.ActivityAsync("↩️", "Phản hồi", Actor, "Trả lời một phản hồi của người dùng");
             TempData["Success"] = "Đã gửi phản hồi tới người dùng.";
         }
         return RedirectToPage();
     }
 
-    // Admin xoá một phản hồi.
     public async Task<IActionResult> OnPostDeleteAsync(string id)
     {
         if (!User.IsInRole("Admin")) return Forbid();
         if (!string.IsNullOrWhiteSpace(id))
         {
             await _feedbackService.DeleteAsync(id);
+            await _notifier.FeedbackChangedAsync("deleted", id);
+            await _notifier.ActivityAsync("🗑", "Phản hồi", Actor, "Xoá một phản hồi");
             TempData["Success"] = "Đã xoá phản hồi.";
         }
         return RedirectToPage();

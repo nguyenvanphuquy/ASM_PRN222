@@ -194,6 +194,9 @@ else
 
 @section Scripts {
 <script>
+    const FB_IS_ADMIN = @(Model.IsAdmin ? "true" : "false");
+    const FB_USER_ID = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "")';
+
     // ── Star rating (form gửi phản hồi của người dùng) ──
     let selectedStar = 5;
     function highlightStars(n) {
@@ -224,5 +227,20 @@ else
             el.style.display = (okText && okRating) ? '' : 'none';
         });
     }
+
+    // ── SignalR: chỉ reload khi thay đổi đến từ người khác ──
+    (function subscribeFeedback() {
+        if (!window.appNotifHub) { setTimeout(subscribeFeedback, 300); return; }
+        window.appNotifHub.on('FeedbackChanged', function (d) {
+            if (!d) return;
+            // Chính mình vừa tạo → đã redirect, bỏ qua.
+            if (d.action === 'created' && d.userId === FB_USER_ID) return;
+            // Admin vừa trả lời → đã redirect; user nhận toast + reload để thấy reply.
+            if (d.action === 'reply' && FB_IS_ADMIN) return;
+            // Admin vừa xoá trên trang này → đã redirect.
+            if (d.action === 'deleted' && FB_IS_ADMIN) return;
+            location.reload();
+        });
+    })();
 </script>
 }

@@ -136,6 +136,9 @@ public class BillingService : IBillingService
             $"Bạn đã mua {pkg.Name} (+{pkg.TokenQuota:N0} token).");
         await _notifier.PackagePurchasedAsync(pkg.Name, pkg.PriceVnd, pkg.TokenQuota);
 
+        var bal = await GetBalanceAsync(userId);
+        await _notifier.TokenBalanceChangedAsync(userId, bal.Remaining, bal.Granted, bal.Used);
+
         return (true, null, purchase);
     }
 
@@ -157,6 +160,8 @@ public class BillingService : IBillingService
             ? $"Đã hủy gói {p.PackageName}. Bạn vẫn dùng được số token còn lại tới hết hạn ({p.ExpiresAt!.Value.ToLocalTime():dd/MM/yyyy})."
             : $"Đã hủy gói {p.PackageName}.";
         await _notifier.SendAsync(userId, "warning", "Đã hủy gói", msg);
+        var bal = await GetBalanceAsync(userId);
+        await _notifier.TokenBalanceChangedAsync(userId, bal.Remaining, bal.Granted, bal.Used);
         return (true, msg);
     }
 

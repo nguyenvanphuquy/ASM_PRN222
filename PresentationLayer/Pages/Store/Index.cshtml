@@ -24,8 +24,8 @@
             }
             else
             {
-                <div style="font-size:2.2rem;font-weight:800;color:var(--accent-purple)">@b.Remaining.ToString("N0")</div>
-                <div class="text-sm text-muted">Đã dùng @b.Used.ToString("N0") / @b.Granted.ToString("N0") token@(b.NextExpiry != null ? $" · hết hạn {b.NextExpiry.Value.ToLocalTime():dd/MM/yyyy}" : "")</div>
+            <div style="font-size:2.2rem;font-weight:800;color:var(--accent-purple)" id="storeRemaining">@b.Remaining.ToString("N0")</div>
+                <div class="text-sm text-muted" id="storeUsageLine">Đã dùng @b.Used.ToString("N0") / @b.Granted.ToString("N0") token@(b.NextExpiry != null ? $" · hết hạn {b.NextExpiry.Value.ToLocalTime():dd/MM/yyyy}" : "")</div>
             }
         </div>
         @if (!unlimited)
@@ -159,6 +159,16 @@
                     document.body.appendChild(bar);
                 }
                 setTimeout(function () { window.location.reload(); }, 900);
+            });
+            window.appNotifHub.on('TokenBalanceChanged', function (d) {
+                if (!d) return;
+                var rem = document.getElementById('storeRemaining');
+                var line = document.getElementById('storeUsageLine');
+                if (rem && typeof d.remaining === 'number')
+                    rem.textContent = d.remaining.toLocaleString('vi-VN');
+                if (line && typeof d.used === 'number' && typeof d.granted === 'number')
+                    line.textContent = 'Đã dùng ' + d.used.toLocaleString('vi-VN') + ' / ' + d.granted.toLocaleString('vi-VN') + ' token';
+                if (window.applyTokenBalance) window.applyTokenBalance(d);
             });
         } else {
             setTimeout(subscribe, 300);

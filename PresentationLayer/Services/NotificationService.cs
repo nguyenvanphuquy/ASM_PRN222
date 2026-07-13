@@ -97,4 +97,36 @@ public class NotificationService : INotificationService
         await _hub.Clients.All
             .SendAsync("ActivityLogged", new { icon, category, actor, description, time = DateTime.Now.ToString("HH:mm:ss") });
     }
+
+    public async Task FeedbackChangedAsync(string action, string feedbackId, string? userId = null, string? preview = null)
+    {
+        await _hub.Clients.All.SendAsync("FeedbackChanged", new
+        {
+            action,
+            feedbackId,
+            userId,
+            preview,
+            time = DateTime.Now.ToString("HH:mm")
+        });
+    }
+
+    public async Task NotifyRoleAsync(string role, string type, string title, string message)
+    {
+        if (string.IsNullOrWhiteSpace(role)) return;
+        await _hub.Clients.Group($"role-{role}")
+            .SendAsync("ReceiveNotification", new
+            {
+                type,
+                title,
+                message,
+                time = DateTime.Now.ToString("HH:mm"),
+                isRead = false
+            });
+    }
+
+    public async Task TokenBalanceChangedAsync(string userId, int remaining, int granted, int used)
+    {
+        await _hub.Clients.Group($"user-{userId}")
+            .SendAsync("TokenBalanceChanged", new { remaining, granted, used });
+    }
 }

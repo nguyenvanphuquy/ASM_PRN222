@@ -117,3 +117,27 @@
         <a href="/Settings" class="btn btn-secondary">⚙️ Cài đặt</a>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    function showDashBanner() {
+        if (document.getElementById('dashLiveBar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'dashLiveBar';
+        bar.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;' +
+            'background:#2563eb;color:#fff;padding:10px 18px;border-radius:999px;' +
+            'box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.9rem;cursor:pointer';
+        bar.innerHTML = '🔄 Có dữ liệu mới — <strong>Bấm để làm mới</strong>';
+        bar.onclick = function () { location.reload(); };
+        document.body.appendChild(bar);
+    }
+    function sub() {
+        if (!window.appNotifHub) { setTimeout(sub, 300); return; }
+        ['DocumentChanged', 'DocumentStatusChanged', 'FeedbackChanged']
+            .forEach(function (evt) { window.appNotifHub.on(evt, showDashBanner); });
+    }
+    sub();
+})();
+</script>
+}

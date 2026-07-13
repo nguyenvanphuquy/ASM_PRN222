@@ -23,7 +23,7 @@
     </div>
     <div class="stat-card green">
         <div class="stat-icon green">🪙</div>
-        <div class="stat-value">@Model.Balance.Remaining.ToString("N0")</div>
+        <div class="stat-value" id="dashTokenRemaining">@Model.Balance.Remaining.ToString("N0")</div>
         <div class="stat-label">Token còn lại</div>
     </div>
     <div class="stat-card orange">
@@ -104,3 +104,32 @@
         <a href="/Feedback" class="btn btn-secondary">💡 Gửi phản hồi</a>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(function () {
+    function showDashBanner() {
+        if (document.getElementById('dashLiveBar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'dashLiveBar';
+        bar.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;' +
+            'background:#2563eb;color:#fff;padding:10px 18px;border-radius:999px;' +
+            'box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.9rem;cursor:pointer';
+        bar.innerHTML = '🔄 Có dữ liệu mới — <strong>Bấm để làm mới</strong>';
+        bar.onclick = function () { location.reload(); };
+        document.body.appendChild(bar);
+    }
+    function sub() {
+        if (!window.appNotifHub) { setTimeout(sub, 300); return; }
+        window.appNotifHub.on('FeedbackChanged', showDashBanner);
+        window.appNotifHub.on('PackagesChanged', showDashBanner);
+        window.appNotifHub.on('TokenBalanceChanged', function (d) {
+            var el = document.getElementById('dashTokenRemaining');
+            if (el && d && typeof d.remaining === 'number')
+                el.textContent = d.remaining.toLocaleString('vi-VN');
+        });
+    }
+    sub();
+})();
+</script>
+}

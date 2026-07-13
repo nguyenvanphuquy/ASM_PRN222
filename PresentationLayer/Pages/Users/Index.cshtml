@@ -333,6 +333,8 @@
                 row.dataset.role = d.value;
                 recount();
                 flash(row);
+            } else if (d.action === 'assign') {
+                flash(row);
             }
         }
         (function subscribe() {

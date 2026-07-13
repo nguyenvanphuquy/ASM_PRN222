@@ -177,6 +177,15 @@ else
             <button class="btn btn-secondary btn-icon" id="sidebarToggle" style="display:none" title="Menu">☰</button>
             <h2 class="topbar-title" style="font-size:1rem;font-weight:600;">@topbarTitle</h2>
             <div class="topbar-actions">
+                @if (role == "Student")
+                {
+                    <a href="/Store" id="tokenBadge" title="Số dư token"
+                       style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+                              background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);
+                              text-decoration:none;color:inherit;font-size:0.82rem;font-weight:600">
+                        🪙 <span id="tokenRemaining">…</span>
+                    </a>
+                }
                 <!-- 🔔 Notification Bell + Dropdown -->
                 <div style="position:relative;display:inline-flex;align-items:center" id="notifWrapper">
                     <button id="notifBell" title="Thông báo"
@@ -400,10 +409,34 @@ else
         showToast(data);
     });
 
+    // Cập nhật badge token realtime (sinh viên)
+    function applyTokenBalance(d) {
+        const el = document.getElementById('tokenRemaining');
+        if (!el || !d) return;
+        if (typeof d.remaining === 'number' && d.remaining >= 0)
+            el.textContent = d.remaining.toLocaleString('vi-VN');
+        window.dispatchEvent(new CustomEvent('token-balance-changed', { detail: d }));
+    }
+
+    conn.on('TokenBalanceChanged', applyTokenBalance);
+
+    async function loadTokenBalance() {
+        const el = document.getElementById('tokenRemaining');
+        if (!el) return;
+        try {
+            const res = await fetch('/api/billing/balance');
+            if (!res.ok) return;
+            const data = await res.json();
+            applyTokenBalance(data);
+        } catch (e) { console.warn('Token balance:', e); }
+    }
+    loadTokenBalance();
+
     // Expose the live notification connection so individual pages (e.g. Documents)
     // can subscribe to extra realtime events like 'DocumentStatusChanged'
     // without opening a second connection.
     window.appNotifHub = conn;
+    window.applyTokenBalance = applyTokenBalance;
 
     conn.start().catch(e => console.warn('Notification hub:', e));
 })();

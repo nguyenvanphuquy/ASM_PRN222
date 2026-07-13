@@ -232,6 +232,10 @@ connection.on('ReceiveMessage', data => {
     ta?.focus();
 });
 
+connection.on('TokenBalanceChanged', data => {
+    if (window.applyTokenBalance) window.applyTokenBalance(data);
+});
+
 connection.on('Error', msg => {
     thinkingBubble?.remove(); thinkingBubble = null;
     appendBubble('assistant', `⚠️ ${escHtml(msg)}`, null);

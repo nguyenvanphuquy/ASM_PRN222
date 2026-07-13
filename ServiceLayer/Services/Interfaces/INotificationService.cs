@@ -54,6 +54,25 @@ public interface INotificationService
     /// tạo/sửa/xoá tài khoản-gói, đổi cấu hình...
     /// </summary>
     Task ActivityAsync(string icon, string category, string actor, string description);
+
+    /// <summary>
+    /// Phát sự kiện realtime khi phản hồi thay đổi (tạo / trả lời / xoá).
+    /// Trang Phản hồi và Dashboard lắng nghe để cập nhật mà không cần reload thủ công.
+    /// action: created | reply | deleted.
+    /// </summary>
+    Task FeedbackChangedAsync(string action, string feedbackId, string? userId = null, string? preview = null);
+
+    /// <summary>
+    /// Thông báo toast tới mọi client thuộc một vai trò (group role-{role}).
+    /// Không ghi DB — dùng cho cảnh báo realtime (vd. admin có phản hồi mới).
+    /// </summary>
+    Task NotifyRoleAsync(string role, string type, string title, string message);
+
+    /// <summary>
+    /// Phát sự kiện số dư token của một user vừa thay đổi (sau chat / mua / hủy gói).
+    /// Layout và trang Cửa hàng cập nhật badge token realtime.
+    /// </summary>
+    Task TokenBalanceChangedAsync(string userId, int remaining, int granted, int used);
 }
 
 

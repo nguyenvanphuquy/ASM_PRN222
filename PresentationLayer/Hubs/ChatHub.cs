@@ -1,4 +1,3 @@
-using DataAccessLayer.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using ServiceLayer.Services.Interfaces;
@@ -10,10 +9,14 @@ namespace PresentationLayer.Hubs;
 public class ChatHub : Hub
 {
     private readonly IChatService _chatService;
+    private readonly IBillingService _billing;
+    private readonly INotificationService _notifier;
 
-    public ChatHub(IChatService chatService)
+    public ChatHub(IChatService chatService, IBillingService billing, INotificationService notifier)
     {
         _chatService = chatService;
+        _billing = billing;
+        _notifier = notifier;
     }
 
     /// <summary>
@@ -24,7 +27,6 @@ public class ChatHub : Hub
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         if (string.IsNullOrWhiteSpace(question)) return;
 
-        // Xác thực session thuộc về user này
         var session = await _chatService.GetSessionAsync(sessionId);
         if (session == null || session.UserId != userId)
         {
@@ -32,14 +34,12 @@ public class ChatHub : Hub
             return;
         }
 
-        // Báo cho client biết AI đang xử lý
         await Clients.Caller.SendAsync("Thinking");
 
         try
         {
             var result = await _chatService.AskAsync(sessionId, userId, question);
 
-            // Gửi câu trả lời + nguồn tham khảo về client
             await Clients.Caller.SendAsync("ReceiveMessage", new
             {
                 answer = result.Answer,
@@ -52,6 +52,20 @@ public class ChatHub : Hub
                     confidenceScore = s.ConfidenceScore
                 })
             });
+
+            // Cập nhật số dư token realtime (sinh viên bị trừ sau mỗi lần hỏi).
+            var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == "Student")
+            {
+                var bal = await _billing.GetBalanceAsync(userId);
+                await Clients.Caller.SendAsync("TokenBalanceChanged", new
+                {
+                    remaining = bal.Remaining,
+                    granted = bal.Granted,
+                    used = bal.Used
+                });
+                await _notifier.TokenBalanceChangedAsync(userId, bal.Remaining, bal.Granted, bal.Used);
+            }
         }
         catch (Exception ex)
         {
