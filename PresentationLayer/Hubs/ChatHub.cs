@@ -47,6 +47,8 @@ public class ChatHub : Hub
                 {
                     documentName = s.DocumentName,
                     page = s.Page,
+                    chunkIndex = s.ChunkIndex,
+                    snippet = s.Snippet,
                     confidenceScore = s.ConfidenceScore
                 })
             });

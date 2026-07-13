@@ -76,8 +76,12 @@ public class BillingService : IBillingService
         var active = await _repo.GetActivePaidPurchasesAsync(userId);
         int granted = active.Sum(p => p.TokensGranted);
         int used = active.Sum(p => p.TokensUsed);
-        var nextExpiry = active.Where(p => p.ExpiresAt != null).OrderBy(p => p.ExpiresAt).FirstOrDefault()?.ExpiresAt;
-        return new TokenBalance(granted, used, Math.Max(0, granted - used), nextExpiry);
+        // Hạn sử dụng = ngày XA NHẤT (toàn bộ token còn dùng được tới đó). Nếu có gói
+        // không giới hạn thời gian (ExpiresAt = null) thì coi như không hết hạn.
+        DateTime? validUntil = active.Any(p => p.ExpiresAt == null)
+            ? null
+            : active.Select(p => p.ExpiresAt).OrderByDescending(x => x).FirstOrDefault();
+        return new TokenBalance(granted, used, Math.Max(0, granted - used), validUntil);
     }
 
     public Task<List<PackagePurchase>> GetUserPurchasesAsync(string userId) => _repo.GetUserPurchasesAsync(userId);
@@ -86,6 +90,30 @@ public class BillingService : IBillingService
     {
         var pkg = await _repo.GetPackageAsync(packageId);
         if (pkg is null || !pkg.IsActive) return (false, "Gói không tồn tại hoặc đã ngừng bán", null);
+
+        var now = DateTime.UtcNow;
+
+        // Mua thêm gói không chỉ CỘNG token mà còn KÉO DÀI hạn sử dụng: hạn mới =
+        // (hạn xa nhất còn hiệu lực, hoặc hôm nay nếu đã hết) + số ngày của gói mới.
+        DateTime? newExpiry = null;
+        if (pkg.DurationDays > 0)
+        {
+            var active = await _repo.GetActivePaidPurchasesAsync(userId);
+            var furthest = active.Where(p => p.ExpiresAt != null)
+                                 .Select(p => p.ExpiresAt!.Value)
+                                 .DefaultIfEmpty(now)
+                                 .Max();
+            var baseDate = furthest > now ? furthest : now;
+            newExpiry = baseDate.AddDays(pkg.DurationDays);
+
+            // Đưa các gói đang hiệu lực (chưa hủy) về chung hạn mới để toàn bộ token
+            // dùng chung một hạn — không phần nào hết hạn sớm hơn.
+            foreach (var p in active.Where(p => p.Status == "Paid" && p.ExpiresAt != null && p.ExpiresAt < newExpiry))
+            {
+                p.ExpiresAt = newExpiry;
+                await _repo.UpdatePurchaseAsync(p);
+            }
+        }
 
         var purchase = new PackagePurchase
         {
@@ -97,9 +125,9 @@ public class BillingService : IBillingService
             TokensUsed = 0,
             Status = "Paid",
             PaymentMethod = "Mock",
-            TransactionRef = "TXN" + DateTime.UtcNow.ToString("yyMMddHHmmss") + Random.Shared.Next(100, 999),
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = pkg.DurationDays > 0 ? DateTime.UtcNow.AddDays(pkg.DurationDays) : null
+            TransactionRef = "TXN" + now.ToString("yyMMddHHmmss") + Random.Shared.Next(100, 999),
+            CreatedAt = now,
+            ExpiresAt = newExpiry
         };
         await _repo.AddPurchaseAsync(purchase);
 

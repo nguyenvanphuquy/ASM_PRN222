@@ -129,7 +129,7 @@
     </div>
     <div class="stat-card orange">
         <div class="stat-icon orange">📊</div>
-        <div class="stat-value" style="color:@(r.ProfitVnd >= 0 ? "var(--accent-green)" : "var(--accent-red)")">@r.ProfitVnd.ToString("N0")₫</div>
+        <div class="stat-value" id="revProfit" style="color:@(r.ProfitVnd >= 0 ? "var(--accent-green)" : "var(--accent-red)")">@r.ProfitVnd.ToString("N0")₫</div>
         <div class="stat-label">Lợi nhuận ước tính</div>
     </div>
 </div>
@@ -232,12 +232,21 @@
 
     // ── Realtime: doanh thu tăng ngay khi có người mua gói ──
     (function () {
-        let count = @r.TotalPurchases, revenue = @r.TotalRevenueVnd;
+        let count = @r.TotalPurchases, revenue = @r.TotalRevenueVnd, profit = @r.ProfitVnd;
         function onPurchase(d) {
             if (!d) return;
-            count += 1; revenue += Number(d.amountVnd || 0);
+            const amt = Number(d.amountVnd || 0);
+            if (amt <= 0) return; // gói miễn phí (0đ) không tính là lượt mua/doanh thu
+            count += 1; revenue += amt;
+            // Mua gói chỉ làm tăng doanh thu, chi phí LLM không đổi → lợi nhuận tăng đúng bằng số tiền.
+            profit += amt;
             const c = document.getElementById('revCount'); if (c) c.textContent = count;
             const rv = document.getElementById('revTotal'); if (rv) rv.textContent = revenue.toLocaleString('vi-VN') + '₫';
+            const pf = document.getElementById('revProfit');
+            if (pf) {
+                pf.textContent = profit.toLocaleString('vi-VN') + '₫';
+                pf.style.color = profit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            }
             const tbody = document.getElementById('recentPurchases');
             if (tbody) {
                 if (tbody.querySelector('td[colspan]')) tbody.innerHTML = ''; // bỏ dòng "chưa có giao dịch"

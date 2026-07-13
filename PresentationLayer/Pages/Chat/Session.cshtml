@@ -6,69 +6,137 @@
     Layout = "_Layout";
 }
 
+<style>
+    .chat-shell { display:flex; height:calc(100vh - var(--topbar-h) - 1px); margin:-28px; }
+    .chat-history { width:270px; flex-shrink:0; display:flex; flex-direction:column;
+                    background:var(--bg-card); border-right:1px solid var(--border-subtle); }
+    .chat-history-new { padding:14px; border-bottom:1px solid var(--border-subtle);
+                        display:flex; flex-direction:column; gap:8px; }
+    .chat-history-list { flex:1; overflow-y:auto; padding:8px; }
+    .chat-history-item { display:block; padding:8px 10px; border-radius:8px; margin-bottom:4px;
+                         color:var(--text-secondary); border:1px solid transparent; border-left:3px solid transparent; }
+    .chat-history-item:hover { background:var(--bg-card-hover); color:var(--text-secondary); }
+    .chat-history-item.active { background:var(--bg-card-hover); border-left-color:var(--accent-purple); }
+    .chat-main { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .chat-subjectbar { padding:10px 16px; border-bottom:1px solid var(--border-subtle);
+                       display:flex; align-items:center; gap:10px; background:var(--bg-glass); }
+    @@media (max-width: 820px) { .chat-history { display:none; } .chat-shell { margin:-16px; } }
+</style>
+
 @if (Model.Session == null)
 {
     <div class="empty-state"><div class="empty-state-icon">❓</div><div>Không tìm thấy cuộc hội thoại.</div></div>
 }
 else
 {
-<div class="chat-container" style="height:calc(100vh - var(--topbar-h) - 1px);margin:-28px">
-    <div class="chat-messages" id="chatMessages">
-        @if (Model.Messages.Count == 0)
-        {
-            <div class="empty-state" id="emptyState">
-                <div class="empty-state-icon">🤖</div>
-                <div class="empty-state-title">AI sẵn sàng trợ giúp!</div>
-                <p class="empty-state-text">Đặt câu hỏi về tài liệu môn học bên dưới.</p>
-            </div>
-        }
-        else
-        {
-            foreach (var msg in Model.Messages)
+<div class="chat-shell">
+    <!-- ── Thanh bên: chọn môn + lịch sử trò chuyện ── -->
+    <aside class="chat-history">
+        <form method="post" asp-page-handler="Create" class="chat-history-new">
+            @Html.AntiForgeryToken()
+            <label class="text-sm text-muted" style="font-weight:600">Hỏi về môn</label>
+            <select name="subjectId" class="form-control">
+                <option value="">🌐 Tất cả các môn</option>
+                @foreach (var s in Model.Subjects)
+                {
+                    <option value="@s.Id">@s.Name</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">➕ Cuộc trò chuyện mới</button>
+        </form>
+
+        <div class="chat-history-list">
+            <div class="text-sm text-muted" style="padding:6px 8px;font-weight:600">🕒 Lịch sử trò chuyện</div>
+            @if (Model.Sessions.Count == 0)
             {
-                <div class="bubble @msg.Role animate-fade-in">
-                    @if (msg.Role == "assistant")
-                    {
-                        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">🤖 AI</div>
-                    }
-                    <div style="white-space:pre-wrap">@msg.Content</div>
-
-                    @if (msg.Role == "assistant" && msg.Sources.Count > 0)
-                    {
-                        <div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px">
-                            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Nguồn tham khảo:</div>
-                            @foreach (var src in msg.Sources.Take(3))
-                            {
-                                <div style="font-size:0.75rem;color:var(--accent-blue);margin-bottom:2px">
-                                    📄 @src.DocumentName – Trang @src.Page
-                                    @if(src.ConfidenceScore > 0)
-                                    {
-                                        <span style="color:var(--text-muted); font-size:0.7rem;">(Độ tin cậy: @(Math.Round(src.ConfidenceScore * 100))%)</span>
-                                    }
-                                </div>
-                            }
+                <div class="text-sm text-muted" style="padding:8px">Chưa có cuộc trò chuyện nào.</div>
+            }
+            else
+            {
+                foreach (var s in Model.Sessions.OrderByDescending(x => x.UpdatedAt))
+                {
+                    var active = s.Id == Model.Session.Id;
+                    <a href="/Chat/Session?id=@s.Id" class="chat-history-item @(active ? "active" : "")">
+                        <div class="truncate" style="font-weight:600;font-size:0.85rem">@s.Title</div>
+                        <div class="text-muted" style="font-size:0.7rem">
+                            @Model.SubjectLabel(s.SubjectId) · @s.UpdatedAt.ToLocalTime().ToString("dd/MM HH:mm")
                         </div>
-                    }
+                    </a>
+                }
+            }
+        </div>
+    </aside>
 
-                    <div style="font-size:0.68rem;color:var(--text-muted);margin-top:6px;text-align:right">
-                        @msg.CreatedAt.ToLocalTime().ToString("HH:mm")
-                    </div>
+    <!-- ── Khung chat chính ── -->
+    <div class="chat-main">
+        <div class="chat-subjectbar">
+            <span class="badge badge-orange">@Model.SubjectLabel(Model.Session.SubjectId)</span>
+            <span class="text-sm text-muted truncate">@Model.Session.Title</span>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            @if (Model.Messages.Count == 0)
+            {
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">🤖</div>
+                    <div class="empty-state-title">AI sẵn sàng trợ giúp!</div>
+                    <p class="empty-state-text">Đặt câu hỏi về tài liệu môn học bên dưới.</p>
                 </div>
             }
-        }
-    </div>
+            else
+            {
+                foreach (var msg in Model.Messages)
+                {
+                    <div class="bubble @msg.Role animate-fade-in">
+                        @if (msg.Role == "assistant")
+                        {
+                            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">🤖 AI</div>
+                        }
+                        <div style="white-space:pre-wrap">@msg.Content</div>
 
-    <!-- Input area -->
-    <div class="chat-input-area">
-        <a href="/Chat" class="btn btn-secondary btn-sm" title="Về danh sách chat">←</a>
-        <div class="flex gap-2" style="flex:1">
-            <textarea id="questionInput" class="form-control chat-input"
-                      placeholder="Đặt câu hỏi về tài liệu... (Ctrl+Enter để gửi)"
-                      rows="1" autofocus></textarea>
-            <button type="button" class="btn btn-primary" id="sendBtn" title="Gửi (Ctrl+Enter)">
-                <span id="sendText">➤</span>
-                <span id="sendSpinner" style="display:none">⏳</span>
-            </button>
+                        @if (msg.Role == "assistant" && msg.Sources.Count > 0)
+                        {
+                            <div style="margin-top:10px;border-top:1px solid var(--border-subtle);padding-top:8px">
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Trích dẫn từ tài liệu:</div>
+                                @foreach (var src in msg.Sources.Take(3))
+                                {
+                                    <div style="margin-bottom:8px">
+                                        <div style="font-size:0.75rem;color:var(--accent-blue)">
+                                            📄 @src.DocumentName · Trang @src.Page · đoạn #@(src.ChunkIndex + 1)
+                                            @if(src.ConfidenceScore > 0)
+                                            {
+                                                <span style="color:var(--text-muted); font-size:0.7rem;">(Độ liên quan: @(Math.Round(src.ConfidenceScore * 100))%)</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(src.Snippet))
+                                        {
+                                            <div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“@src.Snippet”</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:6px;text-align:right">
+                            @msg.CreatedAt.ToLocalTime().ToString("HH:mm")
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Input area -->
+        <div class="chat-input-area">
+            <a href="/Chat" class="btn btn-secondary btn-sm" title="Về danh sách chat">←</a>
+            <div class="flex gap-2" style="flex:1">
+                <textarea id="questionInput" class="form-control chat-input"
+                          placeholder="Đặt câu hỏi về tài liệu... (Ctrl+Enter để gửi)"
+                          rows="1" autofocus></textarea>
+                <button type="button" class="btn btn-primary" id="sendBtn" title="Gửi (Ctrl+Enter)">
+                    <span id="sendText">➤</span>
+                    <span id="sendSpinner" style="display:none">⏳</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -115,13 +183,17 @@ function appendBubble(role, html, sources) {
     inner += `<div style="white-space:pre-wrap">${html}</div>`;
 
     if (sources && sources.length > 0) {
-        inner += `<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px">
-            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Nguồn tham khảo:</div>`;
+        inner += `<div style="margin-top:10px;border-top:1px solid var(--border-subtle);padding-top:8px">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Trích dẫn từ tài liệu:</div>`;
         sources.slice(0, 3).forEach(s => {
             const pct = s.confidenceScore > 0
-                ? ` <span style="color:var(--text-muted);font-size:0.7rem">(Độ tin cậy: ${Math.round(s.confidenceScore * 100)}%)</span>`
+                ? ` <span style="color:var(--text-muted);font-size:0.7rem">(Độ liên quan: ${Math.round(s.confidenceScore * 100)}%)</span>`
                 : '';
-            inner += `<div style="font-size:0.75rem;color:var(--accent-blue);margin-bottom:2px">📄 ${escHtml(s.documentName)} – Trang ${s.page}${pct}</div>`;
+            const seg = (s.chunkIndex != null) ? ` · đoạn #${s.chunkIndex + 1}` : '';
+            const quote = s.snippet
+                ? `<div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“${escHtml(s.snippet)}”</div>`
+                : '';
+            inner += `<div style="margin-bottom:8px"><div style="font-size:0.75rem;color:var(--accent-blue)">📄 ${escHtml(s.documentName)} · Trang ${s.page}${seg}${pct}</div>${quote}</div>`;
         });
         inner += `</div>`;
     }
@@ -200,4 +272,3 @@ ta?.addEventListener('keydown', e => {
 });
 </script>
 }
-

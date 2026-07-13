@@ -93,28 +93,31 @@ public class ReportService : IReportService
     public async Task<RevenueReport> GetRevenueReportAsync()
     {
         var purchases = await _billing.GetAllPurchasesAsync();
-        var paid = purchases.Where(p => p.Status == "Paid").ToList();
+        // "Lượt mua gói" & doanh thu CHỈ tính giao dịch có trả tiền (AmountVnd > 0):
+        //  - Bỏ gói dùng thử miễn phí (auto-grant 0đ) — đó không phải "lượt mua".
+        //  - Gói đã HỦY vẫn tính (app không hoàn tiền → tiền đã thu vẫn là doanh thu thật).
+        var sales = purchases.Where(p => p.AmountVnd > 0).ToList();
         var usage = await _billing.GetUsageSinceAsync(DateTime.MinValue);
         var users = await _users.GetAllAsync();
         var userMap = users.ToDictionary(u => u.Id, u => u);
 
         decimal costUsd = usage.Sum(l => l.CostUsd);
         long costVnd = (long)(costUsd * UsdToVnd);
-        long revenue = paid.Sum(p => p.AmountVnd);
+        long revenue = sales.Sum(p => p.AmountVnd);
 
         var report = new RevenueReport
         {
             TotalRevenueVnd = revenue,
-            TotalPurchases = paid.Count,
-            PayingUsers = paid.Where(p => p.AmountVnd > 0).Select(p => p.UserId).Distinct().Count(),
-            TokensSold = paid.Sum(p => (long)p.TokensGranted),
-            TokensUsed = paid.Sum(p => (long)p.TokensUsed),
+            TotalPurchases = sales.Count,
+            PayingUsers = sales.Select(p => p.UserId).Distinct().Count(),
+            TokensSold = sales.Sum(p => (long)p.TokensGranted),
+            TokensUsed = sales.Sum(p => (long)p.TokensUsed),
             EstimatedCostUsd = costUsd,
             EstimatedCostVnd = costVnd,
             ProfitVnd = revenue - costVnd,
         };
 
-        report.ByPackage = paid
+        report.ByPackage = sales
             .GroupBy(p => p.PackageName)
             .Select(g => new PackageRevenueStat
             {
