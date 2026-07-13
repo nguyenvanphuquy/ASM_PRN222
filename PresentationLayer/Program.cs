@@ -262,6 +262,8 @@ public class Program
                         ALTER TABLE Documents ADD QualitySummary nvarchar(max) NULL;
                     IF COL_LENGTH('Documents', 'QualityWarnings') IS NULL
                         ALTER TABLE Documents ADD QualityWarnings nvarchar(max) NULL;
+                    IF OBJECT_ID('Packages') IS NOT NULL AND COL_LENGTH('Packages', 'IsDeleted') IS NULL
+                        ALTER TABLE Packages ADD IsDeleted bit NOT NULL DEFAULT 0;
                     IF OBJECT_ID('AllowedEmails') IS NULL
                     BEGIN
                         CREATE TABLE AllowedEmails (

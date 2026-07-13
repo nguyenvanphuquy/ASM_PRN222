@@ -34,10 +34,12 @@ public class BillingRepository : IBillingRepository
 
     public async Task DeletePackageAsync(string id)
     {
+        // Xoá mềm: giữ lại row để lịch sử mua (PackagePurchases) không mồ côi khoá ngoại.
+        // Gói bị đánh dấu IsDeleted sẽ bị query filter ẩn khỏi cửa hàng & trang quản trị.
         var p = await _context.Packages.FindAsync(id);
-        if (p != null)
+        if (p != null && !p.IsDeleted)
         {
-            _context.Packages.Remove(p);
+            p.IsDeleted = true;
             await _context.SaveChangesAsync();
         }
     }

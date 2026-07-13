@@ -18,4 +18,7 @@ public class Package
     // Gói nổi bật (đánh dấu "Phổ biến" trên cửa hàng).
     public bool IsPopular { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // Xoá mềm: gói bị "xoá" vẫn giữ lại row để lịch sử mua (PackagePurchases) không mồ côi
+    // (khoá ngoại PackagePurchases → Packages). Bị ẩn khỏi cửa hàng & trang quản trị qua query filter.
+    public bool IsDeleted { get; set; }
 }

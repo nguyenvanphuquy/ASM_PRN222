@@ -331,6 +331,9 @@ public class AppDbContext : DbContext
             e.Property(x => x.Id).HasMaxLength(36);
             e.Property(x => x.Name).HasMaxLength(150);
             e.Property(x => x.Description).HasMaxLength(500);
+            // Xoá mềm: ẩn gói đã xoá khỏi mọi truy vấn (cửa hàng, quản trị, mua, đếm)
+            // nhưng vẫn giữ row để PackagePurchases tham chiếu (khoá ngoại).
+            e.HasQueryFilter(x => !x.IsDeleted);
         });
 
         modelBuilder.Entity<PackagePurchase>(e =>
