@@ -1,0 +1,7 @@
+STT,Subject,Question
+1,SWE301,"Kiểm thử phần mềm là gì / nhằm mục đích gì?"
+2,SWE301,"Quy trình kiểm thử được chia làm các cấp độ chính nào?"
+3,SWE301,"Kiểm thử đơn vị (Unit Testing) tập trung vào gì?"
+4,SWE301,"Ai thường viết Unit Testing?"
+5,SWE301,"Kiểm thử tích hợp (Integration Testing) kiểm tra điều gì?"
+6,SWE301,"Kiểm thử hệ thống (System Testing) đánh giá điều gì?"

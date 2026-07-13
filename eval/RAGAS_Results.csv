@@ -1,0 +1,5 @@
+Metric,Value,Subject,Questions,Generator,Judge,Embedding
+faithfulness,0.917,SWE301,6,llama-3.3-70b-versatile,llama-3.3-70b-versatile,multilingual-e5-base
+answer_relevancy,0.953,SWE301,6,llama-3.3-70b-versatile,llama-3.3-70b-versatile,multilingual-e5-base
+context_precision,0.917,SWE301,6,llama-3.3-70b-versatile,llama-3.3-70b-versatile,multilingual-e5-base
+context_recall,1.000,SWE301,6,llama-3.3-70b-versatile,llama-3.3-70b-versatile,multilingual-e5-base

@@ -146,11 +146,19 @@
             <div><div class="text-sm text-muted">context_precision</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextPrecision.ToString("F3")</div></div>
             <div><div class="text-sm text-muted">context_recall</div><div style="font-size:1.4rem;font-weight:700">@rag.ContextRecall.ToString("F3")</div></div>
         </div>
-        <p class="text-sm text-muted" style="margin:12px 0 0">Nguồn: eval/RAGAS_Results.md · Tái lập: <code>py -3 eval/ragas_benchmark.py --limit 6</code></p>
+        <p class="text-sm text-muted" style="margin:12px 0 0">
+            Nguồn: eval/RAGAS_Results.md ·
+            <a href="/Dashboard/Experiments?handler=ExportRagas">⬇️ Tải Excel RAGAS</a> ·
+            Tái lập: <code>py -3 eval/ragas_benchmark.py --limit 6</code>
+        </p>
     }
     else
     {
-        <p class="text-muted" style="margin:0">Chưa có kết quả RAGAS. Chạy: <code>py -3 eval/ragas_benchmark.py --limit 6</code></p>
+        <p class="text-muted" style="margin:0">
+            Chưa có kết quả RAGAS trên dashboard.
+            File đã xuất sẵn: <code>eval/RAGAS_Results.xlsx</code> ·
+            <a href="/Dashboard/Experiments?handler=ExportRagas">⬇️ Tải Excel</a>
+        </p>
     }
 </div>
 

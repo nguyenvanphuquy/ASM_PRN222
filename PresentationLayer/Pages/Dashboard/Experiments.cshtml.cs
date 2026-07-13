@@ -51,6 +51,29 @@ public class ExperimentsModel : PageModel
         return File(bytes, "text/csv; charset=utf-8", name);
     }
 
+    public IActionResult OnGetExportRagas()
+    {
+        var path = FindRagasXlsx();
+        if (path == null)
+            return NotFound("Chưa có file RAGAS_Results.xlsx. Chạy: py -3 eval/ragas_benchmark.py");
+
+        return PhysicalFile(path,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "RAGAS_Results.xlsx");
+    }
+
+    private static string? FindRagasXlsx()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        for (var i = 0; i < 6 && dir != null; i++, dir = dir.Parent)
+        {
+            var p = Path.Combine(dir.FullName, "eval", "RAGAS_Results.xlsx");
+            if (System.IO.File.Exists(p)) return p;
+        }
+        var fromBase = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "eval", "RAGAS_Results.xlsx"));
+        return System.IO.File.Exists(fromBase) ? fromBase : null;
+    }
+
     private static string? NormalizeKind(string? kind)
         => kind switch
         {
