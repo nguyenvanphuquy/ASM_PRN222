@@ -1,4 +1,5 @@
 @using System.Security.Claims
+@using PresentationLayer.Helpers
 @{
     var user = User;
     var isAuth = user.Identity?.IsAuthenticated ?? false;
@@ -10,11 +11,13 @@
     var initials = fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "?";
     var pageTitle = (string?)ViewData["Title"] ?? "ChatBot PRN222";
     var topbarTitle = (string?)ViewData["TopbarTitle"] ?? pageTitle;
+    var dashboardHome = DashboardHome.PathFor(role);
 
     // Active page detection
     var path = Context.Request.Path.Value?.ToLower() ?? "";
     bool IsActive(string segment) => path.StartsWith(segment);
     bool rblOpen = IsActive("/compare") || IsActive("/dashboard/experiments");
+    bool dashboardActive = IsActive("/dashboard") && !IsActive("/dashboard/experiments");
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -37,7 +40,7 @@ else
 <div class="app-shell">
     <!-- ── Sidebar ── -->
     <aside class="sidebar" id="sidebar">
-        <a class="sidebar-logo" href="/Dashboard">
+        <a class="sidebar-logo" href="@dashboardHome">
             <div class="sidebar-logo-icon">🤖</div>
             <div class="sidebar-logo-text">
                 ChatBot
@@ -48,7 +51,7 @@ else
         <nav class="sidebar-nav">
             @if (role == "Lecturer")
             {
-                <a class="nav-item @(IsActive("/dashboard") && !IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard">
+                <a class="nav-item @(dashboardActive ? "active" : "")" href="@dashboardHome">
                     <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(path == "/documents" || path == "/documents/" ? "active" : "")" href="/Documents">
@@ -78,7 +81,7 @@ else
             }
             else if (role == "Admin")
             {
-                <a class="nav-item @(IsActive("/dashboard") && !IsActive("/dashboard/experiments") ? "active" : "")" href="/Dashboard">
+                <a class="nav-item @(dashboardActive ? "active" : "")" href="@dashboardHome">
                     <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(IsActive("/users") ? "active" : "")" href="/Users">
@@ -120,7 +123,7 @@ else
             }
             else
             {
-                <a class="nav-item @(IsActive("/dashboard") ? "active" : "")" href="/Dashboard">
+                <a class="nav-item @(dashboardActive ? "active" : "")" href="@dashboardHome">
                     <span class="nav-icon">🏠</span> Bảng điều khiển
                 </a>
                 <a class="nav-item @(IsActive("/subjects") ? "active" : "")" href="/Subjects">

@@ -1,0 +1,119 @@
+@page
+@model PresentationLayer.Pages.Dashboard.LecturerModel
+@{
+    ViewData["Title"] = "Dashboard Giảng viên";
+    ViewData["TopbarTitle"] = "🏠 Dashboard Giảng viên";
+    var s = Model.Stats;
+    var exp = Model.Experiments;
+}
+
+<div class="page-header">
+    <h1>Bảng điều khiển giảng viên</h1>
+    <p>Quản lý tài liệu, kiểm thử chatbot và theo dõi thực nghiệm RBL</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card purple">
+        <div class="stat-icon purple">📖</div>
+        <div class="stat-value">@Model.AssignedSubjectCount</div>
+        <div class="stat-label">Môn được giao</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-icon blue">📄</div>
+        <div class="stat-value">@s.Documents</div>
+        <div class="stat-label">Tài liệu hệ thống</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">🧩</div>
+        <div class="stat-value">@s.Chunks</div>
+        <div class="stat-label">Chunks đã index</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon orange">🧪</div>
+        <div class="stat-value">@exp.TotalRuns</div>
+        <div class="stat-label">Thực nghiệm RBL</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📄 Tài liệu gần đây</span>
+            <a href="/Documents" class="btn btn-secondary btn-sm">Quản lý</a>
+        </div>
+        @if (Model.MyDocuments.Count == 0)
+        {
+            <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">📂</div>
+                <div class="empty-state-title">Chưa có tài liệu</div>
+            </div>
+        }
+        else
+        {
+            foreach (var doc in Model.MyDocuments)
+            {
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle)">
+                    <div style="font-size:1.4rem">
+                        @(doc.FileName.EndsWith(".pdf") ? "📕" :
+                          doc.FileName.EndsWith(".docx") ? "📘" :
+                          doc.FileName.EndsWith(".pptx") ? "📙" : "📄")
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div class="truncate" style="font-size:0.85rem;font-weight:600">@doc.Title</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted)">
+                            @(doc.FileSize / 1024) KB · @doc.Status
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🧪 Thực nghiệm gần đây</span>
+            <a href="/Dashboard/Experiments" class="btn btn-secondary btn-sm">Xem tất cả</a>
+        </div>
+        @if (exp.RecentRuns.Count == 0)
+        {
+            <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">🔬</div>
+                <div class="empty-state-title">Chưa có thực nghiệm</div>
+            </div>
+        }
+        else
+        {
+            foreach (var run in exp.RecentRuns.Take(5))
+            {
+                <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle)">
+                    <div class="truncate" style="font-size:0.85rem;font-weight:600">@run.KindLabel</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted)" class="truncate">
+                        @run.Question
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚡ Thao tác nhanh</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="/Documents" class="btn btn-primary">📂 Quản lý tài liệu</a>
+        @if (Model.CanUpload)
+        {
+            <a href="/Documents/Upload" class="btn btn-secondary">⬆️ Upload tài liệu</a>
+        }
+        <a href="/Chat" class="btn btn-secondary">🤖 Kiểm thử Chatbot</a>
+        <a href="/Dashboard/Experiments" class="btn btn-secondary" style="border-color:var(--accent-purple);color:var(--accent-purple)">
+            📊 Kết quả RBL
+        </a>
+        <a href="/Documents/Compare" class="btn btn-secondary" style="border-color:var(--accent-purple);color:var(--accent-purple)">
+            🔍 So sánh file AI
+        </a>
+        <a href="/Feedback" class="btn btn-secondary">💡 Gửi phản hồi</a>
+        <a href="/Settings" class="btn btn-secondary">⚙️ Cài đặt</a>
+    </div>
+</div>

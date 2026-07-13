@@ -1,0 +1,106 @@
+@page
+@model PresentationLayer.Pages.Dashboard.StudentModel
+@{
+    ViewData["Title"] = "Dashboard Sinh viên";
+    ViewData["TopbarTitle"] = "🏠 Dashboard Sinh viên";
+}
+
+<div class="page-header">
+    <h1>Chào mừng bạn học</h1>
+    <p>Học tập với trợ lý AI – ChatBot PRN222</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card purple">
+        <div class="stat-icon purple">📚</div>
+        <div class="stat-value">@Model.SubjectCount</div>
+        <div class="stat-label">Môn học</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-icon blue">💬</div>
+        <div class="stat-value">@Model.SessionCount</div>
+        <div class="stat-label">Cuộc trò chuyện</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green">🪙</div>
+        <div class="stat-value">@Model.Balance.Remaining.ToString("N0")</div>
+        <div class="stat-label">Token còn lại</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-icon orange">💡</div>
+        <div class="stat-value">@Model.MyFeedbackCount</div>
+        <div class="stat-label">Phản hồi đã gửi</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🕒 Hội thoại gần đây</span>
+            <a href="/Chat" class="btn btn-secondary btn-sm">Lịch sử</a>
+        </div>
+        @if (Model.RecentSessions.Count == 0)
+        {
+            <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">💬</div>
+                <div class="empty-state-title">Chưa có cuộc trò chuyện</div>
+                <a href="/Chat?handler=New" class="btn btn-primary btn-sm" style="margin-top:12px">Bắt đầu chat</a>
+            </div>
+        }
+        else
+        {
+            foreach (var session in Model.RecentSessions)
+            {
+                <a href="/Chat/Session/@session.Id"
+                   style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);text-decoration:none;color:inherit">
+                    <div style="font-size:1.4rem">🤖</div>
+                    <div style="flex:1;min-width:0">
+                        <div class="truncate" style="font-size:0.85rem;font-weight:600">
+                            @(string.IsNullOrWhiteSpace(session.Title) ? "Cuộc trò chuyện" : session.Title)
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted)">
+                            @session.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+                </a>
+            }
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📚 Môn học</span>
+            <a href="/Subjects" class="btn btn-secondary btn-sm">Xem tất cả</a>
+        </div>
+        @if (Model.Subjects.Count == 0)
+        {
+            <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">📖</div>
+                <div class="empty-state-title">Chưa có môn học</div>
+            </div>
+        }
+        else
+        {
+            foreach (var subject in Model.Subjects.Take(5))
+            {
+                <div style="padding:10px 0;border-bottom:1px solid var(--border-subtle)">
+                    <div style="font-size:0.85rem;font-weight:600">@subject.Code</div>
+                    <div class="truncate" style="font-size:0.72rem;color:var(--text-muted)">@subject.Name</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚡ Thao tác nhanh</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="/Chat?handler=New" class="btn btn-primary">🤖 Trợ lý AI</a>
+        <a href="/Chat" class="btn btn-secondary">🕒 Lịch sử chat</a>
+        <a href="/Subjects" class="btn btn-secondary">📚 Môn học</a>
+        <a href="/Store" class="btn btn-secondary">🛒 Cửa hàng gói</a>
+        <a href="/Feedback" class="btn btn-secondary">💡 Gửi phản hồi</a>
+    </div>
+</div>

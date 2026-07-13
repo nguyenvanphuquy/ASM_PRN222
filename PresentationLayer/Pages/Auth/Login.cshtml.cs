@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using PresentationLayer.Helpers;
 using ServiceLayer.Services.Interfaces;
 
 namespace PresentationLayer.Pages.Auth;
@@ -25,7 +26,7 @@ public class LoginModel : PageModel
     public IActionResult OnGet()
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToPage("/Dashboard/Index");
+            return RedirectToPage(DashboardHome.PageFor(User));
         return Page();
     }
 
@@ -73,6 +74,6 @@ public class LoginModel : PageModel
         await _notifier.ActivityAsync("🔑", "Đăng nhập", result.FullName ?? result.Username!,
             $"{result.Role ?? "Student"} đăng nhập hệ thống");
 
-        return LocalRedirect(returnUrl ?? "/Dashboard");
+        return LocalRedirect(returnUrl ?? DashboardHome.PathFor(result.Role));
     }
 }

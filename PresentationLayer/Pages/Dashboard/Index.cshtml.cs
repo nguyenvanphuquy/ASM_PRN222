@@ -1,23 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using ServiceLayer.Dtos;
-using ServiceLayer.Services.Interfaces;
+using PresentationLayer.Helpers;
 
 namespace PresentationLayer.Pages.Dashboard;
 
+/// <summary>Chuyển hướng tới dashboard riêng theo vai trò.</summary>
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly IDashboardService _dashboard;
-
-    public IndexModel(IDashboardService dashboard) => _dashboard = dashboard;
-
-    public DashboardStats Stats { get; private set; } = new();
-
-    public async Task OnGetAsync()
-    {
-        ViewData["Title"] = "Dashboard";
-        ViewData["TopbarTitle"] = "Dashboard";
-        Stats = await _dashboard.GetStatsAsync();
-    }
+    public IActionResult OnGet()
+        => RedirectToPage(DashboardHome.PageFor(User));
 }
