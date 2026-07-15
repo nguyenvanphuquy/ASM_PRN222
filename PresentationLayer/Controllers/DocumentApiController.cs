@@ -14,7 +14,13 @@ namespace PresentationLayer.Controllers;
 public class DocumentApiController : ControllerBase
 {
     private readonly IDocumentService _documentService;
-    public DocumentApiController(IDocumentService documentService) => _documentService = documentService;
+    private readonly INotificationService _notifier;
+
+    public DocumentApiController(IDocumentService documentService, INotificationService notifier)
+    {
+        _documentService = documentService;
+        _notifier = notifier;
+    }
 
     /// <summary>Lấy danh sách tài liệu. Lọc theo subjectId nếu cần.</summary>
     [HttpGet]
@@ -118,6 +124,8 @@ public class DocumentApiController : ControllerBase
             return Forbid();
 
         await _documentService.DeleteAsync(id);
+        var actor = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Người dùng";
+        await _notifier.ActivityAsync("🗑", "Tài liệu", actor, $"Xoá tài liệu \"{doc.Title}\"");
         return NoContent();
     }
 }

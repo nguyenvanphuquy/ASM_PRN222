@@ -399,6 +399,19 @@ public class Program
                             AnswerPreview    nvarchar(500) NULL
                         );
                         CREATE INDEX IX_ExperimentVariants_RunId ON ExperimentVariants (ExperimentRunId);
+                    END;
+                    IF OBJECT_ID('SystemActivities') IS NULL
+                    BEGIN
+                        CREATE TABLE SystemActivities (
+                            Id          nvarchar(36)   NOT NULL PRIMARY KEY,
+                            Icon        nvarchar(16)   NOT NULL DEFAULT N'•',
+                            Category    nvarchar(50)   NOT NULL DEFAULT '',
+                            Actor       nvarchar(200)  NOT NULL DEFAULT '',
+                            Description nvarchar(1000) NOT NULL DEFAULT '',
+                            CreatedAt   datetime2      NOT NULL DEFAULT GETUTCDATE()
+                        );
+                        CREATE INDEX IX_SystemActivities_CreatedAt ON SystemActivities (CreatedAt);
+                        CREATE INDEX IX_SystemActivities_Category ON SystemActivities (Category);
                     END;");
 
                 var auth = scope.ServiceProvider.GetRequiredService<IAuthService>();

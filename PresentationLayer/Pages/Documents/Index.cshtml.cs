@@ -82,8 +82,8 @@ public class IndexModel : PageModel
         }
 
         await _docService.DeleteAsync(id);
-        TempData["Success"] = "Đã xoá tài liệu.";
-        await _notifier.ActivityAsync("📄", "Tài liệu", Actor, "Xoá một tài liệu");
+        TempData["Success"] = $"Đã xoá tài liệu \"{doc.Title}\".";
+        await _notifier.ActivityAsync("🗑", "Tài liệu", Actor, $"Xoá tài liệu \"{doc.Title}\"");
         return RedirectToPage();
     }
 }

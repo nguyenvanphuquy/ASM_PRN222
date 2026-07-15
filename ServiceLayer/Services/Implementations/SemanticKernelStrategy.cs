@@ -5,46 +5,71 @@ using ServiceLayer.Services.Interfaces;
 namespace ServiceLayer.Services.Implementations;
 
 /// <summary>
-/// Chunking bằng Microsoft Semantic Kernel <see cref="TextChunker"/> — giống Assignment_1.
-/// Đo độ dài theo KÝ TỰ: tách văn bản thành dòng ≤200 ký tự, rồi gom thành đoạn (chunk)
-/// ≤800 ký tự với overlap 100 ký tự; bỏ các chunk ngắn hơn 50 ký tự.
+/// Chunking bằng Semantic Kernel TextChunker — đo độ dài theo ký tự.
+/// Nhận text đã ghép (thường là cả tài liệu); bỏ chunk chỉ chứa khoảng trắng / mục lục ngắn.
 /// </summary>
 public class SemanticKernelStrategy : IChunkingStrategy
 {
     public string Name => "SemanticKernel";
-    // Theo spec: 500–1000 ký tự mỗi chunk.
+
     private const int LineMaxChars = 200;
     private const int ChunkSize = 800;
     private const int ChunkOverlap = 100;
-    private const int MinChunkLength = 50;
+    private const int MinAlphaNum = 80; // đủ chữ thật, không chỉ tiêu đề TOC
 
     public List<(string Text, int Page)> Chunk(List<(int Page, string Text)> pages)
     {
-        var chunks = new List<(string Text, int Page)>();
+        // Ghép mọi trang thành 1 stream — tránh chunk #0..#N chỉ là mục lục trang 1.
+        var parts = pages
+            .Select(p => (p.Page, Text: TextExtractor.NormalizeText(p.Text)))
+            .Where(p => !string.IsNullOrWhiteSpace(p.Text))
+            .ToList();
+        if (parts.Count == 0) return [];
 
-        // TokenCounter tùy biến: tính độ dài theo số ký tự (Characters) thay vì token.
-        TextChunker.TokenCounter characterCounter = input => input.Length;
+        var combined = string.Join("\n\n", parts.Select(p => p.Text));
+        TextChunker.TokenCounter counter = s => s.Length;
 
-        foreach (var (page, text) in pages)
+        var lines = TextChunker.SplitPlainTextLines(combined, LineMaxChars, counter);
+        var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, ChunkSize, ChunkOverlap, tokenCounter: counter);
+
+        var result = new List<(string Text, int Page)>();
+        foreach (var p in paragraphs)
         {
-            if (string.IsNullOrWhiteSpace(text)) continue;
-
-            // 1) Tách trang thành các dòng/câu nhỏ (≤200 ký tự) để không cắt giữa câu tùy tiện.
-            var lines = TextChunker.SplitPlainTextLines(text, LineMaxChars, characterCounter);
-
-            // 2) Gom các dòng thành đoạn lớn (≤800 ký tự) với overlap 100 ký tự.
-            var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, ChunkSize, ChunkOverlap, tokenCounter: characterCounter);
-
-            foreach (var p in paragraphs)
-            {
-                var trimmed = p.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmed) && trimmed.Length >= MinChunkLength)
-                    chunks.Add((trimmed, page));
-            }
+            var text = TextExtractor.NormalizeText(p);
+            if (TextExtractor.CountAlphaNum(text) < MinAlphaNum) continue;
+            result.Add((text, GuessPage(text, parts)));
         }
 
-        return chunks;
+        return result.Count > 0 ? result : FallbackFixedWindows(combined, parts);
+    }
+
+    /// <summary>Nếu SK lọc hết (PDF lạ) → cắt cửa sổ cố định trên text đã chuẩn hoá.</summary>
+    private static List<(string Text, int Page)> FallbackFixedWindows(
+        string combined, List<(int Page, string Text)> parts)
+    {
+        const int size = 800, overlap = 100;
+        var list = new List<(string, int)>();
+        for (int i = 0; i < combined.Length; )
+        {
+            var len = Math.Min(size, combined.Length - i);
+            var slice = TextExtractor.NormalizeText(combined.Substring(i, len));
+            if (TextExtractor.CountAlphaNum(slice) >= MinAlphaNum)
+                list.Add((slice, GuessPage(slice, parts)));
+            if (i + len >= combined.Length) break;
+            i += size - overlap;
+        }
+        return list;
+    }
+
+    private static int GuessPage(string chunk, List<(int Page, string Text)> parts)
+    {
+        // Trang có đoạn prefix của chunk trùng nhiều nhất.
+        var probe = chunk.Length <= 80 ? chunk : chunk[..80];
+        foreach (var (page, text) in parts)
+        {
+            if (text.Contains(probe, StringComparison.Ordinal))
+                return page;
+        }
+        return parts[0].Page;
     }
 }
-
-

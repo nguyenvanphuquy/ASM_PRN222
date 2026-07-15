@@ -57,15 +57,6 @@
     </div>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success mb-4">@TempData["Success"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger mb-4">@TempData["Error"]</div>
-}
-
 <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
     @if (Model.Document.QualityScore > 0 || !string.IsNullOrEmpty(Model.Document.QualitySummary))
     {
@@ -112,10 +103,10 @@
         }
         else
         {
-            <div class="flex flex-col gap-4">
+            <div class="chunk-list">
                 @foreach (var chunk in Model.Chunks.OrderBy(c => c.ChunkIndex))
                 {
-                    <div class="card" style="background: var(--surface-hover); border: 1px solid var(--border-color); padding: 1.25rem;">
+                    <div class="chunk-item">
                         <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                             <span class="badge" style="background: var(--accent-blue); color: white;">Chunk #@chunk.ChunkIndex</span>
                             <div class="flex gap-2 items-center">
@@ -126,7 +117,17 @@
                                 <span class="text-sm text-muted">Trang @chunk.Page</span>
                             </div>
                         </div>
-                        <div class="text-sm" style="white-space: pre-wrap; line-height: 1.6; color: var(--text-primary); font-family: var(--font-mono, monospace);">@chunk.Content</div>
+                        @{
+                            // PDF giữ xuống dòng theo bề rộng trang sách → cột hẹp, phải trống.
+                            // Khi xem: gom dòng thành đoạn, để browser wrap full-width.
+                            var raw = chunk.Content ?? "";
+                            var display = System.Text.RegularExpressions.Regex.Replace(raw.Trim(), @"\r\n?", "\n");
+                            display = System.Text.RegularExpressions.Regex.Replace(display, @"(?<!\n)\n(?!\n)", " ");
+                            display = System.Text.RegularExpressions.Regex.Replace(display, @"[ \t]{2,}", " ");
+                            display = System.Text.RegularExpressions.Regex.Replace(display, @"\n{3,}", "\n\n");
+                        }
+                        <div class="chunk-body">@display</div>
+                        <div class="text-sm text-muted mt-2">@((chunk.Content ?? "").Length) ký tự</div>
                     </div>
                 }
             </div>

@@ -1,23 +1,31 @@
+using DataAccessLayer.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using ServiceLayer.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace PresentationLayer.Pages.AuditLogs;
 
 /// <summary>
-/// Nhật ký hệ thống — chỉ Admin. Tổng hợp các hoạt động gần đây của hệ thống
-/// (tạo tài khoản, tải tài liệu, gửi phản hồi) từ dữ liệu sẵn có để giám sát.
+/// Nhật ký hệ thống — chỉ Admin. Đọc từ bảng SystemActivities (persist),
+/// nên vẫn thấy thao tác xoá tài liệu / đăng nhập sau khi reload.
 /// </summary>
 [Authorize(Policy = "AdminOnly")]
 public class IndexModel : PageModel
 {
-    private readonly IUserService _users;
-    private readonly IDocumentService _docs;
-    private readonly IFeedbackService _feedback;
-    private readonly IBillingService _billing;
+    private readonly AppDbContext _db;
+    private readonly ServiceLayer.Services.Interfaces.IUserService _users;
+    private readonly ServiceLayer.Services.Interfaces.IDocumentService _docs;
+    private readonly ServiceLayer.Services.Interfaces.IFeedbackService _feedback;
+    private readonly ServiceLayer.Services.Interfaces.IBillingService _billing;
 
-    public IndexModel(IUserService users, IDocumentService docs, IFeedbackService feedback, IBillingService billing)
+    public IndexModel(
+        AppDbContext db,
+        ServiceLayer.Services.Interfaces.IUserService users,
+        ServiceLayer.Services.Interfaces.IDocumentService docs,
+        ServiceLayer.Services.Interfaces.IFeedbackService feedback,
+        ServiceLayer.Services.Interfaces.IBillingService billing)
     {
+        _db = db;
         _users = users;
         _docs = docs;
         _feedback = feedback;
@@ -33,50 +41,86 @@ public class IndexModel : PageModel
         ViewData["Title"] = "Nhật ký hệ thống";
         ViewData["TopbarTitle"] = "📜 Nhật ký hệ thống";
 
-        var entries = new List<AuditEntry>();
+        await EnsureBackfillAsync();
+
+        Entries = await _db.SystemActivities
+            .AsNoTracking()
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(500)
+            .Select(a => new AuditEntry(a.CreatedAt, a.Icon, a.Category, a.Actor, a.Description))
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Lần đầu (bảng trống): seed từ dữ liệu đang có để không mất lịch sử cũ.
+    /// Các sự kiện mới (gồm xoá tài liệu) ghi qua ActivityAsync.
+    /// </summary>
+    private async Task EnsureBackfillAsync()
+    {
+        if (await _db.SystemActivities.AnyAsync()) return;
+
+        var seed = new List<DataAccessLayer.Entities.SystemActivity>();
 
         var users = await _users.GetAllAsync();
         var userMap = users.ToDictionary(u => u.Id, u => u.FullName);
         foreach (var u in users)
         {
-            entries.Add(new AuditEntry(
-                u.CreatedAt, "👤", "Tài khoản", u.FullName,
-                $"Tài khoản {u.Role} \"{u.Username}\" được tạo"));
+            seed.Add(new()
+            {
+                Icon = "👤",
+                Category = "Tài khoản",
+                Actor = u.FullName,
+                Description = $"Tài khoản {u.Role} \"{u.Username}\" được tạo",
+                CreatedAt = u.CreatedAt
+            });
         }
 
         var docs = await _docs.GetAllAsync();
         foreach (var d in docs)
         {
             var actor = userMap.TryGetValue(d.UploadedBy, out var name) ? name : d.UploadedBy;
-            entries.Add(new AuditEntry(
-                d.UploadedAt, "📄", "Tài liệu", actor,
-                $"Tải lên tài liệu \"{d.Title}\" ({d.Status})"));
+            seed.Add(new()
+            {
+                Icon = "📄",
+                Category = "Tài liệu",
+                Actor = actor,
+                Description = $"Tải lên tài liệu \"{d.Title}\" ({d.Status})",
+                CreatedAt = d.UploadedAt
+            });
         }
 
         var feedback = await _feedback.GetAllAsync();
         foreach (var f in feedback)
         {
-            entries.Add(new AuditEntry(
-                f.CreatedAt, "💡", "Phản hồi", f.UserName,
-                $"Gửi phản hồi ({f.Rating}★): {Truncate(f.Content, 60)}"));
+            seed.Add(new()
+            {
+                Icon = "💡",
+                Category = "Phản hồi",
+                Actor = f.UserName,
+                Description = $"Gửi phản hồi ({f.Rating}★): {Truncate(f.Content, 60)}",
+                CreatedAt = f.CreatedAt
+            });
         }
 
         var purchases = await _billing.GetAllPurchasesAsync();
         foreach (var p in purchases)
         {
             var actor = userMap.TryGetValue(p.UserId, out var name) ? name : p.UserId;
-            
-            // Nếu package đã bị hủy, ta ghi nhận như một hành động Mua rổi Hủy
-            // Nếu trạng thái là Paid/Expired thì ta ghi nhận là Mua gói
             var actionText = p.Status == "Cancelled" ? "Mua & hủy gói" : "Mua gói";
             var icon = p.Status == "Cancelled" ? "🚫" : "🛒";
-
-            entries.Add(new AuditEntry(
-                p.CreatedAt, icon, "Giao dịch", actor,
-                $"{actionText} \"{p.PackageName}\" ({p.TokensGranted:N0} token)"));
+            seed.Add(new()
+            {
+                Icon = icon,
+                Category = "Giao dịch",
+                Actor = actor,
+                Description = $"{actionText} \"{p.PackageName}\" ({p.TokensGranted:N0} token)",
+                CreatedAt = p.CreatedAt
+            });
         }
 
-        Entries = entries.OrderByDescending(e => e.Time).ToList();
+        if (seed.Count == 0) return;
+        _db.SystemActivities.AddRange(seed);
+        await _db.SaveChangesAsync();
     }
 
     private static string Truncate(string s, int n)

@@ -94,8 +94,32 @@ public class NotificationService : INotificationService
 
     public async Task ActivityAsync(string icon, string category, string actor, string description)
     {
+        // Persist trước — xoá tài liệu / đăng nhập… vẫn còn trong Nhật ký sau reload.
+        var row = new DataAccessLayer.Entities.SystemActivity
+        {
+            Icon = string.IsNullOrWhiteSpace(icon) ? "•" : icon.Trim(),
+            Category = category?.Trim() ?? "",
+            Actor = actor?.Trim() ?? "",
+            Description = description?.Trim() ?? "",
+            CreatedAt = DateTime.UtcNow
+        };
+        if (row.Description.Length > 1000)
+            row.Description = row.Description[..1000];
+        if (row.Actor.Length > 200)
+            row.Actor = row.Actor[..200];
+
+        _db.SystemActivities.Add(row);
+        await _db.SaveChangesAsync();
+
         await _hub.Clients.All
-            .SendAsync("ActivityLogged", new { icon, category, actor, description, time = DateTime.Now.ToString("HH:mm:ss") });
+            .SendAsync("ActivityLogged", new
+            {
+                icon = row.Icon,
+                category = row.Category,
+                actor = row.Actor,
+                description = row.Description,
+                time = row.CreatedAt.ToLocalTime().ToString("HH:mm:ss")
+            });
     }
 
     public async Task FeedbackChangedAsync(string action, string feedbackId, string? userId = null, string? preview = null)

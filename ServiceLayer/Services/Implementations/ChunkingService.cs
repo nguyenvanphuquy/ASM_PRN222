@@ -41,8 +41,8 @@ public class ChunkingService : IChunkingService
         IReadOnlyList<(int Page, string Text)> pages)
     {
         var nonEmpty = pages
+            .Select(p => (p.Page, Text: TextExtractor.NormalizeText(p.Text)))
             .Where(p => !string.IsNullOrWhiteSpace(p.Text))
-            .Select(p => (p.Page, p.Text.Trim()))
             .ToList();
 
         if (nonEmpty.Count == 0) return 0;

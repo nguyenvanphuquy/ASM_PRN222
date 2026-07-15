@@ -74,6 +74,48 @@ public class LoginModel : PageModel
         await _notifier.ActivityAsync("🔑", "Đăng nhập", result.FullName ?? result.Username!,
             $"{result.Role ?? "Student"} đăng nhập hệ thống");
 
-        return LocalRedirect(returnUrl ?? DashboardHome.PathFor(result.Role));
+        // Chỉ giữ ReturnUrl nếu path đó phù hợp với role — tránh Lecturer bị
+        // ném sang /Users (AdminOnly) → AccessDenied rồi mới về Dashboard.
+        var home = DashboardHome.PathFor(result.Role);
+        if (!string.IsNullOrWhiteSpace(returnUrl)
+            && Url.IsLocalUrl(returnUrl)
+            && IsAllowedReturnUrl(returnUrl, result.Role))
+            return LocalRedirect(returnUrl);
+
+        return LocalRedirect(home);
+    }
+
+    /// <summary>
+    /// ReturnUrl chỉ hợp lệ khi role được phép vào path đó.
+    /// VD: Lecturer không được redirect về /Users, /Packages, /Dashboard/Admin…
+    /// </summary>
+    private static bool IsAllowedReturnUrl(string returnUrl, string? role)
+    {
+        var path = returnUrl.Split('?', '#')[0].TrimEnd('/').ToLowerInvariant();
+        if (string.IsNullOrEmpty(path)) path = "/";
+
+        // Trang role-specific
+        if (path.StartsWith("/dashboard/admin")) return role == "Admin";
+        if (path.StartsWith("/dashboard/lecturer")) return role == "Lecturer";
+        if (path.StartsWith("/dashboard/student")) return role == "Student";
+
+        // AdminOnly
+        string[] adminOnly =
+        [
+            "/users", "/allowedemails", "/reports", "/packages", "/auditlogs"
+        ];
+        if (adminOnly.Any(p => path == p || path.StartsWith(p + "/")))
+            return role == "Admin";
+
+        // LecturerOrAdmin
+        string[] lecturerOrAdmin =
+        [
+            "/compare", "/dashboard/experiments", "/settings", "/subjects/chapters"
+        ];
+        if (lecturerOrAdmin.Any(p => path == p || path.StartsWith(p + "/")))
+            return role is "Admin" or "Lecturer";
+
+        // Còn lại: trang [Authorize] chung (Chat, Documents, Feedback…) — mọi role đã login đều được.
+        return true;
     }
 }

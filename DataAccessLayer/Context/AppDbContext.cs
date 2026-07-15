@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<PackagePurchase> PackagePurchases => Set<PackagePurchase>();
     public DbSet<ExperimentRun> ExperimentRuns => Set<ExperimentRun>();
     public DbSet<ExperimentVariant> ExperimentVariants => Set<ExperimentVariant>();
+    public DbSet<SystemActivity> SystemActivities => Set<SystemActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -377,6 +378,18 @@ public class AppDbContext : DbContext
             e.Property(x => x.VariantLabel).HasMaxLength(200);
             e.Property(x => x.AnswerPreview).HasMaxLength(500);
             e.HasIndex(x => x.ExperimentRunId);
+        });
+
+        modelBuilder.Entity<SystemActivity>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(36);
+            e.Property(x => x.Icon).HasMaxLength(16);
+            e.Property(x => x.Category).HasMaxLength(50);
+            e.Property(x => x.Actor).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(1000);
+            e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => x.Category);
         });
     }
 }

@@ -227,17 +227,23 @@ else
         <div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px"></div>
 
         <main class="page-content">
-            @if (TempData["Success"] != null)
-            {
-                <div class="alert alert-success animate-fade-in">✅ @TempData["Success"]</div>
+            @{
+                // Chỉ hiển thị 1 lần ở Layout (tránh page con render trùng TempData).
+                var flashSuccess = TempData["Success"] as string;
+                var flashError = TempData["Error"] as string;
+                var flashInfo = TempData["Info"] as string;
             }
-            @if (TempData["Error"] != null)
+            @if (!string.IsNullOrEmpty(flashSuccess))
             {
-                <div class="alert alert-danger animate-fade-in">❌ @TempData["Error"]</div>
+                <div class="alert alert-success animate-fade-in">@flashSuccess</div>
             }
-            @if (TempData["Info"] != null)
+            @if (!string.IsNullOrEmpty(flashError))
             {
-                <div class="alert alert-info animate-fade-in">ℹ️ @TempData["Info"]</div>
+                <div class="alert alert-danger animate-fade-in">@flashError</div>
+            }
+            @if (!string.IsNullOrEmpty(flashInfo))
+            {
+                <div class="alert alert-info animate-fade-in">@flashInfo</div>
             }
 
             @RenderBody()
