@@ -8,14 +8,14 @@ namespace ServiceLayer.Services.Implementations;
 public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
 {
     private readonly IRetrievalService _retrieval;
-    private readonly IGroqService _llm;
+    private readonly ICerebrasService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
     private readonly IExperimentService _experiments;
 
     public RagVsFineTunedComparisonService(
         IRetrievalService retrieval,
-        IGroqService llm,
+        ICerebrasService llm,
         IBillingService billing,
         ISubjectService subjects,
         IExperimentService experiments)
@@ -164,7 +164,7 @@ public class RagVsFineTunedComparisonService : IRagVsFineTunedComparisonService
 
         insights.Notes.Add("RAG gắn câu trả lời với tài liệu đã index → giảm hallucination, có citation.");
         insights.Notes.Add("Fine-tuned (parametric) trả lời nhanh từ kiến thức nội tại nhưng không chứng minh nguồn trong corpus.");
-        insights.Notes.Add("Demo dùng cùng base LLM Groq: nhánh Fine-tuned = prompt chuyên gia + KHÔNG retrieval (mô phỏng hành vi model fine-tune).");
+        insights.Notes.Add("Demo dùng cùng base LLM Cerebras: nhánh Fine-tuned = prompt chuyên gia + KHÔNG retrieval (mô phỏng hành vi model fine-tune).");
         if (result.ContextChunks == 0)
             insights.Notes.Add("⚠ Chưa có chunk liên quan — RAG sẽ từ chối trả lời; Fine-tuned vẫn có thể bịa nội dung.");
         if (rag.HasCitations && !ft.HasCitations)

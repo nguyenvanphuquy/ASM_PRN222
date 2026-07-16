@@ -14,7 +14,7 @@ public class FileComparisonService : IFileComparisonService
     private readonly ITextExtractor _extractor;
     private readonly IDocumentFileStore _fileStore;
     private readonly HttpClient _http;
-    private readonly GroqSettings _groq;
+    private readonly CerebrasSettings _cerebras;
     private readonly ILogger<FileComparisonService> _logger;
 
     public FileComparisonService(
@@ -22,14 +22,14 @@ public class FileComparisonService : IFileComparisonService
         ITextExtractor extractor,
         IDocumentFileStore fileStore,
         HttpClient http,
-        IOptions<GroqSettings> groqOptions,
+        IOptions<CerebrasSettings> cerebrasOptions,
         ILogger<FileComparisonService> logger)
     {
         _documentService = documentService;
         _extractor = extractor;
         _fileStore = fileStore;
         _http = http;
-        _groq = groqOptions.Value;
+        _cerebras = cerebrasOptions.Value;
         _logger = logger;
     }
 
@@ -119,12 +119,12 @@ public class FileComparisonService : IFileComparisonService
             text2 = text2.Substring(0, 6000) + "\n...[bị cắt bớt]";
         }
 
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+        if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
         {
             return BuildFallbackResult(doc1.FileName, doc2.FileName, text1, text2);
         }
 
-        return await CallGroqForComparisonAsync(doc1.FileName, text1, doc2.FileName, text2, ct);
+        return await CallCerebrasForComparisonAsync(doc1.FileName, text1, doc2.FileName, text2, ct);
     }
 
     public async Task<FileComparisonResult> CompareStreamsAsync(
@@ -139,12 +139,12 @@ public class FileComparisonService : IFileComparisonService
         var text1 = BuildFullText(pages1, fileName1);
         var text2 = BuildFullText(pages2, fileName2);
 
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+        if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
         {
             return BuildFallbackResult(fileName1, fileName2, text1, text2);
         }
 
-        return await CallGroqForComparisonAsync(fileName1, text1, fileName2, text2, ct);
+        return await CallCerebrasForComparisonAsync(fileName1, text1, fileName2, text2, ct);
     }
 
     // ──────────────────────────────────────────
@@ -167,7 +167,7 @@ public class FileComparisonService : IFileComparisonService
         return full.Length > 6000 ? full.Substring(0, 6000) + "\n...[bị cắt bớt]" : full;
     }
 
-    private async Task<FileComparisonResult> CallGroqForComparisonAsync(
+    private async Task<FileComparisonResult> CallCerebrasForComparisonAsync(
         string fileName1, string text1,
         string fileName2, string text2,
         CancellationToken ct)
@@ -177,7 +177,7 @@ public class FileComparisonService : IFileComparisonService
 
         var payload = new
         {
-            model = _groq.Model,
+            model = _cerebras.Model,
             messages = new[]
             {
                 new { role = "system", content = systemPrompt },
@@ -187,7 +187,7 @@ public class FileComparisonService : IFileComparisonService
             max_tokens = 2048
         };
 
-        var url = $"{_groq.BaseUrl}/chat/completions";
+        var url = $"{_cerebras.BaseUrl}/chat/completions";
         var body = JsonSerializer.Serialize(payload);
 
         try
@@ -203,7 +203,7 @@ public class FileComparisonService : IFileComparisonService
                     Content = new StringContent(body, Encoding.UTF8, "application/json")
                 };
                 req.Headers.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _groq.ApiKey);
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _cerebras.ApiKey);
 
                 res = await _http.SendAsync(req, ct);
                 responseText = await res.Content.ReadAsStringAsync(ct);
@@ -212,14 +212,14 @@ public class FileComparisonService : IFileComparisonService
 
                 if (attempt < retryDelaysMs.Length)
                 {
-                    _logger.LogWarning("Groq 429 (compare) – retry {A}/{M}", attempt + 1, retryDelaysMs.Length);
+                    _logger.LogWarning("Cerebras 429 (compare) – retry {A}/{M}", attempt + 1, retryDelaysMs.Length);
                     await Task.Delay(retryDelaysMs[attempt], ct);
                 }
             }
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Groq API error {Status} during file comparison", res.StatusCode);
+                _logger.LogWarning("Cerebras API error {Status} during file comparison", res.StatusCode);
                 return BuildFallbackResult(fileName1, fileName2, text1, text2,
                     $"API lỗi {(int)res.StatusCode} — không thể phân tích bằng AI.");
             }
@@ -231,11 +231,11 @@ public class FileComparisonService : IFileComparisonService
                 .GetProperty("content")
                 .GetString() ?? "";
 
-            return ParseGroqResponse(fileName1, fileName2, content);
+            return ParseCerebrasResponse(fileName1, fileName2, content);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Groq file comparison call failed");
+            _logger.LogError(ex, "Cerebras file comparison call failed");
             return BuildFallbackResult(fileName1, fileName2, text1, text2,
                 "Lỗi mạng khi gọi AI — vui lòng thử lại.");
         }
@@ -291,7 +291,7 @@ public class FileComparisonService : IFileComparisonService
         Trả về JSON theo đúng format đã quy định.
         """;
 
-    private static FileComparisonResult ParseGroqResponse(
+    private static FileComparisonResult ParseCerebrasResponse(
         string fileName1, string fileName2, string rawContent)
     {
         // Trích JSON từ response (AI đôi khi thêm markdown code block)
@@ -372,9 +372,9 @@ public class FileComparisonService : IFileComparisonService
             FileName1: fileName1,
             DocumentId2: "",
             FileName2: fileName2,
-            Summary: $"Không có API key Groq để phân tích AI{note}. " +
+            Summary: $"Không có API key Cerebras để phân tích AI{note}. " +
                      $"File 1 có {text1.Length} ký tự, File 2 có {text2.Length} ký tự " +
-                     $"(chênh lệch {lenDiff} ký tự). Vui lòng cấu hình Groq API key để sử dụng tính năng này.",
+                     $"(chênh lệch {lenDiff} ký tự). Vui lòng cấu hình Cerebras API key để sử dụng tính năng này.",
             TotalDifferences: 0,
             Differences: []
         );

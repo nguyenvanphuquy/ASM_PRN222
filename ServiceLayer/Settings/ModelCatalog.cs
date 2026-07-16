@@ -11,9 +11,9 @@ public static class ModelCatalog
 {
     public static readonly IReadOnlyList<ModelInfo> All = new[]
     {
-        new ModelInfo("llama-3.3-70b-versatile", "Llama 3.3 70B Versatile", "Meta · Groq",   0.59, 0.79),
-        new ModelInfo("llama-3.1-8b-instant",   "Llama 3.1 8B Instant",    "Meta · Groq",   0.05, 0.08),
-        new ModelInfo("openai/gpt-oss-20b",     "GPT-OSS 20B",             "OpenAI · Groq", 0.10, 0.50),
+        new ModelInfo("gpt-oss-120b", "GPT-OSS 120B", "OpenAI · Cerebras", 0.35, 0.75),
+        new ModelInfo("gemma-4-31b",  "Gemma 4 31B",  "Google · Cerebras", 0.99, 1.49),
+        new ModelInfo("zai-glm-4.7",  "GLM 4.7",      "Z.ai · Cerebras",   2.25, 2.75),
     };
 
     /// <summary>Tỷ giá quy đổi USD→VND để hiển thị chi phí token (khớp với tính doanh thu/lợi nhuận gói).</summary>
@@ -23,7 +23,7 @@ public static class ModelCatalog
     public static long ToVnd(decimal usd) => (long)Math.Round(usd * UsdToVnd);
 
     public static ModelInfo Get(string id)
-        => All.FirstOrDefault(m => m.Id == id) ?? new ModelInfo(id, id, "Groq", 0.50, 0.50);
+        => All.FirstOrDefault(m => m.Id == id) ?? new ModelInfo(id, id, "Cerebras", 0.50, 0.50);
 
     /// <summary>Ước tính chi phí (USD) cho một lần gọi dựa trên số token vào/ra.</summary>
     public static decimal EstimateCostUsd(string model, int promptTokens, int completionTokens)

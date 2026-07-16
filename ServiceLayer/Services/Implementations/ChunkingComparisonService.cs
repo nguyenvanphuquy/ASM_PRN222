@@ -34,7 +34,7 @@ public class ChunkingComparisonService : IChunkingComparisonService
     private readonly IEnumerable<IChunkingStrategy> _strategies;
     private readonly IEmbeddingFactory _embeddingFactory;
     private readonly ISystemSettingService _settings;
-    private readonly IGroqService _llm;
+    private readonly ICerebrasService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
     private readonly IExperimentService _experiments;
@@ -45,7 +45,7 @@ public class ChunkingComparisonService : IChunkingComparisonService
         IEnumerable<IChunkingStrategy> strategies,
         IEmbeddingFactory embeddingFactory,
         ISystemSettingService settings,
-        IGroqService llm,
+        ICerebrasService llm,
         IBillingService billing,
         ISubjectService subjects,
         IExperimentService experiments)

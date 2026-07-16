@@ -45,6 +45,7 @@ public class ChatHub : Hub
                 answer = result.Answer,
                 sources = result.Sources.Select(s => new
                 {
+                    documentId = s.DocumentId,
                     documentName = s.DocumentName,
                     page = s.Page,
                     chunkIndex = s.ChunkIndex,

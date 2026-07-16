@@ -8,10 +8,10 @@ namespace ServiceLayer.Services.Implementations;
 public class ModelComparisonService : IModelComparisonService
 {
     private readonly IRetrievalService _retrieval;
-    private readonly IGroqService _llm;
+    private readonly ICerebrasService _llm;
     private readonly IBillingService _billing;
 
-    public ModelComparisonService(IRetrievalService retrieval, IGroqService llm, IBillingService billing)
+    public ModelComparisonService(IRetrievalService retrieval, ICerebrasService llm, IBillingService billing)
     {
         _retrieval = retrieval;
         _llm = llm;

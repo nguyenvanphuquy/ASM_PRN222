@@ -30,7 +30,7 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
     private readonly IChunkingFactory _chunkingFactory;
     private readonly IEmbeddingFactory _embeddingFactory;
     private readonly ISystemSettingService _settings;
-    private readonly IGroqService _llm;
+    private readonly ICerebrasService _llm;
     private readonly IBillingService _billing;
     private readonly ISubjectService _subjects;
     private readonly IExperimentService _experiments;
@@ -41,7 +41,7 @@ public class EmbeddingComparisonService : IEmbeddingComparisonService
         IChunkingFactory chunkingFactory,
         IEmbeddingFactory embeddingFactory,
         ISystemSettingService settings,
-        IGroqService llm,
+        ICerebrasService llm,
         IBillingService billing,
         ISubjectService subjects,
         IExperimentService experiments,

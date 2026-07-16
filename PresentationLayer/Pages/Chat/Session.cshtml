@@ -21,6 +21,77 @@
     .chat-subjectbar { padding:10px 16px; border-bottom:1px solid var(--border-subtle);
                        display:flex; align-items:center; gap:10px; background:var(--bg-glass); }
     @@media (max-width: 820px) { .chat-history { display:none; } .chat-shell { margin:-16px; } }
+
+    /* Modal RAG Source Detail Styles */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        max-width: 650px;
+        width: 90%;
+        padding: 24px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        position: relative;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal-close-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        line-height: 1;
+    }
+    .modal-close-btn:hover {
+        color: var(--text-primary);
+    }
+    .modal-body {
+        overflow-y: auto;
+        font-size: 0.92rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        color: var(--text-primary);
+        flex: 1;
+        background: rgba(0,0,0,0.15);
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid var(--accent-blue);
+        margin: 12px 0;
+    }
+    .source-title-link:hover {
+        text-decoration: underline !important;
+    }
+    .citation-link {
+        color: var(--accent-purple);
+        font-weight: bold;
+        text-decoration: none;
+        margin: 0 2px;
+        padding: 0 4px;
+        background: rgba(168, 85, 247, 0.15);
+        border-radius: 4px;
+    }
+    .citation-link:hover {
+        background: rgba(168, 85, 247, 0.3);
+        text-decoration: underline;
+    }
 </style>
 
 @if (Model.Session == null)
@@ -87,22 +158,25 @@ else
             {
                 foreach (var msg in Model.Messages)
                 {
-                    <div class="bubble @msg.Role animate-fade-in">
+                    <div class="bubble @msg.Role animate-fade-in" data-sources="@SessionModel.EncodeSources(msg.Sources)">
                         @if (msg.Role == "assistant")
                         {
                             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">🤖 AI</div>
                         }
-                        <div style="white-space:pre-wrap">@msg.Content</div>
+                        <div class="message-content" style="white-space:pre-wrap">@msg.Content</div>
 
                         @if (msg.Role == "assistant" && msg.Sources.Count > 0)
                         {
                             <div style="margin-top:10px;border-top:1px solid var(--border-subtle);padding-top:8px">
                                 <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Trích dẫn từ tài liệu:</div>
-                                @foreach (var src in msg.Sources.Take(3))
+                                @for (int idx = 0; idx < msg.Sources.Count; idx++)
                                 {
+                                    var src = msg.Sources[idx];
                                     <div style="margin-bottom:8px">
-                                        <div style="font-size:0.75rem;color:var(--accent-blue)">
-                                            📄 @src.DocumentName · Trang @src.Page · đoạn #@(src.ChunkIndex + 1)
+                                        <div style="font-size:0.75rem;">
+                                            <a href="javascript:void(0)" class="source-title-link" onclick="openSourceModalDirect(this, @idx)" style="color:var(--accent-blue); font-weight:600; text-decoration:none;">
+                                                📄 @src.DocumentName · Trang @src.Page · đoạn #@(src.ChunkIndex + 1)
+                                            </a>
                                             @if(src.ConfidenceScore > 0)
                                             {
                                                 <span style="color:var(--text-muted); font-size:0.7rem;">(Độ liên quan: @(Math.Round(src.ConfidenceScore * 100))%)</span>
@@ -110,8 +184,12 @@ else
                                         </div>
                                         @if (!string.IsNullOrWhiteSpace(src.Snippet))
                                         {
-                                            <div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“@src.Snippet”</div>
+                                            var preview = src.Snippet.Length > 150 ? src.Snippet.Substring(0, 150) + "..." : src.Snippet;
+                                            <div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“@preview”</div>
                                         }
+                                        <div style="font-size:0.68rem; margin-top:2px;">
+                                            <a href="javascript:void(0)" onclick="openSourceModalDirect(this, @idx)" style="color:var(--accent-purple); text-decoration:underline;">[Xem đầy đủ]</a>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -135,8 +213,26 @@ else
                 <button type="button" class="btn btn-primary" id="sendBtn" title="Gửi (Ctrl+Enter)">
                     <span id="sendText">➤</span>
                     <span id="sendSpinner" style="display:none">⏳</span>
-                </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal hiển thị chi tiết trích dẫn RAG -->
+<div id="sourceModal" class="modal-backdrop">
+    <div class="modal-content">
+        <button type="button" class="modal-close-btn" onclick="closeSourceModal()">✕</button>
+        <div style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; margin-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">📚 Chi tiết đoạn trích tài liệu</h3>
+        </div>
+        <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;">
+            <div><strong>Tài liệu gốc:</strong> <span id="modalDocName" style="color: var(--accent-blue);"></span></div>
+            <div><strong>Vị trí:</strong> Trang <span id="modalPage"></span> · Đoạn #<span id="modalChunkIndex"></span></div>
+            <div><strong>Độ tương quan ngữ nghĩa:</strong> <span id="modalScore"></span>%</div>
+        </div>
+        <div class="modal-body" id="modalBody">Đang tải nội dung...</div>
+        <div style="text-align: right; margin-top: 10px; display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeSourceModal()">Đóng</button>
         </div>
     </div>
 </div>
@@ -172,28 +268,54 @@ function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function stripInlineCitations(s) {
+    return (s || '').replace(/\s*\[(\d+)\]/g, '');
+}
+
 function appendBubble(role, html, sources) {
     document.getElementById('emptyState')?.remove();
 
     const div = document.createElement('div');
     div.className = `bubble ${role} animate-fade-in`;
+    if (sources && sources.length > 0) {
+        div.setAttribute('data-sources', encodeSourcesForBubble(sources));
+    }
 
     let inner = '';
     if (role === 'assistant') inner += `<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">🤖 AI</div>`;
-    inner += `<div style="white-space:pre-wrap">${html}</div>`;
+    
+    let formattedHtml = html;
+    if (role === 'assistant') {
+        formattedHtml = stripInlineCitations(html);
+    }
+    inner += `<div class="message-content" style="white-space:pre-wrap">${formattedHtml}</div>`;
 
     if (sources && sources.length > 0) {
         inner += `<div style="margin-top:10px;border-top:1px solid var(--border-subtle);padding-top:8px">
             <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">📚 Trích dẫn từ tài liệu:</div>`;
-        sources.slice(0, 3).forEach(s => {
+        sources.forEach((s, idx) => {
             const pct = s.confidenceScore > 0
                 ? ` <span style="color:var(--text-muted);font-size:0.7rem">(Độ liên quan: ${Math.round(s.confidenceScore * 100)}%)</span>`
                 : '';
             const seg = (s.chunkIndex != null) ? ` · đoạn #${s.chunkIndex + 1}` : '';
-            const quote = s.snippet
-                ? `<div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“${escHtml(s.snippet)}”</div>`
+            const preview = s.snippet 
+                ? (s.snippet.length > 150 ? s.snippet.substring(0, 150) + "..." : s.snippet)
                 : '';
-            inner += `<div style="margin-bottom:8px"><div style="font-size:0.75rem;color:var(--accent-blue)">📄 ${escHtml(s.documentName)} · Trang ${s.page}${seg}${pct}</div>${quote}</div>`;
+            const quote = preview
+                ? `<div style="font-size:0.72rem;color:var(--text-secondary);border-left:2px solid var(--accent-blue);padding-left:8px;margin-top:3px;font-style:italic">“${escHtml(preview)}”</div>`
+                : '';
+            inner += `<div style="margin-bottom:8px">
+                <div style="font-size:0.75rem;">
+                    <a href="javascript:void(0)" class="source-title-link" onclick="openSourceModalDirect(this, ${idx})" style="color:var(--accent-blue); font-weight:600; text-decoration:none;">
+                        📄 ${escHtml(s.documentName)} · Trang ${s.page}${seg}
+                    </a>
+                    ${pct}
+                </div>
+                ${quote}
+                <div style="font-size:0.68rem; margin-top:2px;">
+                    <a href="javascript:void(0)" onclick="openSourceModalDirect(this, ${idx})" style="color:var(--accent-purple); text-decoration:underline;">[Xem đầy đủ]</a>
+                </div>
+            </div>`;
         });
         inner += `</div>`;
     }
@@ -204,6 +326,97 @@ function appendBubble(role, html, sources) {
     scrollBottom();
     return div;
 }
+
+function normalizeSource(s) {
+    if (!s) return null;
+    return {
+        documentId: s.documentId || s.DocumentId || '',
+        documentName: s.documentName || s.DocumentName || '',
+        chunkIndex: s.chunkIndex ?? s.ChunkIndex ?? 0,
+        page: s.page ?? s.Page ?? 0,
+        snippet: s.snippet || s.Snippet || '',
+        confidenceScore: s.confidenceScore ?? s.ConfidenceScore ?? 0
+    };
+}
+
+function parseSourcesFromBubble(bubble) {
+    const raw = bubble?.getAttribute('data-sources');
+    if (!raw) return [];
+    try {
+        const json = raw.startsWith('b64:')
+            ? atob(raw.slice(4))
+            : raw;
+        const parsed = JSON.parse(json);
+        return Array.isArray(parsed) ? parsed.map(normalizeSource).filter(Boolean) : [];
+    } catch (err) {
+        console.error('Error parsing sources from bubble:', err);
+        return [];
+    }
+}
+
+function encodeSourcesForBubble(sources) {
+    return 'b64:' + btoa(unescape(encodeURIComponent(JSON.stringify(sources || []))));
+}
+
+// Modal handling functions
+async function showSourceInModal(s) {
+    const src = normalizeSource(s);
+    if (!src) return;
+
+    document.getElementById('modalDocName').textContent = src.documentName || '—';
+    document.getElementById('modalPage').textContent = src.page ?? '—';
+    document.getElementById('modalChunkIndex').textContent = (src.chunkIndex ?? 0) + 1;
+    document.getElementById('modalScore').textContent = src.confidenceScore > 0
+        ? Math.round(src.confidenceScore * 100)
+        : '0';
+
+    const modalBody = document.getElementById('modalBody');
+    modalBody.textContent = 'Đang tải nội dung...';
+    document.getElementById('sourceModal').style.display = 'flex';
+
+    let fullText = src.snippet || '';
+
+    if (src.documentId) {
+        try {
+            const res = await fetch(`/api/documents/${encodeURIComponent(src.documentId)}/chunks/${src.chunkIndex}`);
+            if (res.ok) {
+                const data = await res.json();
+                fullText = data.content || fullText;
+            }
+        } catch (err) {
+            console.error('Failed to load full chunk content:', err);
+        }
+    }
+
+    modalBody.textContent = fullText || '(Không có nội dung chi tiết)';
+}
+
+function openSourceModalDirect(el, index) {
+    const bubble = el.closest('.bubble');
+    const sources = parseSourcesFromBubble(bubble);
+    if (sources[index]) showSourceInModal(sources[index]);
+}
+
+function closeSourceModal() {
+    document.getElementById('sourceModal').style.display = 'none';
+}
+
+document.getElementById('sourceModal')?.addEventListener('click', e => {
+    if (e.target.id === 'sourceModal') closeSourceModal();
+});
+
+// Format existing server messages on page load
+function formatServerMessages() {
+    document.querySelectorAll('.bubble.assistant').forEach(bubble => {
+        const contentDiv = bubble.querySelector('.message-content');
+        if (contentDiv) {
+            contentDiv.innerHTML = stripInlineCitations(contentDiv.innerHTML);
+        }
+    });
+}
+
+// Run formatter on load
+formatServerMessages();
 
 function setLoading(on) {
     if (btn)  btn.disabled = on;

@@ -10,16 +10,16 @@ using ServiceLayer.Settings;
 
 namespace ServiceLayer.Services.Implementations;
 
-public class GroqService : IGroqService
+public class CerebrasService : ICerebrasService
 {
     private readonly HttpClient _http;
-    private readonly GroqSettings _groq;
-    private readonly ILogger<GroqService> _logger;
+    private readonly CerebrasSettings _cerebras;
+    private readonly ILogger<CerebrasService> _logger;
 
-    public GroqService(HttpClient http, IOptions<GroqSettings> groqOptions, ILogger<GroqService> logger)
+    public CerebrasService(HttpClient http, IOptions<CerebrasSettings> cerebrasOptions, ILogger<CerebrasService> logger)
     {
         _http = http;
-        _groq = groqOptions.Value;
+        _cerebras = cerebrasOptions.Value;
         _logger = logger;
     }
 
@@ -28,7 +28,7 @@ public class GroqService : IGroqService
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
         CancellationToken ct = default)
-        => GenerateAnswerWithModelAsync(_groq.Model, question, contextChunks, history, ct);
+        => GenerateAnswerWithModelAsync(_cerebras.Model, question, contextChunks, history, ct);
 
     public async Task<LlmResult> GenerateAnswerWithModelAsync(
         string model,
@@ -37,7 +37,7 @@ public class GroqService : IGroqService
         IReadOnlyList<ChatMessage> history,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+        if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
             return new LlmResult(BuildFallback(contextChunks), model, 0, 0, 0, 0, IsError: true);
 
         var systemPrompt = BuildSystemPrompt(contextChunks);
@@ -60,11 +60,11 @@ public class GroqService : IGroqService
 
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
-            return "Chưa cấu hình API Key cho Groq.";
+        if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
+            return "Chưa cấu hình API Key cho Cerebras.";
 
         var messages = new List<object> { new { role = "user", content = prompt } };
-        var result = await CallAsync(_groq.Model, messages, 2048, ct);
+        var result = await CallAsync(_cerebras.Model, messages, 2048, ct);
         return result.IsError ? "Lỗi khi gọi API phân tích." : result.Content;
     }
 
@@ -73,10 +73,10 @@ public class GroqService : IGroqService
         string? subjectName = null,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_groq.ApiKey))
+        if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
             return new LlmResult(
-                "Chưa cấu hình Groq API Key — không thể gọi nhánh Fine-tuned.",
-                _groq.Model, 0, 0, 0, 0, IsError: true);
+                "Chưa cấu hình Cerebras API Key — không thể gọi nhánh Fine-tuned.",
+                _cerebras.Model, 0, 0, 0, 0, IsError: true);
 
         var systemPrompt = BuildParametricSystemPrompt(subjectName);
         var messages = new List<object>
@@ -85,7 +85,7 @@ public class GroqService : IGroqService
             new { role = "user", content = question }
         };
 
-        return await CallAsync(_groq.Model, messages, 1024, ct);
+        return await CallAsync(_cerebras.Model, messages, 1024, ct);
     }
 
     /// <summary>
@@ -106,13 +106,13 @@ public class GroqService : IGroqService
     }
 
     /// <summary>
-    /// Gọi Groq chat/completions, trả về nội dung + số token (usage) + độ trễ.
+    /// Gọi Cerebras chat/completions, trả về nội dung + số token (usage) + độ trễ.
     /// Tự động retry khi bị 429 (rate limit).
     /// </summary>
     private async Task<LlmResult> CallAsync(string model, List<object> messages, int maxTokens, CancellationToken ct)
     {
-        var payload = new { model, messages, temperature = 0.3, max_tokens = maxTokens };
-        var url = $"{_groq.BaseUrl}/chat/completions";
+        var payload = new { model, messages, temperature = 0.1, max_tokens = maxTokens };
+        var url = $"{_cerebras.BaseUrl}/chat/completions";
         var body = JsonSerializer.Serialize(payload);
         var sw = Stopwatch.StartNew();
 
@@ -128,7 +128,7 @@ public class GroqService : IGroqService
                 {
                     Content = new StringContent(body, Encoding.UTF8, "application/json")
                 };
-                req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _groq.ApiKey);
+                req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _cerebras.ApiKey);
 
                 res = await _http.SendAsync(req, ct);
                 text = await res.Content.ReadAsStringAsync(ct);
@@ -138,7 +138,7 @@ public class GroqService : IGroqService
 
                 if (attempt < retryDelaysMs.Length)
                 {
-                    _logger.LogWarning("Groq 429 ({Model}) – retry {Attempt}/{Max} after {Delay}ms", model, attempt + 1, retryDelaysMs.Length, retryDelaysMs[attempt]);
+                    _logger.LogWarning("Cerebras 429 ({Model}) – retry {Attempt}/{Max} after {Delay}ms", model, attempt + 1, retryDelaysMs.Length, retryDelaysMs[attempt]);
                     await Task.Delay(retryDelaysMs[attempt], ct);
                 }
             }
@@ -147,7 +147,7 @@ public class GroqService : IGroqService
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Groq API error {Status} ({Model}): {Body}", res.StatusCode, model, text);
+                _logger.LogWarning("Cerebras API error {Status} ({Model}): {Body}", res.StatusCode, model, text);
                 return new LlmResult(string.Empty, model, 0, 0, 0, sw.ElapsedMilliseconds, IsError: true);
             }
 
@@ -169,7 +169,7 @@ public class GroqService : IGroqService
         catch (Exception ex)
         {
             sw.Stop();
-            _logger.LogError(ex, "Groq call failed ({Model})", model);
+            _logger.LogError(ex, "Cerebras call failed ({Model})", model);
             return new LlmResult(string.Empty, model, 0, 0, 0, sw.ElapsedMilliseconds, IsError: true);
         }
     }
@@ -177,46 +177,46 @@ public class GroqService : IGroqService
     private static string BuildSystemPrompt(IReadOnlyList<DocumentChunk> chunks)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Bạn là trợ lý học tập AI cho sinh viên Việt Nam, trả lời bằng tiếng Việt.");
-        sb.AppendLine("Quy tắc bắt buộc:");
-        sb.AppendLine("1. CHỈ trả lời dựa trên nội dung tài liệu được cung cấp bên dưới.");
-        sb.AppendLine("2. Nếu tài liệu không đủ thông tin để trả lời, hãy trả lời chính xác câu sau và không nói gì thêm: \"Tôi không tìm thấy thông tin này trong tài liệu môn học.\"");
-        sb.AppendLine("3. KHÔNG tự ý chèn Nguồn (Source) hay Độ tin cậy vào câu trả lời vì giao diện đã tự động hiển thị chúng bên dưới.");
-        sb.AppendLine("4. Giọng thân thiện, ngắn gọn, có thể dùng markdown.");
+        sb.AppendLine("You are an AI study assistant for college students. Always reply in English.");
+        sb.AppendLine("Mandatory rules:");
+        sb.AppendLine("1. Answer the question based ONLY on the provided document context below. Do not use external knowledge.");
+        sb.AppendLine("2. If the context does not contain enough information to answer the question, reply with exactly: \"I cannot find this information in the course documents.\" and nothing else.");
+        sb.AppendLine("3. You MUST include clear inline citations in your response (e.g., [1], [2], etc.) corresponding to the index of the context chunks that support your statements. Place the citation immediately after the sentence or information it supports.");
+        sb.AppendLine("4. Keep the response friendly, concise, and structured using markdown.");
         sb.AppendLine();
-        sb.AppendLine("=== NGỮ CẢNH TÀI LIỆU ===");
+        sb.AppendLine("=== DOCUMENT CONTEXT ===");
         if (chunks.Count == 0)
         {
-            sb.AppendLine("(Không có ngữ cảnh — hãy lịch sự thông báo cho người dùng rằng chưa có tài liệu liên quan.)");
+            sb.AppendLine("(No context available — politely inform the user that there are no related documents.)");
         }
         else
         {
             int i = 1;
             foreach (var c in chunks)
             {
-                sb.AppendLine($"[{i}] Nguồn: {c.DocumentName} - Trang {c.Page}");
+                sb.AppendLine($"[{i}] Source: {c.DocumentName} - Page {c.Page}");
                 sb.AppendLine(c.Content);
                 sb.AppendLine();
                 i++;
             }
         }
-        sb.AppendLine("=== HẾT NGỮ CẢNH ===");
+        sb.AppendLine("=== END OF CONTEXT ===");
         return sb.ToString();
     }
 
     private static string BuildFallback(IReadOnlyList<DocumentChunk> chunks)
     {
         if (chunks.Count == 0)
-            return "Tôi không tìm thấy thông tin này trong tài liệu môn học.";
+            return "I cannot find this information in the course documents.";
 
         var sb = new StringBuilder();
-        sb.AppendLine("Dựa trên tài liệu môn học, mình tìm thấy các đoạn liên quan sau:");
+        sb.AppendLine("Based on the course documents, I found the following relevant parts:");
         sb.AppendLine();
         int i = 1;
         foreach (var c in chunks)
         {
             var snippet = c.Content.Length > 400 ? c.Content.Substring(0, 400) + "..." : c.Content;
-            sb.AppendLine($"[{i}] *{c.DocumentName} - Trang {c.Page}*");
+            sb.AppendLine($"[{i}] *{c.DocumentName} - Page {c.Page}*");
             sb.AppendLine(snippet);
             sb.AppendLine();
             i++;

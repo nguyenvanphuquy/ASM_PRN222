@@ -3,7 +3,7 @@ using ServiceLayer.Dtos;
 
 namespace ServiceLayer.Services.Interfaces;
 
-public interface IGroqService
+public interface ICerebrasService
 {
     /// <summary>Sinh câu trả lời RAG bằng model mặc định, kèm số token đã dùng.</summary>
     Task<LlmResult> GenerateAnswerAsync(

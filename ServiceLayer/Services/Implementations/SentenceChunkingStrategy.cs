@@ -35,9 +35,7 @@ public class SentenceChunkingStrategy : IChunkingStrategy
             var text = TextExtractor.NormalizeText(string.Join(" ", buf));
             if (TextExtractor.CountAlphaNum(text) >= MinAlphaNum)
             {
-                var probe = text.Length <= 60 ? text : text[..60];
-                var page = parts.FirstOrDefault(p => p.Text.Contains(probe, StringComparison.Ordinal)).Page;
-                if (page == 0) page = parts[0].Page;
+                var page = GuessPage(text, parts);
                 chunks.Add((text, page));
             }
             buf.Clear();
@@ -52,5 +50,52 @@ public class SentenceChunkingStrategy : IChunkingStrategy
         }
         Flush();
         return chunks;
+    }
+
+    private static int GuessPage(string chunk, List<(int Page, string Text)> parts)
+    {
+        if (parts == null || parts.Count == 0) return 1;
+
+        var probe = chunk.Length <= 80 ? chunk : chunk[..80];
+        var cleanProbe = Regex.Replace(probe, @"\s+", " ").Trim();
+        if (string.IsNullOrEmpty(cleanProbe)) return parts[0].Page;
+
+        // 1. Try to find an exact or whitespace-normalized match in a single page
+        foreach (var (page, text) in parts)
+        {
+            var cleanText = Regex.Replace(text, @"\s+", " ");
+            if (cleanText.Contains(cleanProbe, StringComparison.OrdinalIgnoreCase))
+                return page;
+        }
+
+        // 2. Map match index in combined text to page
+        var combinedText = string.Join("\n\n", parts.Select(p => p.Text));
+        var cleanCombined = Regex.Replace(combinedText, @"\s+", " ");
+        var matchIndex = cleanCombined.IndexOf(cleanProbe, StringComparison.OrdinalIgnoreCase);
+        if (matchIndex >= 0)
+        {
+            int currentLength = 0;
+            foreach (var (page, text) in parts)
+            {
+                var cleanText = Regex.Replace(text, @"\s+", " ");
+                currentLength += cleanText.Length + 1; // +1 for space replacing "\n\n"
+                if (matchIndex < currentLength)
+                    return page;
+            }
+        }
+
+        // 3. Fallback to shorter probe
+        if (cleanProbe.Length > 20)
+        {
+            var shortProbe = cleanProbe[..20];
+            foreach (var (page, text) in parts)
+            {
+                var cleanText = Regex.Replace(text, @"\s+", " ");
+                if (cleanText.Contains(shortProbe, StringComparison.OrdinalIgnoreCase))
+                    return page;
+            }
+        }
+
+        return parts[0].Page;
     }
 }

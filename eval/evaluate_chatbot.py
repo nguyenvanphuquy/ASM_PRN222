@@ -6,8 +6,8 @@ Quy trình:
   1) Đăng nhập web app (cookie auth) bằng tài khoản student.
   2) Tạo 1 phiên chat (không gắn môn → tìm trên toàn bộ tài liệu).
   3) Gửi từng câu hỏi tới /Chat/Ask, lấy câu trả lời của bot.
-  4) Dùng Groq (LLM-as-judge) so câu trả lời với ground truth → CORRECT/INCORRECT.
-     Nếu không có Groq key / mất mạng → fallback chấm bằng độ trùng từ khóa.
+  4) Dùng Cerebras (LLM-as-judge) so câu trả lời với ground truth → CORRECT/INCORRECT.
+     Nếu không có Cerebras key / mất mạng → fallback chấm bằng độ trùng từ khóa.
   5) In độ chính xác (accuracy) và xuất file Eval_Results.xlsx.
 
 Yêu cầu: app đang chạy (dotnet run). Cài thư viện: pip install -r requirements.txt
@@ -101,23 +101,23 @@ class ChatClient:
 
 
 # ----------------------------------------------------------------------------- judge
-def load_groq(appsettings, override_key=None):
-    cfg = {"ApiKey": override_key or "", "Model": "llama-3.3-70b-versatile",
-           "BaseUrl": "https://api.groq.com/openai/v1"}
+def load_cerebras(appsettings, override_key=None):
+    cfg = {"ApiKey": override_key or "", "Model": "gpt-oss-120b",
+           "BaseUrl": "https://api.cerebras.ai/v1"}
     if os.path.exists(appsettings):
         try:
             with open(appsettings, encoding="utf-8-sig") as f:
-                g = json.load(f).get("Groq", {})
-            cfg["Model"] = g.get("Model", cfg["Model"])
-            cfg["BaseUrl"] = g.get("BaseUrl", cfg["BaseUrl"])
+                c = json.load(f).get("Cerebras", {})
+            cfg["Model"] = c.get("Model", cfg["Model"])
+            cfg["BaseUrl"] = c.get("BaseUrl", cfg["BaseUrl"])
             if not override_key:
-                cfg["ApiKey"] = g.get("ApiKey", "")
+                cfg["ApiKey"] = c.get("ApiKey", "")
         except Exception:
             pass
     return cfg
 
 
-def judge_llm(groq, question, ground_truth, answer):
+def judge_llm(cerebras, question, ground_truth, answer):
     prompt = (
         "Bạn là giám khảo chấm điểm câu trả lời của một chatbot học tập.\n"
         "So sánh CÂU TRẢ LỜI với ĐÁP ÁN ĐÚNG (ground truth).\n"
@@ -127,9 +127,9 @@ def judge_llm(groq, question, ground_truth, answer):
         f"CÂU HỎI: {question}\n\nĐÁP ÁN ĐÚNG: {ground_truth}\n\nCÂU TRẢ LỜI: {answer}\n"
     )
     r = requests.post(
-        f"{groq['BaseUrl']}/chat/completions",
-        headers={"Authorization": f"Bearer {groq['ApiKey']}", "Content-Type": "application/json"},
-        json={"model": groq["Model"], "temperature": 0,
+        f"{cerebras['BaseUrl']}/chat/completions",
+        headers={"Authorization": f"Bearer {cerebras['ApiKey']}", "Content-Type": "application/json"},
+        json={"model": cerebras["Model"], "temperature": 0,
               "messages": [{"role": "user", "content": prompt}]},
         timeout=60,
     )
@@ -159,7 +159,7 @@ def main():
     ap.add_argument("--password", default="student123")
     ap.add_argument("--xlsx", default=DEFAULT_XLSX)
     ap.add_argument("--appsettings", default=DEFAULT_APPSETTINGS)
-    ap.add_argument("--groq-key", default=None, help="Ghi đè Groq API key (mặc định đọc từ appsettings.json)")
+    ap.add_argument("--cerebras-key", default=None, help="Ghi đè Cerebras API key (mặc định đọc từ appsettings.json)")
     ap.add_argument("--no-judge", action="store_true", help="Không dùng LLM, chỉ chấm bằng trùng từ khóa")
     ap.add_argument("--out", default=os.path.join(HERE, "Eval_Results.xlsx"))
     ap.add_argument("--limit", type=int, default=0, help="Chỉ chạy N câu đầu (để thử nhanh)")
@@ -170,9 +170,9 @@ def main():
         items = items[:args.limit]
     print(f"Đã đọc {len(items)} câu hỏi từ {os.path.basename(args.xlsx)}")
 
-    groq = load_groq(args.appsettings, args.groq_key)
-    use_llm = not args.no_judge and bool(groq["ApiKey"])
-    print(f"Chấm điểm: {'Groq LLM-as-judge (' + groq['Model'] + ')' if use_llm else 'trùng từ khóa (fallback)'}")
+    cerebras = load_cerebras(args.appsettings, args.cerebras_key)
+    use_llm = not args.no_judge and bool(cerebras["ApiKey"])
+    print(f"Chấm điểm: {'Cerebras LLM-as-judge (' + cerebras['Model'] + ')' if use_llm else 'trùng từ khóa (fallback)'}")
 
     client = ChatClient(args.base_url)
     print(f"Đăng nhập {args.base_url} ...")
@@ -190,7 +190,7 @@ def main():
 
         if use_llm:
             try:
-                verdict, reason = judge_llm(groq, it["question"], it["ground_truth"], answer)
+                verdict, reason = judge_llm(cerebras, it["question"], it["ground_truth"], answer)
             except Exception as e:
                 verdict, reason = judge_overlap(it["ground_truth"], answer)
                 reason += f" (LLM judge lỗi: {e})"

@@ -12,7 +12,7 @@ public class ChatService : IChatService
     private readonly IChatRepository _chatRepo;
     private readonly IUserRepository _userRepo;
     private readonly IRetrievalService _retrievalService;
-    private readonly IGroqService _llm;
+    private readonly ICerebrasService _llm;
     private readonly IBillingService _billing;
     private readonly AutoMapper.IMapper _mapper;
 
@@ -20,7 +20,7 @@ public class ChatService : IChatService
         IChatRepository chatRepo,
         IUserRepository userRepo,
         IRetrievalService retrievalService,
-        IGroqService llm,
+        ICerebrasService llm,
         IBillingService billing,
         AutoMapper.IMapper mapper)
     {
@@ -81,35 +81,29 @@ public class ChatService : IChatService
             return new ChatAnswer(blocked, new List<ChatSource>());
         }
 
-        var searchResults = await _retrievalService.SearchAsync(question, session.SubjectId, 5);
+        // Lấy nhiều chunk hơn để citation không bị "rụng" khi xếp hạng sát nhau.
+        var searchResults = await _retrievalService.SearchAsync(question, session.SubjectId, 8);
 
         string answer;
         var sources = new List<ChatSource>();
 
-        if (searchResults.Count == 0 || searchResults.All(x => x.Score < 0.2f))
+        if (searchResults.Count == 0 || searchResults.All(x => x.Score < 0.1f))
         {
-            answer = "Tôi không tìm thấy thông tin này trong tài liệu môn học.";
+            answer = "I cannot find this information in the course documents.";
         }
         else
         {
             var chunks = searchResults.Select(x => x.Chunk).ToList();
-            // Deduplicate sources by DocumentId, lấy điểm cao nhất cho mỗi tài liệu
             sources = searchResults
-                .GroupBy(c => c.Chunk.DocumentId)
-                .Select(g =>
+                .Select(res => new ChatSource
                 {
-                    var best = g.OrderByDescending(x => x.Score).First();
-                    return new ChatSource
-                    {
-                        DocumentId = best.Chunk.DocumentId,
-                        DocumentName = best.Chunk.DocumentName,
-                        ChunkIndex = best.Chunk.ChunkIndex,
-                        Page = best.Chunk.Page,
-                        Snippet = best.Chunk.Content.Length > 300 ? best.Chunk.Content.Substring(0, 300) + "..." : best.Chunk.Content,
-                        ConfidenceScore = Math.Min(best.Score, 1.0f) // Cap tối đa 100%
-                    };
+                    DocumentId = res.Chunk.DocumentId,
+                    DocumentName = res.Chunk.DocumentName,
+                    ChunkIndex = res.Chunk.ChunkIndex,
+                    Page = res.Chunk.Page,
+                    Snippet = res.Chunk.Content,
+                    ConfidenceScore = Math.Min(res.Score, 1.0f)
                 })
-                .OrderByDescending(s => s.ConfidenceScore)
                 .ToList();
 
             var llm = await _llm.GenerateAnswerAsync(question, chunks, history);
@@ -121,8 +115,12 @@ public class ChatService : IChatService
 
             // Nếu model vẫn từ chối (ngữ cảnh không thực sự liên quan) thì KHÔNG hiển thị nguồn —
             // tránh trường hợp "không tìm thấy trong tài liệu" nhưng vẫn kèm nguồn + độ tin cậy.
-            if (answer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase))
+            if (answer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase) ||
+                answer.Contains("cannot find this information", StringComparison.OrdinalIgnoreCase) ||
+                answer.Contains("not found in the", StringComparison.OrdinalIgnoreCase))
+            {
                 sources = new List<ChatSource>();
+            }
         }
 
         await _chatRepo.AddMessageAsync(new ChatMessage

@@ -1,3 +1,4 @@
+using DataAccessLayer.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PresentationLayer.Helpers;
@@ -14,11 +15,16 @@ namespace PresentationLayer.Controllers;
 public class DocumentApiController : ControllerBase
 {
     private readonly IDocumentService _documentService;
+    private readonly IDocumentChunkRepository _chunkRepo;
     private readonly INotificationService _notifier;
 
-    public DocumentApiController(IDocumentService documentService, INotificationService notifier)
+    public DocumentApiController(
+        IDocumentService documentService,
+        IDocumentChunkRepository chunkRepo,
+        INotificationService notifier)
     {
         _documentService = documentService;
+        _chunkRepo = chunkRepo;
         _notifier = notifier;
     }
 
@@ -67,6 +73,25 @@ public class DocumentApiController : ControllerBase
             doc.FileSize,
             doc.UploadedAt,
             doc.UploadedBy
+        });
+    }
+
+    /// <summary>Lấy nội dung đầy đủ của một chunk (dùng cho modal trích dẫn trong chat).</summary>
+    [HttpGet("{documentId}/chunks/{chunkIndex:int}")]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetChunk(string documentId, int chunkIndex)
+    {
+        var chunk = await _chunkRepo.GetByDocumentAndIndexAsync(documentId, chunkIndex);
+        if (chunk == null) return NotFound();
+
+        return Ok(new
+        {
+            chunk.DocumentId,
+            chunk.DocumentName,
+            chunk.ChunkIndex,
+            chunk.Page,
+            content = chunk.Content
         });
     }
 

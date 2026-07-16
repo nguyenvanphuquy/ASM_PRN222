@@ -89,8 +89,10 @@ public class ChatApiController : ControllerBase
                 answer = result.Answer,
                 sources = result.Sources.Select(s => new
                 {
+                    documentId = s.DocumentId,
                     documentName = s.DocumentName,
                     page = s.Page,
+                    chunkIndex = s.ChunkIndex,
                     confidenceScore = s.ConfidenceScore,
                     snippet = s.Snippet
                 })

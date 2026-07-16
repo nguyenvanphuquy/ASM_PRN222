@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using ServiceLayer.Dtos;
 using ServiceLayer.Services.Interfaces;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 
 namespace PresentationLayer.Pages.Chat;
 
@@ -86,4 +88,11 @@ public class SessionModel : PageModel
         => string.IsNullOrEmpty(subjectId)
             ? "🌐 Tất cả các môn"
             : "📘 " + (Subjects.FirstOrDefault(s => s.Id == subjectId)?.Name ?? "Môn học");
+
+    /// <summary>Encode sources as base64 JSON for safe HTML data-attribute storage.</summary>
+    public static string EncodeSources(IEnumerable<ServiceLayer.DTOs.ChatSourceDto> sources)
+    {
+        var json = JsonSerializer.Serialize(sources);
+        return "b64:" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+    }
 }

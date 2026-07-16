@@ -10,8 +10,8 @@ RAGAS benchmark cho ChatBot PRN222 — đo 4 chỉ số RAG chuẩn RAGAS:
 
 Cài đặt theo đúng ĐỊNH NGHĨA của RAGAS (https://docs.ragas.io) nhưng KHÔNG dùng thư viện
 `ragas` (phụ thuộc langchain chồng chéo, hay vỡ trên Python mới). Thay vào đó:
-  - Groq làm "judge" LLM (mặc định llama-3.1-8b-instant cho nhẹ rate-limit; sinh câu trả lời
-    dùng đúng model của chatbot: llama-3.3-70b)
+  - Cerebras làm "judge" LLM (mặc định gpt-oss-120b; sinh câu trả lời
+    dùng đúng model của chatbot: gpt-oss-120b)
   - sentence-transformers (multilingual-e5-base) chạy local → cosine cho answer_relevancy
 Không cần OpenAI key.
 
@@ -41,20 +41,20 @@ try:
 except Exception:
     pass
 
-GROQ_KEY = GEN_MODEL = JUDGE_MODEL = GROQ_URL = None
-_last_call = [0.0]  # pacing giữa các lệnh Groq
-PACE = [2.5]        # giây tối thiểu giữa 2 lệnh Groq (đặt cao cho model 70b để né TPM)
+CEREBRAS_KEY = GEN_MODEL = JUDGE_MODEL = CEREBRAS_URL = None
+_last_call = [0.0]  # pacing giữa các lệnh Cerebras
+PACE = [2.5]        # giây tối thiểu giữa 2 lệnh Cerebras (né rate-limits)
 
 
 # ───────────────────────── Config ─────────────────────────
 def load_config():
     with open(APPSETTINGS, encoding="utf-8-sig") as f:
         cfg = json.load(f)
-    g = cfg["Groq"]
-    # Cho phép override Groq key qua biến môi trường GROQ_API_KEY (dùng key khác nếu key chính hết quota ngày).
-    key = os.environ.get("GROQ_API_KEY", "").strip() or g["ApiKey"]
-    return (key, g.get("Model", "llama-3.3-70b-versatile"),
-            g.get("BaseUrl", "https://api.groq.com/openai/v1"),
+    c = cfg["Cerebras"]
+    # Cho phép override Cerebras key qua biến môi trường CEREBRAS_API_KEY.
+    key = os.environ.get("CEREBRAS_API_KEY", "").strip() or c["ApiKey"]
+    return (key, c.get("Model", "gpt-oss-120b"),
+            c.get("BaseUrl", "https://api.cerebras.ai/v1"),
             cfg["ConnectionStrings"]["DefaultConnection"])
 
 
@@ -92,16 +92,16 @@ def _retry_after(r):
     return None
 
 
-def groq_chat(messages, model, temperature=0.0, max_tokens=500, pace=None):
-    # pace tối thiểu giữa 2 lệnh để không vượt token/phút (TPM) của Groq free-tier
+def cerebras_chat(messages, model, temperature=0.0, max_tokens=500, pace=None):
+    # pace tối thiểu giữa 2 lệnh để không vượt rate limits của Cerebras free-tier
     pace = PACE[0] if pace is None else pace
     dt = time.time() - _last_call[0]
     if dt < pace:
         time.sleep(pace - dt)
     body = {"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
     for attempt in range(6):
-        r = requests.post(f"{GROQ_URL}/chat/completions",
-                          headers={"Authorization": f"Bearer {GROQ_KEY}"}, json=body, timeout=90)
+        r = requests.post(f"{CEREBRAS_URL}/chat/completions",
+                          headers={"Authorization": f"Bearer {CEREBRAS_KEY}"}, json=body, timeout=90)
         _last_call[0] = time.time()
         if r.status_code == 429 and attempt < 5:
             wait = _retry_after(r) or (10 * (attempt + 1))
@@ -115,7 +115,7 @@ def groq_chat(messages, model, temperature=0.0, max_tokens=500, pace=None):
 
 
 def judge_json(prompt):
-    txt = groq_chat([{"role": "user", "content": prompt}], JUDGE_MODEL, max_tokens=500)
+    txt = cerebras_chat([{"role": "user", "content": prompt}], JUDGE_MODEL, max_tokens=500)
     m = re.search(r"\{.*\}|\[.*\]", txt, re.S)
     try:
         return json.loads(m.group(0) if m else txt)
@@ -163,8 +163,8 @@ def rag_answer(question, contexts):
     if not contexts:
         return "Tôi không tìm thấy thông tin này trong tài liệu môn học."
     ctx = "\n\n".join(f"[{i+1}] {c}" for i, c in enumerate(contexts))
-    return groq_chat([{"role": "system", "content": f"{RAG_SYS}\n\n=== NGỮ CẢNH ===\n{ctx}\n=== HẾT ==="},
-                      {"role": "user", "content": question}], GEN_MODEL, max_tokens=500)
+    return cerebras_chat([{"role": "system", "content": f"{RAG_SYS}\n\n=== NGỮ CẢNH ===\n{ctx}\n=== HẾT ==="},
+                          {"role": "user", "content": question}], GEN_MODEL, max_tokens=500)
 
 
 # ───────────────────────── 4 chỉ số RAGAS ─────────────────────────
@@ -267,7 +267,7 @@ def save_outputs(results):
     xlsx = os.path.join(HERE, "RAGAS_Results.xlsx"); wb.save(xlsx)
 
     md = ["# Kết quả RAGAS benchmark", "",
-          f"- Sinh câu trả lời: `{GEN_MODEL}` · Judge: `{JUDGE_MODEL}` (Groq) · Embedding: `multilingual-e5-base` (local)",
+          f"- Sinh câu trả lời: `{GEN_MODEL}` · Judge: `{JUDGE_MODEL}` (Cerebras) · Embedding: `multilingual-e5-base` (local)",
           f"- Số câu đánh giá: **{len(results)}** (thuộc môn đã có tài liệu index)", "",
           "## Trung bình", "", "| Chỉ số | Giá trị |", "|---|---|"]
     for m in metrics:
@@ -289,21 +289,21 @@ def save_outputs(results):
 
 # ───────────────────────── Main ─────────────────────────
 def main():
-    global GROQ_KEY, GEN_MODEL, JUDGE_MODEL, GROQ_URL
+    global CEREBRAS_KEY, GEN_MODEL, JUDGE_MODEL, CEREBRAS_URL
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=10)
-    ap.add_argument("--gen", default="", help="model Groq sinh câu trả lời (mặc định = model chatbot)")
-    ap.add_argument("--judge", default="", help="model Groq để chấm (mặc định = model sinh)")
-    ap.add_argument("--pace", type=float, default=2.5, help="giây giữa 2 lệnh Groq (đặt ~10 cho 70b)")
+    ap.add_argument("--gen", default="", help="model Cerebras sinh câu trả lời (mặc định = model chatbot)")
+    ap.add_argument("--judge", default="", help="model Cerebras để chấm (mặc định = model sinh)")
+    ap.add_argument("--pace", type=float, default=2.5, help="giây giữa 2 lệnh Cerebras (đặt ~10 cho 70b)")
     args = ap.parse_args()
     PACE[0] = args.pace
 
-    GROQ_KEY, GEN_MODEL, GROQ_URL, conn_str = load_config()
+    CEREBRAS_KEY, GEN_MODEL, CEREBRAS_URL, conn_str = load_config()
     if args.gen:
         GEN_MODEL = args.gen
     JUDGE_MODEL = args.judge or GEN_MODEL
-    if not GROQ_KEY or not GROQ_KEY.startswith("gsk_"):
-        sys.exit("Thiếu Groq API key hợp lệ trong appsettings.json.")
+    if not CEREBRAS_KEY or not CEREBRAS_KEY.startswith("csk-"):
+        sys.exit("Thiếu Cerebras API key hợp lệ trong appsettings.json.")
 
     print("Nạp embedding model (multilingual-e5-base) ...", flush=True)
     from sentence_transformers import SentenceTransformer

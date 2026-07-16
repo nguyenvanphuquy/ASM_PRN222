@@ -27,7 +27,7 @@ public class Program
         builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
         // === Config ===
-        builder.Services.Configure<GroqSettings>(builder.Configuration.GetSection("Groq"));
+        builder.Services.Configure<CerebrasSettings>(builder.Configuration.GetSection("Cerebras"));
         builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
 
         // === Upload size limits (2GB) ===
@@ -114,8 +114,8 @@ public class Program
         builder.Services.AddScoped<IRetrievalService, RetrievalService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
 
-        // Groq (HTTP client)
-        builder.Services.AddHttpClient<IGroqService, GroqService>(c =>
+        // Cerebras (HTTP client)
+        builder.Services.AddHttpClient<ICerebrasService, CerebrasService>(c =>
         {
             c.Timeout = TimeSpan.FromSeconds(60);
         });
