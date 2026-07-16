@@ -58,25 +58,6 @@
 </div>
 
 <div class="grid" style="grid-template-columns: 1fr; gap: 2rem;">
-    @if (Model.Document.QualityScore > 0 || !string.IsNullOrEmpty(Model.Document.QualitySummary))
-    {
-        <div class="card" style="padding: 1.5rem; margin-bottom: 1rem; background: var(--surface-hover);">
-            <div class="flex justify-between items-center mb-2">
-                <h3 style="margin: 0; color: var(--text-primary);">Đánh giá AI (Quality Check)</h3>
-                <span class="badge @(Model.Document.QualityScore >= 80 ? "badge-green" : Model.Document.QualityScore >= 50 ? "badge-orange" : "badge-red")" style="font-size: 1.2rem;">
-                    @Model.Document.QualityScore / 100
-                </span>
-            </div>
-            <p><strong>Tóm tắt:</strong> @Model.Document.QualitySummary</p>
-            @if (!string.IsNullOrEmpty(Model.Document.QualityWarnings))
-            {
-                <div style="background-color: #ffcc0033; border-left: 4px solid #ffcc00; padding: 10px; margin-top: 10px; border-radius: 4px;">
-                    <strong style="color: #d4a000;">Cảnh báo:</strong> @Model.Document.QualityWarnings
-                </div>
-            }
-        </div>
-    }
-
     @if (!string.IsNullOrEmpty(Model.Document.ExtractedText))
     {
         <div class="card" style="padding: 1.5rem; margin-bottom: 1rem;">
@@ -103,7 +84,7 @@
         }
         else
         {
-            <div class="chunk-list">
+            <div class="chunk-list" id="chunkList">
                 @foreach (var chunk in Model.Chunks.OrderBy(c => c.ChunkIndex))
                 {
                     <div class="chunk-item">
@@ -131,6 +112,137 @@
                     </div>
                 }
             </div>
+            <nav id="chunkPager" class="chunk-pager" aria-label="Phân trang chunks"></nav>
         }
     </div>
 </div>
+
+@section Scripts {
+<style>
+    .chunk-pager {
+        display: none; /* JS bật khi có nhiều hơn 1 trang */
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 1.25rem;
+    }
+    .chunk-pager button {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+        border: 1px solid var(--border-color, #d9d3c7);
+        background: var(--surface-bg, #fff);
+        color: var(--text-primary, #222);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background .15s, border-color .15s;
+    }
+    .chunk-pager button:hover:not(:disabled):not(.active) { background: var(--surface-hover, #f0ece3); }
+    .chunk-pager button.active {
+        background: var(--accent-blue, #2563eb);
+        border-color: var(--accent-blue, #2563eb);
+        color: #fff;
+        font-weight: 600;
+        cursor: default;
+    }
+    .chunk-pager button:disabled { opacity: .45; cursor: not-allowed; }
+    .chunk-pager .chunk-pager-ellipsis { padding: 0 4px; color: var(--text-muted, #888); }
+    .chunk-pager .chunk-pager-info {
+        margin: 0 auto 0 0;
+        font-size: 0.85rem;
+        color: var(--text-muted, #888);
+    }
+</style>
+<script>
+(function () {
+    var PAGE_SIZE = 10;
+    var list = document.getElementById('chunkList');
+    var pager = document.getElementById('chunkPager');
+    if (!list || !pager) return;
+
+    var items = Array.prototype.slice.call(list.querySelectorAll('.chunk-item'));
+    var total = items.length;
+    var pageCount = Math.ceil(total / PAGE_SIZE);
+    if (pageCount <= 1) return; // 1 trang thì không cần phân trang
+
+    var current = 1;
+
+    function render() {
+        // Ẩn/hiện chunk theo trang hiện tại
+        var start = (current - 1) * PAGE_SIZE;
+        var end = start + PAGE_SIZE;
+        items.forEach(function (el, i) {
+            el.style.display = (i >= start && i < end) ? '' : 'none';
+        });
+        buildControls();
+    }
+
+    // Tính dải số trang cần hiện (có "…" khi quá nhiều trang)
+    function pageNumbers() {
+        var nums = [];
+        var add = function (n) { if (nums[nums.length - 1] !== n) nums.push(n); };
+        add(1);
+        for (var i = current - 1; i <= current + 1; i++) {
+            if (i > 1 && i < pageCount) add(i);
+        }
+        if (pageCount > 1) add(pageCount);
+        // Chèn ellipsis khi có khoảng cách
+        var out = [];
+        for (var j = 0; j < nums.length; j++) {
+            if (j > 0 && nums[j] - nums[j - 1] > 1) out.push('...');
+            out.push(nums[j]);
+        }
+        return out;
+    }
+
+    function makeBtn(label, opts) {
+        opts = opts || {};
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        if (opts.disabled) b.disabled = true;
+        if (opts.active) b.classList.add('active');
+        if (opts.onClick && !opts.disabled && !opts.active) b.addEventListener('click', opts.onClick);
+        return b;
+    }
+
+    function go(p) {
+        current = Math.min(Math.max(1, p), pageCount);
+        render();
+        list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function buildControls() {
+        pager.innerHTML = '';
+
+        var info = document.createElement('span');
+        info.className = 'chunk-pager-info';
+        info.textContent = 'Trang ' + current + ' / ' + pageCount + ' · ' + total + ' chunks';
+        pager.appendChild(info);
+
+        pager.appendChild(makeBtn('«', { disabled: current === 1, onClick: function () { go(current - 1); } }));
+
+        pageNumbers().forEach(function (n) {
+            if (n === '...') {
+                var e = document.createElement('span');
+                e.className = 'chunk-pager-ellipsis';
+                e.textContent = '…';
+                pager.appendChild(e);
+            } else {
+                pager.appendChild(makeBtn(String(n), {
+                    active: n === current,
+                    onClick: function () { go(n); }
+                }));
+            }
+        });
+
+        pager.appendChild(makeBtn('»', { disabled: current === pageCount, onClick: function () { go(current + 1); } }));
+    }
+
+    pager.style.display = 'flex';
+    render();
+})();
+</script>
+}

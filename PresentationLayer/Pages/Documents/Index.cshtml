@@ -114,7 +114,7 @@
                     <th>Thao tác</th>
                 </tr>
             </thead>
-            <tbody id="docsTbody">
+            <tbody id="docsTbody" data-pager="10" data-pager-label="tài liệu">
                 @foreach (var doc in Model.Documents)
                 {
                     var icon = doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ? "📕" :

@@ -12,18 +12,6 @@
     <p>Module nghiên cứu: so sánh RAG vs Fine-tuned · benchmark chunking · benchmark embedding · tổng hợp kết quả.</p>
 </div>
 
-<div class="flex gap-2 flex-wrap items-center mb-4">
-    @if (d.SidecarOnline)
-    {
-        <span class="badge badge-green">🟢 Sidecar embedding online</span>
-    }
-    else
-    {
-        <span class="badge badge-red">🔴 Sidecar offline — e5/PhoBERT/bge sẽ bỏ qua</span>
-    }
-    <span class="text-sm text-muted">App tự khởi động sidecar; hoặc chạy: python tools/embedding_server.py</span>
-</div>
-
 @if (Model.SuiteResult != null)
 {
     var sr = Model.SuiteResult;
@@ -212,7 +200,7 @@ else
                         <th>Variants</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody data-pager="10" data-pager-label="lần chạy">
                     @foreach (var r in d.RecentRuns)
                     {
                         <tr>

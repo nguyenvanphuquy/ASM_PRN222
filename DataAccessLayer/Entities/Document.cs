@@ -17,9 +17,6 @@ public class Document
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
     public string? ExtractedText { get; set; }
-    public int QualityScore { get; set; }
-    public string? QualitySummary { get; set; }
-    public string? QualityWarnings { get; set; }
 
     // Navigation Properties
     public virtual Subject? Subject { get; set; }

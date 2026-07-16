@@ -100,7 +100,7 @@
                     <th class="text-right" style="text-align:right">Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody data-pager="10" data-pager-label="người dùng">
                 @foreach (var u in Model.Users)
                 {
                     var roleClass = u.Role == "Admin" ? "badge-red" :

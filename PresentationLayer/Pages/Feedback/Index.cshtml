@@ -50,7 +50,7 @@
         }
         else
         {
-            <div id="fbList" style="display:flex;flex-direction:column;gap:12px">
+            <div id="fbList" style="display:flex;flex-direction:column;gap:12px" data-pager="10" data-pager-label="phản hồi">
                 @foreach (var fb in Model.Items.OrderByDescending(x => x.CreatedAt))
                 {
                     var replies = Model.Replies.TryGetValue(fb.Id, out var rs) ? rs : new();

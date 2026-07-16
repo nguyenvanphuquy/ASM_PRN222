@@ -88,7 +88,7 @@
             <thead>
                 <tr><th>Mã GD</th><th>Gói</th><th class="text-right">Số tiền</th><th class="text-right">Token</th><th>Trạng thái</th><th class="text-right">Ngày</th></tr>
             </thead>
-            <tbody>
+            <tbody data-pager="10" data-pager-label="giao dịch">
                 @if (Model.History.Count == 0)
                 {
                     <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted)">Chưa có giao dịch nào.</td></tr>

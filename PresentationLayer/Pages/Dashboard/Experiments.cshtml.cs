@@ -30,14 +30,14 @@ public class ExperimentsModel : PageModel
     {
         ViewData["Title"] = "Dashboard RBL";
         ViewData["TopbarTitle"] = "📊 Kết quả thực nghiệm RBL";
-        Data = await _experiments.GetDashboardAsync(filterKind: NormalizeKind(Kind));
+        Data = await _experiments.GetDashboardAsync(recentTake: 500, filterKind: NormalizeKind(Kind));
     }
 
     public async Task<IActionResult> OnPostRunSuiteAsync()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         SuiteResult = await _suite.RunStandardSuiteAsync(userId);
-        Data = await _experiments.GetDashboardAsync(filterKind: NormalizeKind(Kind));
+        Data = await _experiments.GetDashboardAsync(recentTake: 500, filterKind: NormalizeKind(Kind));
         ViewData["Title"] = "Dashboard RBL";
         ViewData["TopbarTitle"] = "📊 Kết quả thực nghiệm RBL";
         return Page();

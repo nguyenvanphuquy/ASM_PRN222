@@ -108,7 +108,6 @@ public class Program
         builder.Services.AddScoped<IRagVsFineTunedComparisonService, RagVsFineTunedComparisonService>();
         builder.Services.AddScoped<IChunkingComparisonService, ChunkingComparisonService>();
         builder.Services.AddScoped<IEmbeddingComparisonService, EmbeddingComparisonService>();
-        builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
         builder.Services.AddScoped<IChunkingService, ChunkingService>();
         builder.Services.AddScoped<IRetrievalService, RetrievalService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -174,7 +173,7 @@ public class Program
             {
                 Title = "ChatBot PRN222 API",
                 Version = "v1",
-                Description = "REST API cho hệ thống RAG Chatbot học thuật — Chat, Document Management, Quality Check."
+                Description = "REST API cho hệ thống RAG Chatbot học thuật — Chat, Document Management."
             });
             // Cookie auth scheme cho Swagger UI
             c.AddSecurityDefinition("cookieAuth", new OpenApiSecurityScheme
@@ -256,12 +255,6 @@ public class Program
                         ALTER TABLE Documents ADD ChapterId nvarchar(36) NULL;
                     IF COL_LENGTH('Documents', 'ExtractedText') IS NULL
                         ALTER TABLE Documents ADD ExtractedText nvarchar(max) NULL;
-                    IF COL_LENGTH('Documents', 'QualityScore') IS NULL
-                        ALTER TABLE Documents ADD QualityScore int NOT NULL DEFAULT 0;
-                    IF COL_LENGTH('Documents', 'QualitySummary') IS NULL
-                        ALTER TABLE Documents ADD QualitySummary nvarchar(max) NULL;
-                    IF COL_LENGTH('Documents', 'QualityWarnings') IS NULL
-                        ALTER TABLE Documents ADD QualityWarnings nvarchar(max) NULL;
                     IF OBJECT_ID('Packages') IS NOT NULL AND COL_LENGTH('Packages', 'IsDeleted') IS NULL
                         ALTER TABLE Packages ADD IsDeleted bit NOT NULL DEFAULT 0;
                     IF OBJECT_ID('AllowedEmails') IS NULL

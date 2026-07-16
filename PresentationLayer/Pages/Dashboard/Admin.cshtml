@@ -14,25 +14,25 @@
 <div class="stats-grid">
     <div class="stat-card purple">
         <div class="stat-icon purple">👥</div>
-        <div class="stat-value">@s.UsersTotal</div>
+        <div class="stat-value" id="statUsers">@s.UsersTotal</div>
         <div class="stat-label">Người dùng</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px">
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px" id="statUserBreakdown">
             Admin @s.Admins · GV @s.Lecturers · SV @s.Students
         </div>
     </div>
     <div class="stat-card blue">
         <div class="stat-icon blue">📄</div>
-        <div class="stat-value">@s.Documents</div>
+        <div class="stat-value" id="statDocuments">@s.Documents</div>
         <div class="stat-label">Tài liệu</div>
     </div>
     <div class="stat-card green">
         <div class="stat-icon green">💬</div>
-        <div class="stat-value">@s.ChatMessages</div>
+        <div class="stat-value" id="statChatMessages">@s.ChatMessages</div>
         <div class="stat-label">Tin nhắn chat</div>
     </div>
     <div class="stat-card orange">
         <div class="stat-icon orange">📚</div>
-        <div class="stat-value">@s.Subjects</div>
+        <div class="stat-value" id="statSubjects">@s.Subjects</div>
         <div class="stat-label">Môn học</div>
     </div>
 </div>
@@ -43,6 +43,7 @@
             <span class="card-title">📄 Tài liệu gần đây</span>
             <a href="/Documents" class="btn btn-secondary btn-sm">Giám sát</a>
         </div>
+        <div id="recentDocsList">
         @if (s.RecentDocuments.Count == 0)
         {
             <div class="empty-state" style="padding:32px">
@@ -69,6 +70,7 @@
                 </div>
             }
         }
+        </div>
     </div>
 
     <div class="card">
@@ -79,21 +81,21 @@
         <div style="display:flex;flex-direction:column;gap:14px">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
                 <span style="font-size:0.85rem;color:var(--text-secondary)">⭐ Điểm phản hồi TB</span>
-                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-orange)">
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-orange)" id="statFeedbackAvg">
                     @(s.FeedbackAverage > 0 ? s.FeedbackAverage.ToString("F1") : "–")
                 </span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
                 <span style="font-size:0.85rem;color:var(--text-secondary)">💬 Phiên chat</span>
-                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-blue)">@s.ChatSessions</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-blue)" id="statChatSessions">@s.ChatSessions</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
                 <span style="font-size:0.85rem;color:var(--text-secondary)">🧩 Chunks đã index</span>
-                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-green)">@s.Chunks</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-green)" id="statChunks">@s.Chunks</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-md)">
                 <span style="font-size:0.85rem;color:var(--text-secondary)">⏳ Phản hồi chờ duyệt</span>
-                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-red)">@s.FeedbackAwaiting</span>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--accent-red)" id="statFeedbackAwaiting">@s.FeedbackAwaiting</span>
             </div>
         </div>
     </div>
@@ -117,23 +119,101 @@
 </div>
 
 @section Scripts {
+<style>
+    /* Nhấp nháy nhẹ khi một số liệu vừa được cập nhật real-time */
+    @@keyframes statFlash {
+        0%   { background:rgba(37,99,235,.18); }
+        100% { background:transparent; }
+    }
+    .stat-flash { animation: statFlash 1s ease-out; border-radius:6px; }
+</style>
 <script>
 (function () {
-    function showDashBanner() {
-        if (document.getElementById('dashLiveBar')) return;
-        var bar = document.createElement('div');
-        bar.id = 'dashLiveBar';
-        bar.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;' +
-            'background:#2563eb;color:#fff;padding:10px 18px;border-radius:999px;' +
-            'box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.9rem;display:flex;gap:12px;align-items:center;cursor:pointer';
-        bar.innerHTML = '🔄 Có dữ liệu mới — <strong>Bấm để làm mới</strong>';
-        bar.onclick = function () { location.reload(); };
-        document.body.appendChild(bar);
+    // Cập nhật một phần tử số liệu tại chỗ; chỉ nhấp nháy khi giá trị thực sự đổi.
+    function setStat(id, value) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var next = String(value);
+        if (el.textContent.trim() === next) return;
+        el.textContent = next;
+        el.classList.remove('stat-flash');
+        void el.offsetWidth; // reflow để restart animation
+        el.classList.add('stat-flash');
     }
+
+    function docIcon(name) {
+        name = (name || '').toLowerCase();
+        if (name.endsWith('.pdf')) return '📕';
+        if (name.endsWith('.docx')) return '📘';
+        if (name.endsWith('.pptx')) return '📙';
+        return '📄';
+    }
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : s;
+        return d.innerHTML;
+    }
+
+    function renderRecentDocs(docs) {
+        var box = document.getElementById('recentDocsList');
+        if (!box) return;
+        if (!docs || docs.length === 0) {
+            box.innerHTML = '<div class="empty-state" style="padding:32px">' +
+                '<div class="empty-state-icon">📂</div>' +
+                '<div class="empty-state-title">Chưa có tài liệu</div></div>';
+            return;
+        }
+        box.innerHTML = docs.map(function (d) {
+            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle)">' +
+                '<div style="font-size:1.4rem">' + docIcon(d.fileName) + '</div>' +
+                '<div style="flex:1;min-width:0">' +
+                '<div class="truncate" style="font-size:0.85rem;font-weight:600">' + esc(d.title) + '</div>' +
+                '<div style="font-size:0.72rem;color:var(--text-muted)">' +
+                Math.floor((d.fileSize || 0) / 1024) + ' KB · ' + esc(d.status) + '</div>' +
+                '</div></div>';
+        }).join('');
+    }
+
+    var busy = false, pending = false;
+    async function refreshStats() {
+        // Gộp nhiều event dồn dập: nếu đang tải thì đánh dấu để chạy lại một lần.
+        if (busy) { pending = true; return; }
+        busy = true;
+        try {
+            var res = await fetch('?handler=Stats', { headers: { 'X-Requested-With': 'fetch' } });
+            if (!res.ok) return;
+            var d = await res.json();
+            setStat('statUsers', d.usersTotal);
+            var bd = document.getElementById('statUserBreakdown');
+            if (bd) bd.textContent = 'Admin ' + d.admins + ' · GV ' + d.lecturers + ' · SV ' + d.students;
+            setStat('statDocuments', d.documents);
+            setStat('statChatMessages', d.chatMessages);
+            setStat('statSubjects', d.subjects);
+            setStat('statFeedbackAvg', d.feedbackAverage > 0 ? d.feedbackAverage.toFixed(1) : '–');
+            setStat('statChatSessions', d.chatSessions);
+            setStat('statChunks', d.chunks);
+            setStat('statFeedbackAwaiting', d.feedbackAwaiting);
+            renderRecentDocs(d.recentDocuments);
+        } catch (e) {
+            console.warn('Dashboard refresh:', e);
+        } finally {
+            busy = false;
+            if (pending) { pending = false; refreshStats(); }
+        }
+    }
+
+    // Debounce: nhiều event trong ~600ms chỉ gọi refresh một lần.
+    var timer = null;
+    function scheduleRefresh() {
+        clearTimeout(timer);
+        timer = setTimeout(refreshStats, 600);
+    }
+
     function sub() {
         if (!window.appNotifHub) { setTimeout(sub, 300); return; }
         ['DocumentChanged', 'UserChanged', 'PackagePurchased', 'FeedbackChanged', 'ActivityLogged']
-            .forEach(function (evt) { window.appNotifHub.on(evt, showDashBanner); });
+            .forEach(function (evt) { window.appNotifHub.on(evt, scheduleRefresh); });
     }
     sub();
 })();

@@ -15,9 +15,6 @@ namespace ServiceLayer.DTOs
         public int ChunkCount { get; set; }
         public string Status { get; set; } = "Indexed";
         public DateTime UploadedAt { get; set; }
-        public int QualityScore { get; set; }
-        public string? QualitySummary { get; set; }
-        public string? QualityWarnings { get; set; }
         public string? ExtractedText { get; set; }
     }
 }

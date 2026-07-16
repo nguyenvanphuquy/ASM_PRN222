@@ -959,3 +959,41 @@ tbody tr:hover td { background: var(--bg-card-hover); color: var(--text-primary)
     width: 100%;
 }
 .hidden { display: none !important; }
+
+/* ── Phân trang danh sách dùng chung (list-pager.js) ── */
+.lp-hidden { display: none !important; }
+.list-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 16px 20px 20px;
+}
+.list-pager-info {
+    margin-right: auto;
+    font-size: 0.82rem;
+    color: var(--text-muted, #8a8178);
+}
+.list-pager button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border-subtle, #e2dccf);
+    background: var(--bg-card, #fff);
+    color: var(--text-primary, #2b2521);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.list-pager button:hover:not(:disabled):not(.active) { background: var(--surface-hover, #f0ece3); }
+.list-pager button.active {
+    background: var(--accent-blue, #2563eb);
+    border-color: var(--accent-blue, #2563eb);
+    color: #fff;
+    font-weight: 600;
+    cursor: default;
+}
+.list-pager button:disabled { opacity: .45; cursor: not-allowed; }
+.list-pager-ellipsis { padding: 0 4px; color: var(--text-muted, #8a8178); }

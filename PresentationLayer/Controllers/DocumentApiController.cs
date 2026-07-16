@@ -40,14 +40,13 @@ public class DocumentApiController : ControllerBase
             d.ChapterId,
             d.Status,
             d.ChunkCount,
-            d.QualityScore,
             d.FileSize,
             d.UploadedAt,
             d.UploadedBy
         }));
     }
 
-    /// <summary>Lấy chi tiết một tài liệu kèm kết quả AI Quality Check.</summary>
+    /// <summary>Lấy chi tiết một tài liệu.</summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(404)]
@@ -65,9 +64,6 @@ public class DocumentApiController : ControllerBase
             doc.ChapterId,
             doc.Status,
             doc.ChunkCount,
-            doc.QualityScore,
-            doc.QualitySummary,
-            doc.QualityWarnings,
             doc.FileSize,
             doc.UploadedAt,
             doc.UploadedBy

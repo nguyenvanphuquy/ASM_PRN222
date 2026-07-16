@@ -7,9 +7,6 @@ namespace ServiceLayer.Services.Implementations;
 
 public class ReportService : IReportService
 {
-    // Tỷ giá quy đổi dùng chung ở ModelCatalog.UsdToVnd (khớp mọi chỗ hiển thị chi phí).
-    private const decimal UsdToVnd = ModelCatalog.UsdToVnd;
-
     private readonly IBillingRepository _billing;
     private readonly IUserRepository _users;
 
@@ -102,7 +99,8 @@ public class ReportService : IReportService
         var userMap = users.ToDictionary(u => u.Id, u => u);
 
         decimal costUsd = usage.Sum(l => l.CostUsd);
-        long costVnd = (long)(costUsd * UsdToVnd);
+        // Dùng chung helper làm tròn với mọi chỗ hiển thị chi phí (Math.Round) — tránh lệch 1đ do cast cắt phần lẻ.
+        long costVnd = ModelCatalog.ToVnd(costUsd);
         long revenue = sales.Sum(p => p.AmountVnd);
 
         var report = new RevenueReport

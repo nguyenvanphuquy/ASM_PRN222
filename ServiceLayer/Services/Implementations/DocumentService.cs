@@ -14,21 +14,19 @@ public class DocumentService : IDocumentService
     private readonly IDocumentChunkRepository _chunkRepo;
     private readonly ITextExtractor _extractor;
     private readonly IDocumentFileStore _fileStore;
-    private readonly IQualityCheckService _qualityCheckService;
     private readonly IChunkingService _chunkingService;
     private readonly INotificationService _notifier;
     private readonly AutoMapper.IMapper _mapper;
 
     public DocumentService(IDocumentRepository docRepo, IDocumentChunkRepository chunkRepo,
         ITextExtractor extractor, IDocumentFileStore fileStore,
-        IQualityCheckService qualityCheckService, IChunkingService chunkingService,
+        IChunkingService chunkingService,
         INotificationService notifier, AutoMapper.IMapper mapper)
     {
         _docRepo = docRepo;
         _chunkRepo = chunkRepo;
         _extractor = extractor;
         _fileStore = fileStore;
-        _qualityCheckService = qualityCheckService;
         _chunkingService = chunkingService;
         _notifier = notifier;
         _mapper = mapper;
@@ -87,11 +85,6 @@ public class DocumentService : IDocumentService
 
             doc.ExtractedText = extractedText;
 
-            var qualityResult = await _qualityCheckService.CheckQualityAsync(extractedText);
-            doc.QualityScore = qualityResult.Score;
-            doc.QualitySummary = qualityResult.Summary;
-            doc.QualityWarnings = qualityResult.Warnings;
-
             // Tự động chunk & embed ngay sau khi trích xuất (không cần duyệt thủ công).
             doc.Status = "Indexing";
             await _docRepo.UpdateAsync(doc);
@@ -105,7 +98,7 @@ public class DocumentService : IDocumentService
 
             await _notifier.SendAsync(uploadedByUserId, "success",
                 "✅ Tài liệu đã được index",
-                $"\"{doc.Title}\" đã chunk & embed thành {chunkCount} đoạn (điểm AI: {doc.QualityScore}/100).");
+                $"\"{doc.Title}\" đã chunk & embed thành {chunkCount} đoạn.");
         }
         catch
         {

@@ -39,7 +39,7 @@
                     <th>Mô tả</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody data-pager="15" data-pager-label="hoạt động">
                 @foreach (var e in Model.Entries)
                 {
                     <tr class="audit-row" data-cat="@e.Category" data-text="@($"{e.Actor} {e.Description}".ToLower())">

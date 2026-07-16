@@ -111,8 +111,6 @@ public class AppDbContext : DbContext
             e.Property(d => d.ContentHash).HasMaxLength(64).HasDefaultValue("");
             e.Property(d => d.Status).HasMaxLength(20).HasDefaultValue("Indexed");
             e.Property(d => d.ExtractedText).HasColumnType("nvarchar(max)");
-            e.Property(d => d.QualitySummary).HasColumnType("nvarchar(max)");
-            e.Property(d => d.QualityWarnings).HasColumnType("nvarchar(max)");
             e.HasIndex(d => d.SubjectId);
             e.HasIndex(d => d.ChapterId);
 
