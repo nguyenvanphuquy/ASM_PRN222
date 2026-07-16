@@ -80,10 +80,10 @@ public class NotificationService : INotificationService
             .SendAsync("UserChanged", new { action, userId, value });
     }
 
-    public async Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens)
+    public async Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens, string? userName = null)
     {
         await _hub.Clients.All
-            .SendAsync("PackagePurchased", new { packageName, amountVnd, tokens, time = DateTime.Now.ToString("HH:mm") });
+            .SendAsync("PackagePurchased", new { packageName, amountVnd, tokens, userName, time = DateTime.Now.ToString("HH:mm") });
     }
 
     public async Task PackagesChangedAsync(string action)

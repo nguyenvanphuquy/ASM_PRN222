@@ -39,7 +39,7 @@ public interface INotificationService
     /// Phát sự kiện realtime khi có giao dịch mua gói mới — trang Báo cáo &amp; Thống kê
     /// của admin cập nhật doanh thu/token mà không cần reload.
     /// </summary>
-    Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens);
+    Task PackagePurchasedAsync(string packageName, long amountVnd, int tokens, string? userName = null);
 
     /// <summary>
     /// Phát sự kiện realtime khi danh mục GÓI thay đổi (admin tạo/sửa/xoá gói) —

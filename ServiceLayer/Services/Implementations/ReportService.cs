@@ -37,6 +37,9 @@ public class ReportService : IReportService
             TotalCompletion = logs.Sum(l => (long)l.CompletionTokens),
             TotalRequests = logs.Count,
             TotalCostUsd = logs.Sum(l => l.CostUsd),
+            // Tách riêng phần CHAT (vận hành) khỏi benchmark RBL để tính chi phí/lợi nhuận cho đúng.
+            ChatTokens = logs.Where(l => l.Kind == "chat").Sum(l => (long)l.TotalTokens),
+            ChatCostUsd = logs.Where(l => l.Kind == "chat").Sum(l => l.CostUsd),
             ActiveUsers = logs.Select(l => l.UserId).Distinct().Count(),
         };
 
@@ -87,32 +90,42 @@ public class ReportService : IReportService
         return report;
     }
 
-    public async Task<RevenueReport> GetRevenueReportAsync()
+    public async Task<RevenueReport> GetRevenueReportAsync(string range)
     {
+        var since = range switch
+        {
+            "week" => DateTime.UtcNow.AddDays(-7),
+            "all" => DateTime.MinValue,
+            _ => DateTime.UtcNow.AddDays(-30),
+        };
+
         var purchases = await _billing.GetAllPurchasesAsync();
-        // "Lượt mua gói" & doanh thu CHỈ tính giao dịch có trả tiền (AmountVnd > 0):
+        // "Lượt mua gói" & doanh thu CHỈ tính giao dịch có trả tiền (AmountVnd > 0) TRONG KHOẢNG range:
         //  - Bỏ gói dùng thử miễn phí (auto-grant 0đ) — đó không phải "lượt mua".
         //  - Gói đã HỦY vẫn tính (app không hoàn tiền → tiền đã thu vẫn là doanh thu thật).
-        var sales = purchases.Where(p => p.AmountVnd > 0).ToList();
-        var usage = await _billing.GetUsageSinceAsync(DateTime.MinValue);
+        var sales = purchases.Where(p => p.AmountVnd > 0 && p.CreatedAt >= since).ToList();
+        var usage = await _billing.GetUsageSinceAsync(since);
         var users = await _users.GetAllAsync();
         var userMap = users.ToDictionary(u => u.Id, u => u);
 
-        decimal costUsd = usage.Sum(l => l.CostUsd);
-        // Dùng chung helper làm tròn với mọi chỗ hiển thị chi phí (Math.Round) — tránh lệch 1đ do cast cắt phần lẻ.
-        long costVnd = ModelCatalog.ToVnd(costUsd);
+        // Lợi nhuận chỉ trừ chi phí VẬN HÀNH (chat); chi phí benchmark RBL để riêng.
+        decimal chatCostUsd = usage.Where(l => l.Kind == "chat").Sum(l => l.CostUsd);
+        long chatCostVnd = ModelCatalog.ToVnd(chatCostUsd);
+        long researchCostVnd = ModelCatalog.ToVnd(usage.Where(l => l.Kind != "chat").Sum(l => l.CostUsd));
         long revenue = sales.Sum(p => p.AmountVnd);
 
         var report = new RevenueReport
         {
+            Range = range,
             TotalRevenueVnd = revenue,
             TotalPurchases = sales.Count,
             PayingUsers = sales.Select(p => p.UserId).Distinct().Count(),
             TokensSold = sales.Sum(p => (long)p.TokensGranted),
             TokensUsed = sales.Sum(p => (long)p.TokensUsed),
-            EstimatedCostUsd = costUsd,
-            EstimatedCostVnd = costVnd,
-            ProfitVnd = revenue - costVnd,
+            EstimatedCostUsd = chatCostUsd,
+            EstimatedCostVnd = chatCostVnd,
+            ResearchCostVnd = researchCostVnd,
+            ProfitVnd = revenue - chatCostVnd,
         };
 
         report.ByPackage = sales
@@ -129,6 +142,7 @@ public class ReportService : IReportService
             .ToList();
 
         report.Recent = purchases
+            .Where(p => p.CreatedAt >= since)
             .Take(12)
             .Select(p =>
             {

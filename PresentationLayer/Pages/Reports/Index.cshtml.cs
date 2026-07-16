@@ -22,6 +22,6 @@ public class IndexModel : PageModel
 
         Range = range is "week" or "month" or "all" ? range : "month";
         Tokens = await _report.GetTokenReportAsync(Range);
-        Revenue = await _report.GetRevenueReportAsync();
+        Revenue = await _report.GetRevenueReportAsync(Range);
     }
 }

@@ -10,11 +10,13 @@ public class BillingService : IBillingService
 {
     private readonly IBillingRepository _repo;
     private readonly INotificationService _notifier;
+    private readonly IUserRepository _users;
 
-    public BillingService(IBillingRepository repo, INotificationService notifier)
+    public BillingService(IBillingRepository repo, INotificationService notifier, IUserRepository users)
     {
         _repo = repo;
         _notifier = notifier;
+        _users = users;
     }
 
     // ── Packages ──
@@ -161,9 +163,11 @@ public class BillingService : IBillingService
         }
 
         // Realtime: báo cho user + cập nhật doanh thu trên trang báo cáo của admin.
+        var buyer = await _users.GetByIdAsync(userId);
+        var buyerName = buyer?.FullName is { Length: > 0 } fn ? fn : (buyer?.Username ?? "Người dùng");
         await _notifier.SendAsync(userId, "success", "Mua gói thành công",
             $"Bạn đã mua {pkg.Name} (+{pkg.TokenQuota:N0} token).");
-        await _notifier.PackagePurchasedAsync(pkg.Name, pkg.PriceVnd, pkg.TokenQuota);
+        await _notifier.PackagePurchasedAsync(pkg.Name, pkg.PriceVnd, pkg.TokenQuota, buyerName);
 
         var bal = await GetBalanceAsync(userId);
         await _notifier.TokenBalanceChangedAsync(userId, bal.Remaining, bal.Granted, bal.Used);

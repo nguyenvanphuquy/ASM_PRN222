@@ -9,5 +9,6 @@ public interface IReportService
 {
     /// <param name="range">week | month | all</param>
     Task<TokenReport> GetTokenReportAsync(string range);
-    Task<RevenueReport> GetRevenueReportAsync();
+    /// <param name="range">week | month | all — lọc doanh thu & chi phí theo cùng khoảng với token.</param>
+    Task<RevenueReport> GetRevenueReportAsync(string range);
 }

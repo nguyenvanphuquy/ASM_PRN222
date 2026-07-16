@@ -39,9 +39,15 @@
     </div>
     <div class="stat-card orange">
         <div class="stat-icon orange">💵</div>
-        <div class="stat-value">@t.TotalCostVnd.ToString("N0")₫</div>
-        <div class="stat-label">Chi phí token ước tính</div>
+        <div class="stat-value">@t.ChatCostVnd.ToString("N0")₫</div>
+        <div class="stat-label">Chi phí vận hành (chat)</div>
     </div>
+</div>
+<div class="text-sm text-muted" style="margin:-8px 0 20px">
+    Tổng token: <strong>@t.TotalTokens.ToString("N0")</strong>
+    = chat <strong>@t.ChatTokens.ToString("N0")</strong>
+    + benchmark RBL <strong>@t.RblTokens.ToString("N0")</strong>
+    · Chi phí RBL (nghiên cứu): <strong>@t.RblCostVnd.ToString("N0")₫</strong> — không tính vào lợi nhuận.
 </div>
 
 <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-bottom:24px">
@@ -110,7 +116,7 @@
 </div>
 
 <!-- ══════════ PHẦN 2: DOANH THU GÓI ══════════ -->
-<h3 style="margin:8px 0 14px">💳 Doanh thu &amp; lợi nhuận gói</h3>
+<h3 style="margin:8px 0 14px">💳 Doanh thu &amp; lợi nhuận gói — @RangeLabel(Model.Range)</h3>
 <div class="stats-grid">
     <div class="stat-card green">
         <div class="stat-icon green">💰</div>
@@ -163,9 +169,10 @@
                 </tbody>
             </table>
         </div>
-        <div style="padding:14px 24px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;font-size:0.82rem;color:var(--text-secondary)">
+        <div style="padding:14px 24px;border-top:1px solid var(--border-subtle);display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;font-size:0.82rem;color:var(--text-secondary)">
             <span>Token đã bán: <strong>@r.TokensSold.ToString("N0")</strong></span>
-            <span>Chi phí LLM ước tính: <strong>@r.EstimatedCostVnd.ToString("N0")₫</strong></span>
+            <span>Chi phí LLM vận hành (chat): <strong>@r.EstimatedCostVnd.ToString("N0")₫</strong></span>
+            <span title="Không trừ vào lợi nhuận">Chi phí benchmark RBL: <strong>@r.ResearchCostVnd.ToString("N0")₫</strong></span>
         </div>
     </div>
 
@@ -175,20 +182,28 @@
         <div class="table-wrapper" style="border:none">
             <table>
                 <thead>
-                    <tr><th>Người dùng</th><th>Gói</th><th class="text-right">Số tiền</th><th class="text-right">Thời gian</th></tr>
+                    <tr><th>Người dùng</th><th>Gói</th><th>Trạng thái</th><th class="text-right">Số tiền</th><th class="text-right">Thời gian</th></tr>
                 </thead>
                 <tbody id="recentPurchases">
                     @if (r.Recent.Count == 0)
                     {
-                        <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">Chưa có giao dịch.</td></tr>
+                        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">Chưa có giao dịch.</td></tr>
                     }
                     else
                     {
                         foreach (var p in r.Recent)
                         {
+                            @* Nhãn trạng thái: miễn phí (0đ) / đã mua (Paid) / đã hủy (Cancelled) / hết hạn (Expired). *@
+                            var (stLabel, stClass) = p.AmountVnd == 0
+                                ? ("Miễn phí", "badge-gray")
+                                : p.Status == "Paid" ? ("Đã mua", "badge-green")
+                                : p.Status == "Cancelled" ? ("Đã hủy", "badge-orange")
+                                : p.Status == "Expired" ? ("Hết hạn", "badge-gray")
+                                : (p.Status, "badge-gray");
                             <tr>
                                 <td style="font-weight:600;color:var(--text-primary)">@p.UserName</td>
                                 <td class="text-sm">@p.PackageName</td>
+                                <td><span class="badge @stClass">@stLabel</span></td>
                                 <td class="text-right" style="font-weight:600">@p.AmountVnd.ToString("N0")₫</td>
                                 <td class="text-right text-sm text-muted">@p.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</td>
                             </tr>
@@ -251,7 +266,7 @@
             if (tbody) {
                 if (tbody.querySelector('td[colspan]')) tbody.innerHTML = ''; // bỏ dòng "chưa có giao dịch"
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td style="font-weight:600;color:var(--text-primary)">Vừa mua</td><td class="text-sm">${escHtml(d.packageName)}</td><td class="text-right" style="font-weight:600">${Number(d.amountVnd).toLocaleString('vi-VN')}₫</td><td class="text-right text-sm text-muted">${escHtml(d.time || '')}</td>`;
+                tr.innerHTML = `<td style="font-weight:600;color:var(--text-primary)">${escHtml(d.userName || 'Vừa mua')}</td><td class="text-sm">${escHtml(d.packageName)}</td><td><span class="badge badge-green">Đã mua</span></td><td class="text-right" style="font-weight:600">${Number(d.amountVnd).toLocaleString('vi-VN')}₫</td><td class="text-right text-sm text-muted">${escHtml(d.time || '')}</td>`;
                 tr.style.background = 'rgba(63,164,106,0.12)';
                 tbody.insertBefore(tr, tbody.firstElementChild);
             }
