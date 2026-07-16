@@ -19,8 +19,8 @@ public interface IBillingService
     // ── Người dùng ──
     Task<TokenBalance> GetBalanceAsync(string userId);
     Task<List<PackagePurchase>> GetUserPurchasesAsync(string userId);
-    /// <summary>Mua gói (thanh toán giả lập → cấp token ngay).</summary>
-    Task<(bool Success, string? Error, PackagePurchase? Purchase)> BuyAsync(string userId, string packageId);
+    /// <summary>Mua gói (thanh toán giả lập → cấp token ngay). <paramref name="idempotencyKey"/> chống mua trùng.</summary>
+    Task<(bool Success, string? Error, PackagePurchase? Purchase)> BuyAsync(string userId, string packageId, string? idempotencyKey = null);
     /// <summary>Hủy một gói đã mua (trạng thái Paid).</summary>
     Task<(bool Success, string? Error)> CancelPurchaseAsync(string userId, string purchaseId);
     /// <summary>Cấp gói dùng thử miễn phí một lần cho người dùng chưa từng có giao dịch.</summary>

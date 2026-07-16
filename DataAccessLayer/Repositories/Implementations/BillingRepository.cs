@@ -83,6 +83,72 @@ public class BillingRepository : IBillingRepository
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 
+    public Task<PackagePurchase?> GetByIdempotencyKeyAsync(string userId, string idempotencyKey)
+        => _context.PackagePurchases
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.IdempotencyKey == idempotencyKey);
+
+    public async Task DeductAsync(string userId, int tokens)
+    {
+        if (tokens <= 0) return;
+        var now = DateTime.UtcNow;
+
+        // Trừ token NGUYÊN TỬ bằng pessimistic row lock: khóa (UPDLOCK) các dòng gói còn hiệu
+        // lực của user trong 1 transaction. Hai request song song của cùng user sẽ XẾP HÀNG tại
+        // đây rồi trừ tuần tự trên dữ liệu mới nhất ⇒ không mất update, không cần retry.
+        await using var tx = await _context.Database.BeginTransactionAsync();
+
+        var active = await _context.PackagePurchases
+            .FromSqlInterpolated($@"SELECT * FROM PackagePurchases WITH (UPDLOCK, ROWLOCK)
+                WHERE UserId = {userId}
+                  AND (Status = 'Paid' OR Status = 'Cancelled')
+                  AND (ExpiresAt IS NULL OR ExpiresAt > {now})")
+            .OrderBy(p => p.CreatedAt) // FIFO cũ → mới
+            .ToListAsync();
+
+        var remaining = tokens;
+        foreach (var p in active)
+        {
+            if (remaining <= 0) break;
+            var free = p.TokensGranted - p.TokensUsed;
+            if (free <= 0) continue;
+            var take = Math.Min(free, remaining);
+            p.TokensUsed += take;
+            remaining -= take;
+        }
+        // remaining > 0 ⇒ câu vượt hạn mức (câu cuối): KHÔNG dồn phần dư vào đâu ⇒ TokensUsed
+        // không bao giờ vượt TokensGranted (không "tiêu lố"), số dư sàn 0. Lần sau HasQuota=0 chặn.
+
+        await _context.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+
+    public Task<int> MarkExpiredAsync()
+    {
+        var now = DateTime.UtcNow;
+        return _context.PackagePurchases
+            .Where(p => p.Status == "Paid" && p.ExpiresAt != null && p.ExpiresAt < now)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, "Expired"));
+    }
+
+    public Task<List<PackagePurchase>> GetNearExpiryUnnotifiedAsync(int withinDays)
+    {
+        var now = DateTime.UtcNow;
+        var limit = now.AddDays(withinDays);
+        return _context.PackagePurchases
+            .Where(p => p.Status == "Paid" && !p.ExpiryNotified
+                        && p.ExpiresAt != null && p.ExpiresAt > now && p.ExpiresAt <= limit)
+            .ToListAsync();
+    }
+
+    public async Task MarkExpiryNotifiedAsync(IEnumerable<string> purchaseIds)
+    {
+        var ids = purchaseIds.ToList();
+        if (ids.Count == 0) return;
+        await _context.PackagePurchases
+            .Where(p => ids.Contains(p.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.ExpiryNotified, true));
+    }
+
     // ── Token usage ──
     public async Task AddUsageAsync(TokenUsageLog log)
     {

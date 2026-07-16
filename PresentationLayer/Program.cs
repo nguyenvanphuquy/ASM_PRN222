@@ -103,6 +103,8 @@ public class Program
         builder.Services.AddScoped<IDashboardService, DashboardService>();
         builder.Services.AddScoped<IChatService, ChatService>();
         builder.Services.AddScoped<IBillingService, BillingService>();
+        // Job nền: đánh dấu gói hết hạn + nhắc sắp hết hạn.
+        builder.Services.AddHostedService<BillingMaintenanceService>();
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IModelComparisonService, ModelComparisonService>();
         builder.Services.AddScoped<IRagVsFineTunedComparisonService, RagVsFineTunedComparisonService>();
@@ -257,6 +259,12 @@ public class Program
                         ALTER TABLE Documents ADD ExtractedText nvarchar(max) NULL;
                     IF OBJECT_ID('Packages') IS NOT NULL AND COL_LENGTH('Packages', 'IsDeleted') IS NULL
                         ALTER TABLE Packages ADD IsDeleted bit NOT NULL DEFAULT 0;
+                    IF OBJECT_ID('PackagePurchases') IS NOT NULL AND COL_LENGTH('PackagePurchases', 'IdempotencyKey') IS NULL
+                        ALTER TABLE PackagePurchases ADD IdempotencyKey nvarchar(64) NULL;
+                    IF OBJECT_ID('PackagePurchases') IS NOT NULL AND COL_LENGTH('PackagePurchases', 'ExpiryNotified') IS NULL
+                        ALTER TABLE PackagePurchases ADD ExpiryNotified bit NOT NULL DEFAULT 0;
+                    IF OBJECT_ID('PackagePurchases') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_PackagePurchases_IdemKey')
+                        EXEC('SET QUOTED_IDENTIFIER ON; CREATE UNIQUE INDEX UX_PackagePurchases_IdemKey ON PackagePurchases(IdempotencyKey) WHERE IdempotencyKey IS NOT NULL');
                     IF OBJECT_ID('AllowedEmails') IS NULL
                     BEGIN
                         CREATE TABLE AllowedEmails (

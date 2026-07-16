@@ -47,7 +47,7 @@ public class IndexModel : PageModel
         History = await _billing.GetUserPurchasesAsync(UserId);
     }
 
-    public async Task<IActionResult> OnPostBuyAsync(string packageId)
+    public async Task<IActionResult> OnPostBuyAsync(string packageId, string? idempotencyKey)
     {
         // Admin & Giảng viên dùng token KHÔNG giới hạn → không mua gói (tránh giao dịch rác).
         var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Student";
@@ -57,7 +57,7 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var (ok, err, purchase) = await _billing.BuyAsync(UserId, packageId);
+        var (ok, err, purchase) = await _billing.BuyAsync(UserId, packageId, idempotencyKey);
         TempData[ok ? "Success" : "Error"] = ok
             ? $"Mua {purchase!.PackageName} thành công! Đã cộng {purchase.TokensGranted:N0} token vào tài khoản."
             : err;

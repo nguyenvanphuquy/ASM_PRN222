@@ -67,11 +67,14 @@
             }
             else
             {
-                <form method="post" asp-page-handler="Buy" style="margin-top:auto">
+                <form method="post" asp-page-handler="Buy" style="margin-top:auto"
+                      data-name="@p.Name" data-price="@(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")"
+                      onsubmit="return storeBuy(this)">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="packageId" value="@p.Id" />
-                    <button type="submit" class="btn @(p.IsPopular ? "btn-primary" : "btn-secondary") w-full"
-                            onclick="return confirm('Xác nhận mua @p.Name với giá @(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")? (thanh toán giả lập)')">
+                    @* Khoá chống mua trùng: mỗi lần render 1 key; double-click ⇒ vẫn 1 giao dịch. *@
+                    <input type="hidden" name="idempotencyKey" value="@Guid.NewGuid()" />
+                    <button type="submit" class="btn @(p.IsPopular ? "btn-primary" : "btn-secondary") w-full">
                         🛒 Mua gói
                     </button>
                 </form>
@@ -144,6 +147,16 @@
 
 @section Scripts {
 <script>
+    // Xác nhận mua + chống double-click (khoá nút ngay sau khi submit). Idempotency key ở
+    // form đảm bảo dù có lọt 2 request thì backend cũng chỉ tạo 1 giao dịch.
+    function storeBuy(form) {
+        if (!confirm('Xác nhận mua ' + form.dataset.name + ' với giá ' + form.dataset.price + '? (thanh toán giả lập)'))
+            return false;
+        var btn = form.querySelector('button[type=submit]');
+        if (btn) setTimeout(function () { btn.disabled = true; btn.textContent = '⏳ Đang xử lý…'; }, 0);
+        return true;
+    }
+
     // Realtime: khi admin tạo/sửa/xoá gói, sinh viên tự thấy danh sách gói mới cập nhật.
     (function subscribe() {
         if (window.appNotifHub) {

@@ -345,8 +345,11 @@ public class AppDbContext : DbContext
             e.Property(x => x.Status).HasMaxLength(20);
             e.Property(x => x.PaymentMethod).HasMaxLength(30);
             e.Property(x => x.TransactionRef).HasMaxLength(60);
+            e.Property(x => x.IdempotencyKey).HasMaxLength(64);
             e.HasIndex(x => x.UserId);
             e.HasIndex(x => x.CreatedAt);
+            // Chống mua trùng: 2 request cùng IdempotencyKey ⇒ request thứ 2 vi phạm unique ⇒ bị chặn.
+            e.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
 
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });

@@ -86,8 +86,16 @@ public class BillingService : IBillingService
 
     public Task<List<PackagePurchase>> GetUserPurchasesAsync(string userId) => _repo.GetUserPurchasesAsync(userId);
 
-    public async Task<(bool, string?, PackagePurchase?)> BuyAsync(string userId, string packageId)
+    public async Task<(bool, string?, PackagePurchase?)> BuyAsync(string userId, string packageId, string? idempotencyKey = null)
     {
+        // Chống mua trùng: nếu key này đã tạo giao dịch (double-click / 2 request) thì trả về
+        // giao dịch cũ, KHÔNG tạo thêm & KHÔNG cộng token lần nữa.
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var existing = await _repo.GetByIdempotencyKeyAsync(userId, idempotencyKey);
+            if (existing != null) return (true, null, existing);
+        }
+
         var pkg = await _repo.GetPackageAsync(packageId);
         if (pkg is null || !pkg.IsActive) return (false, "Gói không tồn tại hoặc đã ngừng bán", null);
 
@@ -125,11 +133,28 @@ public class BillingService : IBillingService
             TokensUsed = 0,
             Status = "Paid",
             PaymentMethod = "Mock",
-            TransactionRef = "TXN" + now.ToString("yyMMddHHmmss") + Random.Shared.Next(100, 999),
+            // Guid ⇒ mã giao dịch thực sự duy nhất (không còn trùng trong cùng 1 giây).
+            TransactionRef = "TXN" + now.ToString("yyMMddHHmmss") + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(),
+            IdempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey,
             CreatedAt = now,
             ExpiresAt = newExpiry
         };
-        await _repo.AddPurchaseAsync(purchase);
+
+        try
+        {
+            await _repo.AddPurchaseAsync(purchase);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // Va chạm unique IdempotencyKey ⇒ một request song song đã tạo giao dịch trước.
+            // Trả về giao dịch đó (idempotent) thay vì báo lỗi/mua trùng.
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                var existing = await _repo.GetByIdempotencyKeyAsync(userId, idempotencyKey);
+                if (existing != null) return (true, null, existing);
+            }
+            return (false, "Không thể tạo giao dịch, vui lòng thử lại.", null);
+        }
 
         // Realtime: báo cho user + cập nhật doanh thu trên trang báo cáo của admin.
         await _notifier.SendAsync(userId, "success", "Mua gói thành công",
@@ -198,29 +223,9 @@ public class BillingService : IBillingService
         return bal.Remaining > 0;
     }
 
-    public async Task DeductAsync(string userId, int tokens)
-    {
-        if (tokens <= 0) return;
-        var active = await _repo.GetActivePaidPurchasesAsync(userId); // FIFO (cũ → mới)
-        int remaining = tokens;
-        foreach (var p in active)
-        {
-            if (remaining <= 0) break;
-            int free = p.TokensGranted - p.TokensUsed;
-            if (free <= 0) continue;
-            int take = Math.Min(free, remaining);
-            p.TokensUsed += take;
-            remaining -= take;
-            await _repo.UpdatePurchaseAsync(p);
-        }
-        // Nếu vẫn còn dư (vượt quota) → dồn hết vào bản ghi cuối để phản ánh đúng lượng đã tiêu.
-        if (remaining > 0 && active.Count > 0)
-        {
-            var last = active[^1];
-            last.TokensUsed += remaining;
-            await _repo.UpdatePurchaseAsync(last);
-        }
-    }
+    public Task DeductAsync(string userId, int tokens)
+        // Trừ token nguyên tử (optimistic concurrency + cap chống tiêu lố) — xem BillingRepository.
+        => _repo.DeductAsync(userId, tokens);
 
     public async Task RecordUsageAsync(string userId, string? sessionId, LlmResult result, string kind, bool meter)
     {
