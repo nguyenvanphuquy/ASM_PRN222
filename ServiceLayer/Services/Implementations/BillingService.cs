@@ -99,6 +99,10 @@ public class BillingService : IBillingService
         var pkg = await _repo.GetPackageAsync(packageId);
         if (pkg is null || !pkg.IsActive) return (false, "Gói không tồn tại hoặc đã ngừng bán", null);
 
+        // Gói miễn phí (dùng thử) chỉ được CẤP TỰ ĐỘNG một lần (EnsureFreeGrantAsync), KHÔNG bán —
+        // nếu cho mua thì sinh viên sẽ mua lặp để kéo dài hạn / gom token miễn phí.
+        if (pkg.PriceVnd <= 0) return (false, "Gói dùng thử được cấp tự động, không thể mua.", null);
+
         var now = DateTime.UtcNow;
 
         // Mua thêm gói không chỉ CỘNG token mà còn KÉO DÀI hạn sử dụng: hạn mới =

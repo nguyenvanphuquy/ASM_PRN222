@@ -65,10 +65,17 @@
                     Bạn dùng token <strong>không giới hạn</strong> — không cần mua gói.
                 </div>
             }
+            else if (p.PriceVnd <= 0)
+            {
+                @* Gói dùng thử: cấp tự động cho tài khoản mới, KHÔNG bán (tránh mua lặp kéo dài hạn). *@
+                <div class="text-sm text-muted" style="margin-top:auto;text-align:center;padding:10px 0;border-top:1px dashed var(--border-subtle)">
+                    🎁 Gói dùng thử — <strong>cấp tự động</strong> cho tài khoản mới, không bán.
+                </div>
+            }
             else
             {
                 <form method="post" asp-page-handler="Buy" style="margin-top:auto"
-                      data-name="@p.Name" data-price="@(p.PriceVnd == 0 ? "miễn phí" : $"{p.PriceVnd:N0}₫")"
+                      data-name="@p.Name" data-price="@($"{p.PriceVnd:N0}₫")"
                       onsubmit="return storeBuy(this)">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="packageId" value="@p.Id" />
