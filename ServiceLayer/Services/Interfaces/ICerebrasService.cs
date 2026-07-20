@@ -10,6 +10,7 @@ public interface ICerebrasService
         string question,
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
+        string responseLanguage = "en",
         CancellationToken ct = default);
 
     /// <summary>Sinh câu trả lời RAG bằng một model cụ thể (dùng cho tính năng so sánh model).</summary>
@@ -18,6 +19,7 @@ public interface ICerebrasService
         string question,
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
+        string responseLanguage = "en",
         CancellationToken ct = default);
 
     /// <summary>Sinh văn bản tự do (dùng cho kiểm tra chất lượng tài liệu).</summary>

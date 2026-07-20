@@ -22,7 +22,7 @@ public class ChatHub : Hub
     /// <summary>
     /// Client gọi hàm này để gửi câu hỏi. Hub sẽ gọi AI rồi push kết quả về.
     /// </summary>
-    public async Task SendMessageAsync(string sessionId, string question)
+    public async Task SendMessageAsync(string sessionId, string question, string? language = null)
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         if (string.IsNullOrWhiteSpace(question)) return;
@@ -38,7 +38,7 @@ public class ChatHub : Hub
 
         try
         {
-            var result = await _chatService.AskAsync(sessionId, userId, question);
+            var result = await _chatService.AskAsync(sessionId, userId, question, language);
 
             await Clients.Caller.SendAsync("ReceiveMessage", new
             {

@@ -83,7 +83,7 @@ public class ChatApiController : ControllerBase
 
         try
         {
-            var result = await _chatService.AskAsync(req.SessionId, UserId, req.Question);
+            var result = await _chatService.AskAsync(req.SessionId, UserId, req.Question, req.Language);
             return Ok(new
             {
                 answer = result.Answer,
@@ -119,4 +119,4 @@ public class ChatApiController : ControllerBase
 }
 
 public record CreateSessionRequest(string? SubjectId);
-public record AskRequest(string SessionId, string Question);
+public record AskRequest(string SessionId, string Question, string? Language = null);

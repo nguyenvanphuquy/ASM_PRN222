@@ -27,20 +27,22 @@ public class CerebrasService : ICerebrasService
         string question,
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
+        string responseLanguage = "en",
         CancellationToken ct = default)
-        => GenerateAnswerWithModelAsync(_cerebras.Model, question, contextChunks, history, ct);
+        => GenerateAnswerWithModelAsync(_cerebras.Model, question, contextChunks, history, responseLanguage, ct);
 
     public async Task<LlmResult> GenerateAnswerWithModelAsync(
         string model,
         string question,
         IReadOnlyList<DocumentChunk> contextChunks,
         IReadOnlyList<ChatMessage> history,
+        string responseLanguage = "en",
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_cerebras.ApiKey))
-            return new LlmResult(BuildFallback(contextChunks), model, 0, 0, 0, 0, IsError: true);
+            return new LlmResult(BuildFallback(contextChunks, responseLanguage), model, 0, 0, 0, 0, IsError: true);
 
-        var systemPrompt = BuildSystemPrompt(contextChunks);
+        var systemPrompt = BuildSystemPrompt(contextChunks, responseLanguage);
         var messages = new List<object> { new { role = "system", content = systemPrompt } };
 
         // Add recent history (last 6 turns) as conversation context
@@ -52,7 +54,10 @@ public class CerebrasService : ICerebrasService
         var result = await CallAsync(model, messages, 1024, ct);
         if (result.IsError)
         {
-            var fb = BuildFallback(contextChunks) + $"\n\n_(Không gọi được model {model}, đã dùng fallback.)_";
+            var fallbackNote = responseLanguage == "en"
+                ? $"\n\n_(The model {model} could not be reached; a grounded fallback was used.)_"
+                : $"\n\n_(Không gọi được model {model}; hệ thống đã dùng câu trả lời dự phòng dựa trên tài liệu.)_";
+            var fb = BuildFallback(contextChunks, responseLanguage) + fallbackNote;
             return result with { Content = fb };
         }
         return result;
@@ -174,15 +179,16 @@ public class CerebrasService : ICerebrasService
         }
     }
 
-    private static string BuildSystemPrompt(IReadOnlyList<DocumentChunk> chunks)
+    private static string BuildSystemPrompt(IReadOnlyList<DocumentChunk> chunks, string responseLanguage)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("You are an AI study assistant for college students. Always reply in English.");
+        sb.AppendLine("You are an AI study assistant for college students.");
         sb.AppendLine("Mandatory rules:");
         sb.AppendLine("1. Answer the question based ONLY on the provided document context below. Do not use external knowledge.");
-        sb.AppendLine("2. If the context does not contain enough information to answer the question, reply with exactly: \"I cannot find this information in the course documents.\" and nothing else.");
+        sb.AppendLine($"2. If the context does not contain enough information to answer the question, reply with exactly: \"{ResponseLanguage.RefusalMessage}\" and nothing else.");
         sb.AppendLine("3. You MUST include clear inline citations in your response (e.g., [1], [2], etc.) corresponding to the index of the context chunks that support your statements. Place the citation immediately after the sentence or information it supports.");
         sb.AppendLine("4. Keep the response friendly, concise, and structured using markdown.");
+        sb.AppendLine(ResponseLanguage.PromptDirective(responseLanguage));
         sb.AppendLine();
         sb.AppendLine("=== DOCUMENT CONTEXT ===");
         if (chunks.Count == 0)
@@ -204,13 +210,15 @@ public class CerebrasService : ICerebrasService
         return sb.ToString();
     }
 
-    private static string BuildFallback(IReadOnlyList<DocumentChunk> chunks)
+    private static string BuildFallback(IReadOnlyList<DocumentChunk> chunks, string responseLanguage)
     {
         if (chunks.Count == 0)
-            return "I cannot find this information in the course documents.";
+            return ResponseLanguage.RefusalMessage;
 
         var sb = new StringBuilder();
-        sb.AppendLine("Based on the course documents, I found the following relevant parts:");
+        sb.AppendLine(responseLanguage == "en"
+            ? "Based on the course documents, I found the following relevant parts:"
+            : "Dựa trên tài liệu môn học, tôi tìm được các đoạn liên quan sau:");
         sb.AppendLine();
         int i = 1;
         foreach (var c in chunks)

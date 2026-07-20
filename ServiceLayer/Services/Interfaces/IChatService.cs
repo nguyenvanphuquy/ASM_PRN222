@@ -10,7 +10,7 @@ public interface IChatService
     Task<DTOs.ChatSessionDto?> GetSessionAsync(string sessionId);
     Task DeleteSessionAsync(string sessionId);
     Task<List<DTOs.ChatMessageDto>> GetMessagesAsync(string sessionId);
-    Task<ChatAnswer> AskAsync(string sessionId, string userId, string question);
+    Task<ChatAnswer> AskAsync(string sessionId, string userId, string question, string? language = null);
 }
 
 

@@ -50,8 +50,12 @@ public class ChatService : IChatService
     public Task DeleteSessionAsync(string sessionId) => _chatRepo.DeleteSessionAsync(sessionId);
     public async Task<List<DTOs.ChatMessageDto>> GetMessagesAsync(string sessionId) { var entities = await _chatRepo.GetMessagesAsync(sessionId); return _mapper.Map<List<DTOs.ChatMessageDto>>(entities); }
 
-    public async Task<ChatAnswer> AskAsync(string sessionId, string userId, string question)
+    public async Task<ChatAnswer> AskAsync(string sessionId, string userId, string question, string? language = null)
     {
+        question = question?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(question))
+            throw new ArgumentException("Câu hỏi không được để trống.", nameof(question));
+
         var session = await _chatRepo.GetSessionAsync(sessionId)
             ?? throw new InvalidOperationException("Session không tồn tại");
 
@@ -89,7 +93,7 @@ public class ChatService : IChatService
 
         if (searchResults.Count == 0 || searchResults.All(x => x.Score < 0.1f))
         {
-            answer = "I cannot find this information in the course documents.";
+            answer = ResponseLanguage.RefusalMessage;
         }
         else
         {
@@ -106,7 +110,8 @@ public class ChatService : IChatService
                 })
                 .ToList();
 
-            var llm = await _llm.GenerateAnswerAsync(question, chunks, history);
+            var outputLanguage = ResponseLanguage.Resolve(language, question);
+            var llm = await _llm.GenerateAnswerAsync(question, chunks, history, outputLanguage);
             answer = llm.Content;
 
             // Ghi nhật ký token + trừ quota (nếu là sinh viên) khi thực sự gọi model thành công.
@@ -115,8 +120,7 @@ public class ChatService : IChatService
 
             // Nếu model vẫn từ chối (ngữ cảnh không thực sự liên quan) thì KHÔNG hiển thị nguồn —
             // tránh trường hợp "không tìm thấy trong tài liệu" nhưng vẫn kèm nguồn + độ tin cậy.
-            if (answer.Contains("không tìm thấy thông tin", StringComparison.OrdinalIgnoreCase) ||
-                answer.Contains("cannot find this information", StringComparison.OrdinalIgnoreCase) ||
+            if (ResponseLanguage.IsRefusal(answer) ||
                 answer.Contains("not found in the", StringComparison.OrdinalIgnoreCase))
             {
                 sources = new List<ChatSource>();
